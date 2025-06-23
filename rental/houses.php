@@ -145,6 +145,6 @@
 	// }
 	$('table').dataTable()
 </script><footer class="footer d-flex flex-column flex-md-row align-items-center justify-content-between px-4 py-3 border-top small">
-   <p class="text-muted mb-1 mb-md-0">Copyright © 2024 <a href="https://www.mayurik.com" target="_blank">Tenant Management System Software</a> - Design By Mayuri K. Freelancer</p>
+   <p class="text-muted mb-1 mb-md-0">Copyright © 2025 <a href="https://github.com/John-Denver/" target="_blank">House Rental</a> - Design Thiira and Tallam, Backend - Denver</p>
    
 </footer>
