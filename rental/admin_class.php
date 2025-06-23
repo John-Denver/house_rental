@@ -583,44 +583,54 @@ class Action {
     }
 
     function save_payment() {
-        $required = ['tenant_id', 'amount', 'date_created'];
-        foreach($required as $field) {
-            if(empty($_POST[$field])) {
-                return "Missing required field: $field";
-            }
+    $required = ['tenant_id', 'amount', 'invoice', 'date_created'];
+    foreach($required as $field) {
+        if(empty($_POST[$field])) {
+            return "Missing required field: $field";
         }
+    }
 
+    try {
         $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
         $data = [
             'tenant_id' => (int)$_POST['tenant_id'],
             'amount' => (float)$_POST['amount'],
+            'invoice' => trim($_POST['invoice']),
             'date_created' => $_POST['date_created'],
-            'remarks' => trim($_POST['remarks'] ?? '')
+            
         ];
 
         if($id > 0) {
             $stmt = $this->db->prepare("UPDATE payments SET 
-                tenant_id = ?, amount = ?, date_created = ?, remarks = ? 
+                tenant_id = ?, amount = ?, invoice = ?, date_created = ?
                 WHERE id = ?");
             $stmt->bind_param("idssi", 
                 $data['tenant_id'], 
                 $data['amount'], 
+                $data['invoice'],
                 $data['date_created'], 
-                $data['remarks'], 
                 $id);
         } else {
             $stmt = $this->db->prepare("INSERT INTO payments 
-                (tenant_id, amount, date_created, remarks) 
+                (tenant_id, amount, invoice, date_created) 
                 VALUES (?, ?, ?, ?)");
             $stmt->bind_param("idss", 
                 $data['tenant_id'], 
                 $data['amount'], 
-                $data['date_created'], 
-                $data['remarks']);
+                $data['invoice'], 
+                $data['date_created']);
         }
 
-        return $stmt->execute() ? 1 : $this->db->error;
+        if(!$stmt->execute()) {
+            throw new Exception($this->db->error);
+        }
+        
+        return 1;
+    } catch (Exception $e) {
+        return $e->getMessage();
     }
+}
+
 
     function delete_payment() {
         if(empty($_POST['id']) || !is_numeric($_POST['id'])) {
