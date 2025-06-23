@@ -102,7 +102,7 @@ div#login-right::before {
   	</div>
   	<div class="col-md-6">
   		<div class="text-center mb-5 pt-5">
-         <a href="index.php" class="logo logo-admin"><img src="assets/img/logo.png" alt="logo" width="250px"></a>
+         <a href="index.php" class="logo logo-admin"><img src="assets/img/smart_rental_logo.png" alt="logo" width="250px"></a>
       </div>
   		<div id="login-right" class="bg-white">
   			<div class="w-100">
@@ -135,7 +135,6 @@ div#login-right::before {
 
 
 </body>
-<script src="https://www.google.com/recaptcha/api.js" async defer></script> 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 	$('#login-form').submit(function(e){
