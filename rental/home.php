@@ -411,12 +411,6 @@
                 <div class="stat-label">Total Users</div>
             </div>
         </div>
-
-        <!-- Chart Section -->
-        <div class="chart-section">
-            <h2 class="chart-title">Dashboard Analytics</h2>
-            <div id="piechart" style="width: 100%; height: 400px; background: var(--dark-bg); border-radius: 10px;"></div>
-        </div>
     </div>
 
     <!-- Footer -->
@@ -470,7 +464,6 @@
                 const houseTypes = parseInt(document.getElementById('houseTypes').textContent);
                 const totalUsers = parseInt(document.getElementById('totalUsers').textContent);
 
-                // Store original values and reset to 0 for animation
                 document.getElementById('totalHouses').textContent = '0';
                 document.getElementById('totalTenants').textContent = '0';
                 document.getElementById('monthlyPayments').textContent = '0.00';
@@ -478,7 +471,6 @@
                 document.getElementById('houseTypes').textContent = '0';
                 document.getElementById('totalUsers').textContent = '0';
 
-                // Animate to real values
                 animateNumber(document.getElementById('totalHouses'), totalHouses);
                 animateNumber(document.getElementById('totalTenants'), totalTenants);
                 animateNumberWithCurrency(document.getElementById('monthlyPayments'), monthlyPayments);
@@ -488,7 +480,6 @@
             }, 800);
         });
 
-        // Special function for currency animation
         function animateNumberWithCurrency(element, finalNumber) {
             const startNumber = 0;
             const duration = 2000;
@@ -513,76 +504,8 @@
             requestAnimationFrame(updateNumber);
         }
 
-        // Google Charts initialization
-        google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChart);
-
-        function drawChart() {
-            <?php
-            // Get real data for the chart
-            $total_houses = $conn->query("SELECT * FROM houses")->num_rows;
-            $occupied_houses = $conn->query("SELECT * FROM tenants WHERE status = 1")->num_rows;
-            $vacant_houses = $total_houses - $occupied_houses;
-            
-            // Get houses by category
-            $categories_query = $conn->query("
-                SELECT c.name, COUNT(h.id) as house_count 
-                FROM categories c 
-                LEFT JOIN houses h ON c.id = h.category_id 
-                GROUP BY c.id, c.name
-            ");
-            ?>
-            
-            const data = google.visualization.arrayToDataTable([
-                ['Category', 'Count'],
-                ['Occupied Houses', <?php echo $occupied_houses; ?>],
-                ['Vacant Houses', <?php echo $vacant_houses; ?>],
-                <?php
-                if($categories_query->num_rows > 0) {
-                    while($row = $categories_query->fetch_assoc()) {
-                        echo "['" . $row['name'] . "', " . $row['house_count'] . "],";
-                    }
-                }
-                ?>
-            ]);
-
-            const options = {
-                title: 'Property Distribution Overview',
-                titleTextStyle: {
-                    color: '#D4AF37',
-                    fontSize: 18,
-                    fontName: 'Segoe UI'
-                },
-                backgroundColor: '#1a1a1a',
-                colors: ['#D4AF37', '#B8860B', '#F7E98E', '#9B7A00', '#DAA520', '#FFD700'],
-                legend: {
-                    textStyle: {
-                        color: '#ffffff'
-                    }
-                },
-                pieSliceTextStyle: {
-                    color: '#000000',
-                    fontSize: 12
-                },
-                chartArea: {
-                    left: 50,
-                    top: 50,
-                    width: '80%',
-                    height: '70%'
-                }
-            };
-
-            const chart = new google.visualization.PieChart(document.getElementById('piechart'));
-            chart.draw(data, options);
-        }
-
-        // Responsive chart redraw
-        window.addEventListener('resize', drawChart);
-
-        // Add smooth scrolling for better UX
         document.documentElement.style.scrollBehavior = 'smooth';
 
-        // Add intersection observer for scroll animations
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -597,7 +520,6 @@
             });
         }, observerOptions);
 
-        // Observe all stat cards
         document.addEventListener('DOMContentLoaded', () => {
             const cards = document.querySelectorAll('.stat-card');
             cards.forEach(card => observer.observe(card));
