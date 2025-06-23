@@ -18,30 +18,35 @@ foreach($qry->fetch_array() as $k => $val){
             <label for="" class="control-label">Tenant</label>
             <select name="tenant_id" id="tenant_id" class="custom-select select2">
                 <option value=""></option>
-
-            <?php 
-            $tenant = $conn->query("SELECT *,concat(lastname,', ',firstname,' ',middlename) as name FROM tenants where status = 1 order by name asc");
-            while($row=$tenant->fetch_assoc()):
-            ?>
-            <option value="<?php echo $row['id'] ?>" <?php echo isset($tenant_id) && $tenant_id == $row['id'] ? 'selected' : '' ?>><?php echo ucwords($row['name']) ?></option>
-            <?php endwhile; ?>
+                <?php 
+                $tenant = $conn->query("SELECT *,concat(lastname,', ',firstname,' ',middlename) as name FROM tenants where status = 1 order by name asc");
+                while($row=$tenant->fetch_assoc()):
+                ?>
+                <option value="<?php echo $row['id'] ?>" <?php echo isset($tenant_id) && $tenant_id == $row['id'] ? 'selected' : '' ?>><?php echo ucwords($row['name']) ?></option>
+                <?php endwhile; ?>
             </select>
         </div>
-        <div class="form-group" id="details">
-            
-        </div>
+        <div class="form-group" id="details"></div>
 
         <div class="form-group">
-            <label for="" class="control-label">Invoice: </label>
-            <input type="text" class="form-control" name="invoice"  value="<?php echo isset($invoice) ? $invoice :'' ?>" >
+            <label for="" class="control-label">Payment Date: </label>
+            <input type="date" class="form-control" name="date_created" value="<?php echo isset($date_created) ? $date_created : date('Y-m-d') ?>" required>
+        </div>
+        <div class="form-group">
+            <label for="" class="control-label">Invoice/Receipt #: </label>
+            <input type="text" class="form-control" name="invoice" value="<?php echo isset($invoice) ? $invoice :'' ?>" required>
         </div>
         <div class="form-group">
             <label for="" class="control-label">Amount Paid: </label>
-            <input type="number" class="form-control text-right" step="any" name="amount"  value="<?php echo isset($amount) ? $amount :'' ?>" >
+            <input type="number" class="form-control text-right" step="any" name="amount" value="<?php echo isset($amount) ? $amount :'' ?>" required>
         </div>
-</div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
     </form>
 </div>
+
+
 <div id="details_clone" style="display: none">
     <div class='d'>
         <large><b>Details</b></large>
@@ -91,29 +96,36 @@ foreach($qry->fetch_array() as $k => $val){
             end_load()
         }
     })
-   })
+   }) 
     $('#manage-payment').submit(function(e){
-        e.preventDefault()
-        start_load()
-        $('#msg').html('')
-        $.ajax({
-            url:'ajax.php?action=save_payment',
-            data: new FormData($(this)[0]),
-            cache: false,
-            contentType: false,
-            processData: false,
-            method: 'POST',
-            type: 'POST',
-            success:function(resp){
-                if(resp==1){
-                    alert_toast("Data successfully saved.",'success')
-                        setTimeout(function(){
-                            location.reload()
-                        },1000)
-                }
+    e.preventDefault()
+    start_load()
+    $('#msg').html('')
+    $.ajax({
+        url:'ajax.php?action=save_payment',
+        data: new FormData($(this)[0]),
+        cache: false,
+        contentType: false,
+        processData: false,
+        method: 'POST',
+        type: 'POST',
+        success:function(resp){
+            if(resp==1){
+                alert_toast("Data successfully saved.",'success')
+                setTimeout(function(){
+                    location.reload()
+                },1000)
+            } else {
+                alert_toast("Error: " + resp,'error')
+                console.log(resp)
             }
-        })
+        },
+        error: function(xhr, status, error) {
+            alert_toast("AJAX Error: " + error,'error')
+            console.log(xhr.responseText)
+        }
     })
+})
 </script>
 
 <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
