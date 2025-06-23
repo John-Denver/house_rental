@@ -41,7 +41,8 @@ foreach($qry->fetch_array() as $k => $val){
 				<select name="house_id" id="" class="custom-select select2">
 					<option value=""></option>
 					<?php 
-					$house = $conn->query("SELECT * FROM houses where id not in (SELECT house_id from tenants where status = 1) ".(isset($house_id)? " or id = $house_id": "" )." ");
+					// $house = $conn->query("SELECT * FROM houses where id not in (SELECT house_id from tenants where status = 1) ".(isset($house_id)? " or id = $house_id": "" )." ");
+					$house = $conn->query("SELECT * FROM houses ". (isset($house_id) ? " WHERE id = $house_id" : ""));
 					while($row= $house->fetch_assoc()):
 					?>
 					<option value="<?php echo $row['id'] ?>" <?php echo isset($house_id) && $house_id == $row['id'] ? 'selected' : '' ?>><?php echo $row['house_no'] ?></option>
