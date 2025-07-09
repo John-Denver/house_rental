@@ -31,6 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Redirect based on user type
                 if ($user['type'] === 'admin') {
                     header('Location: rental/index.php');
+                } elseif ($user['type'] === 'landlord') {
+                    header('Location: smart_landlords/index.php');
                 } else {
                     header('Location: smart_rental/index.php');
                 }
@@ -63,6 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-6">
                 <div class="card shadow-sm">
+                    <div class="card-header text-center">
+                        <h3 class="card-title mb-0">Login</h3>
+                        <p class="text-muted mb-0">Don't have an account? <a href="register.php">Register here</a></p>
+                    </div>
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
                             <a href="index.php" class="logo">
