@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db.php';
+require_once '../config/db.php';
 
 // Get search parameters
 $location = $_GET['location'] ?? '';

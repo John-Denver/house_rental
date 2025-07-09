@@ -1,12 +1,10 @@
 <?php
 require_once '../config/db.php';
+require_once '../config/auth.php';
+require_login();
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
     echo json_encode(['error' => 'Please login to book a property']);
     exit;
 }

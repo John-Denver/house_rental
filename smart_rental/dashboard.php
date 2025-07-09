@@ -1,20 +1,7 @@
 <?php
-require_once 'config/db.php';
-
-// Check if user is logged in
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-
-// Get user's active bookings
-$sql = "SELECT b.*, h.house_no, h.location, h.price, h.image, c.name as category_name 
-        FROM bookings b 
-        LEFT JOIN houses h ON b.property_id = h.id 
-        LEFT JOIN categories c ON h.category_id = c.id
-        WHERE b.user_id = ? AND b.status IN ('pending', 'approved')
-        ORDER BY b.created_at DESC";
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_login('./login.php');
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('i', $_SESSION['user_id']);

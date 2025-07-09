@@ -1,10 +1,12 @@
 <?php
 session_start();
+require_once '../config/db.php';
+require_once '../config/auth.php';
 ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
     <div class="container">
         <a class="navbar-brand" href="index.php">
-            <img src="../assets/images/logo.png" alt="Smart Rental" height="40">
+            <img src="./assets/images/smart_rental_logo.png" alt="Smart Rental" height="40">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
@@ -26,25 +28,25 @@ session_start();
             </ul>
 
             <ul class="navbar-nav">
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user"></i> <?php echo htmlspecialchars($_SESSION['user_name']); ?>
+                <?php if (is_logged_in()): ?>
+                    <li class="nav-item">
+                        <span class="nav-link me-2">
+                            <i class="fas fa-user me-1"></i>
+                            <?php echo htmlspecialchars($_SESSION['user_name']); ?>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-outline-primary" href="../logout.php">
+                            <i class="fas fa-sign-out-alt me-1"></i>
+                            Logout
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="profile.php">Profile</a></li>
-                            <li><a class="dropdown-item" href="favorites.php">Favorites</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="logout.php">Logout</a></li>
-                        </ul>
                     </li>
                 <?php else: ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="login.php">Login</a>
+                        <a class="nav-link" href="../login.php">Login</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-primary text-white px-3" href="register.php">Register</a>
+                        <a class="nav-link btn btn-primary text-white px-3" href="../register.php">Register</a>
                     </li>
                 <?php endif; ?>
             </ul>

@@ -1,5 +1,7 @@
 <?php
-session_start();
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_admin();
 ini_set('display_errors', 1);
 
 class Action {
@@ -34,12 +36,13 @@ class Action {
             if(password_verify($_POST['password'], $user['password'])) {
                 foreach ($user as $key => $value) {
                     if($key != 'password' && !is_numeric($key)) {
-                        $_SESSION['login_'.$key] = $value;
+                        $_SESSION[$key] = $value;
                     }
                 }
                 
-                if($_SESSION['login_type'] != 1) {
-                    session_destroy();
+                if($_SESSION['user_type'] != 1) {
+                    require_once '../config/auth.php';
+                    logout();
                     return 2; // Not admin
                 }
                 return 1; // Success
@@ -65,13 +68,13 @@ class Action {
             if(password_verify($_POST['password'], $user['password'])) {
                 foreach ($user as $key => $value) {
                     if($key != 'password' && !is_numeric($key)) {
-                        $_SESSION['login_'.$key] = $value;
+                        $_SESSION[$key] = $value;
                     }
                 }
 
-                if($_SESSION['login_alumnus_id'] > 0) {
+                if($_SESSION['user_id'] > 0) {
                     $bio_stmt = $this->db->prepare("SELECT * FROM alumnus_bio WHERE id = ?");
-                    $bio_stmt->bind_param("i", $_SESSION['login_alumnus_id']);
+                    $bio_stmt->bind_param("i", $_SESSION['user_id']);
                     $bio_stmt->execute();
                     $bio = $bio_stmt->get_result()->fetch_assoc();
                     
@@ -85,7 +88,8 @@ class Action {
                 }
 
                 if($_SESSION['bio']['status'] != 1) {
-                    session_destroy();
+                    require_once '../config/auth.php';
+                    logout();
                     return 2;
                 }
                 return 1;
@@ -96,30 +100,12 @@ class Action {
 
     function logout() {
         $_SESSION = array();
-        if(ini_get("session.use_cookies")) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-                $params["path"], $params["domain"],
-                $params["secure"], $params["httponly"]
-            );
-        }
-        session_destroy();
-        header("Location: login.php");
-        exit();
     }
 
     function logout2() {
-        $_SESSION = array();
-        if(ini_get("session.use_cookies")) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-                $params["path"], $params["domain"],
-                $params["secure"], $params["httponly"]
-            );
-        }
-        session_destroy();
-        header("Location: ../index.php");
-        exit();
+        require_once '../config/auth.php';
+        logout();
+    }
     }
 
     // Secure user management
@@ -267,7 +253,7 @@ class Action {
         try {
             // Check if email exists for other users
             $check_stmt = $this->db->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
-            $check_stmt->bind_param("si", $email, $_SESSION['login_id']);
+            $check_stmt->bind_param("si", $email, $_SESSION['user_id']);
             $check_stmt->execute();
             
             if($check_stmt->get_result()->num_rows > 0) {
@@ -287,7 +273,7 @@ class Action {
                 $types .= "s";
             }
             
-            $params[] = $_SESSION['login_id'];
+            $params[] = $_SESSION['user_id'];
             $types .= "i";
             
             $user_stmt = $this->db->prepare("UPDATE users SET $data WHERE id = ?");
@@ -319,7 +305,7 @@ class Action {
                 }
             }
             
-            $params[] = $_SESSION['bio']['id'];
+            $params[] = $_SESSION['user_id'];
             $types .= "i";
             
             $set_clause = implode(", ", $data);

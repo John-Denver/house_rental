@@ -56,7 +56,7 @@
                                 </ul>
                             </li>
 					
-					<?php if($_SESSION['login_type'] == 1): ?>
+					<?php if(is_admin()): ?>
 					<a href="index.php?page=users" class="nav-item nav-users"><span class='icon-field'><i data-feather="users"></i></span> Users</a>
 					
 					<?php endif; ?>

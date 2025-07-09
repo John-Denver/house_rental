@@ -1,12 +1,8 @@
 <?php
-require_once 'config/db.php';
+require_once '../config/db.php';
+require_once '../config/auth.php';
 
-// Check token validity
 $token = $_GET['token'] ?? '';
-if (empty($token)) {
-    header('Location: login.php');
-    exit;
-}
 
 // Validate token
 $stmt = $conn->prepare("SELECT * FROM password_resets WHERE token = ? AND expires_at > NOW()");
@@ -15,11 +11,16 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    $error = "Invalid or expired reset token";
+    header('Location: ../login.php?error=Invalid%20or%20expired%20reset%20token');
+    exit;
 }
 
+// Get user email from token
+$reset = $result->fetch_assoc();
+$email = $reset['email'];
+
 // Handle password reset
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
     $errors = [];
@@ -74,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($error)) {
                                 <?php echo $success; ?>
                             </div>
                             <div class="text-center mt-3">
-                                <a href="login.php" class="btn btn-primary">Login</a>
+                                <a href="../login.php" class="btn btn-primary">Login</a>
                             </div>
                         <?php else: ?>
                             <?php if (!empty($error)): ?>

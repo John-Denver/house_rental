@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db.php';
+require_once '../config/db.php';
 
 // Get property ID from URL
 $property_id = $_GET['id'] ?? 0;

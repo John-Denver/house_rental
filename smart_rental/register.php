@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db.php';
+require_once '../config/db.php';
 
 // Handle registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </form>
                         
                         <div class="text-center mt-3">
-                            <p class="mb-0">Already have an account? <a href="login.php">Login here</a></p>
+                            <p class="mb-0">Already have an account? <a href="../login.php">Login here</a></p>
                         </div>
                     </div>
                 </div>

@@ -1,12 +1,7 @@
 <?php
-require_once 'config/db.php';
-
-// Check if user is logged in
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_login('./login.php');
 
 // Handle favorite actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

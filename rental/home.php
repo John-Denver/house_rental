@@ -356,7 +356,7 @@
     <div class="container-fluid">
         <!-- Welcome Section -->
         <div class="welcome-section">
-            <h1 class="welcome-title"><?php echo "Welcome back ". $_SESSION['login_name']."!" ?></h1>
+            <h1 class="welcome-title"><?php echo "Welcome back ". $_SESSION['user_name']."!" ?></h1>
             <div class="developer-credits">
                 Developed by John Denver, Tallam Maureen and Thiira Elizabeth
             </div>

@@ -1,5 +1,6 @@
 <?php
-require_once 'config/db.php';
+require_once '../config/db.php';
+require_once '../config/auth.php';
 
 // Pagination settings
 $records_per_page = 9;
@@ -25,48 +26,34 @@ if(!empty($propertyType)) {
     $params[] = $propertyType;
 }
 
-// Get total number of records
-$sql = "SELECT COUNT(*) as total FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions";
-if(count($params) > 0) {
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param(str_repeat('s', count($params)), ...$params);
-    $stmt->execute();
-    $total_records = $stmt->get_result()->fetch_assoc()['total'];
+// Prepare and execute count query
+$stmt = $conn->prepare("SELECT COUNT(*) as total FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions");
+if (!empty($params)) {
+    $types = str_repeat('s', count($params));
+    $stmt->bind_param($types, ...$params);
 } else {
-    $total_records = $conn->query($sql)->fetch_assoc()['total'];
+    $stmt->execute();
 }
+$stmt->execute();
+$total_records = $stmt->get_result()->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $records_per_page);
 
-// Reset page if search is empty
-if(empty($search) && empty($propertyType)) {
-    $page = 1;
-    $start = 0;
-}
-
-// Get houses for current page
-$sql = "SELECT h.*, c.name as category_name 
-        FROM houses h 
-        LEFT JOIN categories c ON h.category_id = c.id 
-        $conditions
-        ORDER BY h.created_at DESC";
-
-if(count($params) > 0) {
-    $sql .= " LIMIT ?, ?";
-    $stmt = $conn->prepare($sql);
-    $params = array_merge($params, [$start, $records_per_page]);
-    $stmt->bind_param(str_repeat('s', count($params)), ...$params);
-    $stmt->execute();
-    $result = $stmt->get_result();
+// Prepare and execute main query with limit
+$stmt = $conn->prepare("SELECT h.*, c.name as category_name FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions ORDER BY h.created_at DESC LIMIT ?, ?");
+$params = array_merge($params, [$start, $records_per_page]);
+if (!empty($params)) {
+    $types = str_repeat('s', count($params));
+    $stmt->bind_param($types, ...$params);
 } else {
-    $sql .= " LIMIT $start, $records_per_page";
-    $result = $conn->query($sql);
+    $stmt->execute();
 }
+$stmt->execute();
+$result = $stmt->get_result();
 
-// Get actual number of results for this page
-$current_page_records = $result->num_rows;
-
-// Get actual number of results for this page
-$current_page_records = $result->num_rows;
+// Get categories for dropdown
+$stmt = $conn->prepare("SELECT id, name FROM categories ORDER BY name");
+$stmt->execute();
+$categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -149,31 +136,7 @@ $current_page_records = $result->num_rows;
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="index.php">
-                <img src="assets/images/smart_rental_logo.png" alt="Smart Rental" height="40" class="me-2">
-                <span class="navbar-text">Smart Rental</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.php">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="bookings.php">My Bookings</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="login.php">Login</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include('./includes/header.php'); ?>
 
     <!-- Hero Section -->
     <div class="hero-section">
