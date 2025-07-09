@@ -46,7 +46,7 @@ require_once '../config/auth.php';
                         <a class="nav-link" href="../login.php">Login</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-primary text-white px-3" href="../register.php">Register</a>
+                        <a class="nav-link btn btn-warning text-white px-3" href="../register.php">Register</a>
                     </li>
                 <?php endif; ?>
             </ul>

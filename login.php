@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
-                            <a href="index.php" class="logo">
+                            <a href="smart_rental/index.php" class="logo">
                                 <img src="smart_rental/assets/images/smart_rental_logo.png" 
                                      alt="Smart Rental" 
                                      height="40" 
