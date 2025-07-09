@@ -5,7 +5,7 @@ require_once '../config/auth.php';
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
     <div class="container-fluid">
         <a class="navbar-brand" href="index.php">
-            <img src="../assets/images/smart_rental_logo.png" alt="Smart Rental" height="40">
+            <img src="./assets/images/smart_rental_logo.png" alt="Smart Rental" height="40">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>

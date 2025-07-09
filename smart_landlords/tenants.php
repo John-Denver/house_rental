@@ -3,11 +3,16 @@ require_once '../config/db.php';
 require_once '../config/auth.php';
 require_landlord();
 
-// Get landlord's tenants
-$stmt = $conn->prepare("SELECT DISTINCT u.*, h.house_no, h.description 
+// Get landlord's tenants with their current rental status
+$stmt = $conn->prepare("SELECT DISTINCT u.*, 
+                       h.house_no, 
+                       h.description,
+                       rb.status as rental_status,
+                       rb.start_date,
+                       rb.end_date
                        FROM users u 
-                       LEFT JOIN bookings b ON u.id = b.tenant_id 
-                       LEFT JOIN houses h ON b.house_id = h.id 
+                       LEFT JOIN rental_bookings rb ON u.id = rb.user_id 
+                       LEFT JOIN houses h ON rb.house_id = h.id 
                        WHERE h.landlord_id = ?
                        ORDER BY u.name");
 $stmt->bind_param('i', $_SESSION['user_id']);
@@ -73,7 +78,9 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>Current Property</th>
-                                <th>Status</th>
+                                <th>Rental Status</th>
+<th>Start Date</th>
+<th>End Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -92,9 +99,23 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge bg-<?php echo $tenant['status'] ? 'success' : 'danger'; ?>">
-                                        <?php echo $tenant['status'] ? 'Active' : 'Inactive'; ?>
+                                    <span class="badge bg-<?php echo $tenant['rental_status'] === 'confirmed' ? 'success' : ($tenant['rental_status'] === 'pending' ? 'warning' : 'danger'); ?>">
+                                        <?php echo ucfirst($tenant['rental_status']); ?>
                                     </span>
+                                </td>
+                                <td>
+                                    <?php if ($tenant['start_date']): ?>
+                                        <?php echo date('M d, Y', strtotime($tenant['start_date'])); ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">N/A</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($tenant['end_date']): ?>
+                                        <?php echo date('M d, Y', strtotime($tenant['end_date'])); ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">N/A</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <a href="view-tenant.php?id=<?php echo $tenant['id']; ?>" class="btn btn-sm btn-primary">
