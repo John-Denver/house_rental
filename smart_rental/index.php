@@ -78,13 +78,29 @@ $current_page_records = $result->num_rows;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
     .hero-section {
-        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-                   url('assets/images/hero-bg.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        min-height: 600px;
-        color: white;
+        position: relative;
+        min-height: 400px;
+        overflow: hidden;
+    }
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('assets/images/hero-bg.png') center/cover no-repeat;
+        z-index: -1;
+    }
+    .hero-section::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.05);
+        z-index: -1;
     }
     .hero-section .container {
         position: relative;
@@ -96,24 +112,37 @@ $current_page_records = $result->num_rows;
         margin-bottom: 2rem;
     }
     .hero-section .search-form {
-        background: rgba(255, 255, 255, 0.9);
         padding: 1.5rem;
         border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        background: transparent;
     }
     .hero-section .search-form .form-control,
     .hero-section .search-form .form-select {
-        background-color: #fff;
-        border: 1px solid #ddd;
-        color: #333;
+        background-color: transparent;
+        border: 1px solid #0d6efd;
+        color: white;
+        padding: 0.75rem;
+        border-radius: 8px;
+    }
+    .hero-section .search-form .form-control:focus,
+    .hero-section .search-form .form-select:focus {
+        background-color: transparent;
+        border-color: #0b5ed7;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
     .hero-section .search-form .btn-primary {
         background-color: #0d6efd;
         border-color: #0d6efd;
+        color: white;
+        border-radius: 8px;
     }
     .hero-section .search-form .btn-primary:hover {
         background-color: #0b5ed7;
         border-color: #0a58ca;
+    }
+    .hero-section .search-form .form-control::placeholder,
+    .hero-section .search-form .form-select::placeholder {
+        color: rgba(255, 255, 255, 0.7);
     }
 </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -123,8 +152,9 @@ $current_page_records = $result->num_rows;
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="index.php">
-                <img src="assets/images/logo.png" alt="Smart Rental" height="40">
+            <a class="navbar-brand d-flex align-items-center" href="index.php">
+                <img src="assets/images/smart_rental_logo.png" alt="Smart Rental" height="40" class="me-2">
+                <span class="navbar-text">Smart Rental</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -133,9 +163,6 @@ $current_page_records = $result->num_rows;
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="index.php">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="browse.php">Browse Properties</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="bookings.php">My Bookings</a>
