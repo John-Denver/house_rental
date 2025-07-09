@@ -50,6 +50,14 @@ body {
     background-color: #0056b3;
 }
 
+/* Main Content Area */
+.main-content {
+    padding: 2rem; /* Top padding to account for navbar */
+    margin-left: 240px; /* Left margin for sidebar */
+    min-height: calc(100vh - 4rem); /* Full height minus navbar height */
+    background-color: #f8f9fa;
+}
+
 /* Property Cards */
 .property-card {
     background: white;
@@ -58,6 +66,140 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     transition: transform 0.3s;
     height: 100%;
+    margin-bottom: 1.5rem;
+}
+
+/* Content Cards */
+.card {
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    border: none;
+    border-radius: 0.5rem;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Page Content */
+.page-content {
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    min-height: 100vh;
+    padding-top: 6rem; /* Increased top padding to align with navbar */
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    z-index: 1000;
+}
+
+/* Navbar */
+.navbar {
+    z-index: 1030;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Page Wrapper */
+.page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-link {
+    color: #6c757d;
+    padding: 1rem 1.5rem; /* Increased padding for better spacing */
+    margin: 0.25rem 0; /* Added margin between items */
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.nav-link i {
+    width: 1.75rem; /* Slightly larger icons */
+    text-align: center;
+    margin-right: 1rem; /* Increased spacing between icon and text */
+    font-size: 1.2rem;
+}
+
+.nav-link:hover {
+    color: #007bff;
+    background-color: #e9ecef;
+}
+
+.nav-link.active {
+    color: #007bff;
+    background-color: #e9ecef;
+    font-weight: 500;
+}
+
+.nav-link i {
+    width: 1.5rem;
+    text-align: center;
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+/* Navbar */
+.navbar-brand {
+    padding: 1rem 1.5rem;
+}
+
+.navbar-brand img {
+    height: 45px;
+    margin-right: 1rem;
+}
+
+.navbar-brand span {
+    font-weight: 600;
+    color: #007bff;
+    font-size: 1.25rem;
+}
+
+/* Dropdown */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #007bff;
+}
+
+.dropdown-item i {
+    width: 1.5rem;
+    text-align: center;
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.dropdown-divider {
+    margin: 0.5rem 0;
 }
 
 /* Property Header */
