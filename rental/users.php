@@ -29,7 +29,24 @@
 					<tbody>
 						<?php
 							include 'db_connect.php';
-							$type = array("","Admin","Staff","Alumnus/Alumna");
+							// Get user type - handles both numeric and string types
+function get_user_type($type) {
+    // If it's already a string, return it as is
+    if (is_string($type)) {
+        return $type;
+    }
+    
+    // If it's numeric, convert using mapping
+    $types = array(
+        1 => 'admin',
+        2 => 'staff',
+        3 => 'landlord',
+        4 => 'customer',
+        5 => 'caretaker'
+    );
+    
+    return isset($types[$type]) ? $types[$type] : '';
+}
 							$users = $conn->query("SELECT * FROM users ORDER BY name ASC");
 							$i = 1;
 							while($row= $users->fetch_assoc()):
@@ -38,7 +55,7 @@
 							<td class="text-center"><?php echo $i++ ?></td>
 							<td><?php echo ucwords($row['name']) ?></td>
 							<td><?php echo $row['username'] ?></td>
-							<td><?php echo $type[$row['type']] ?></td>
+							<td><?php echo ucfirst(get_user_type($row['type'])) ?></td>
 							<td>
 								<center>
 									<div class="btn-group">

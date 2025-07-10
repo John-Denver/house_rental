@@ -1,4 +1,9 @@
 <?php 
+require_once '../config/db.php';
+require_once '../config/auth.php';
+require_admin();
+?>
+<?php 
 include('db_connect.php');
 session_start();
 

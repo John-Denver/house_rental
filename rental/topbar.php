@@ -41,7 +41,7 @@
                      <h5 class="text3">Welcome</h5>
                   </div>
                   <a class="dropdown-item" href="javascript:void(0)" id="manage_my_account"><i class="fa fa-cog text-muted"></i> Manage Account</a>
-                  <a class="dropdown-item" href="ajax.php?action=logout"><i class="fa fa-power-off text-muted"></i> Logout</a>
+                  <a class="dropdown-item" href="../logout.php"><i class="fa fa-power-off text-muted"></i> Logout</a>
                </div>
             </div>
          </div>
@@ -52,7 +52,7 @@
 
 <script>
    $('#manage_my_account').click(function(){
-     uni_modal("Manage Account","manage_user.php?id=<?php echo $_SESSION['login_id'] ?>&mtype=own")
+     uni_modal("Manage Account","manage_user.php?id=<?php echo $_SESSION['user_id'] ?>&mtype=own")
    })
 </script>
 

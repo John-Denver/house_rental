@@ -10,10 +10,12 @@
  	
 
 <?php
-  if(!isset($_SESSION['login_id']))
-    header('location:login.php');
- include('./header.php'); 
- // include('./auth.php'); 
+  require_once '../config/auth.php';
+  require_admin();
+  
+
+  
+  include('./header.php'); 
  ?>
 
 </head>
