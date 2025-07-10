@@ -40,25 +40,66 @@ if (!$property) {
             <div class="col-md-8">
                 <div id="propertyCarousel" class="carousel slide" data-bs-ride="carousel">
                     <div class="carousel-inner">
+                        <!-- Main Image -->
+                        <div class="carousel-item active">
+                            <img src="<?php echo $property['main_image'] ? '../uploads/' . htmlspecialchars($property['main_image']) : 'assets/images/default-property.jpg'; ?>" 
+                                 class="property-image d-block w-100" alt="Main Property Image">
+                        </div>
+                        
+                        <!-- Additional Media -->
                         <?php
-                        // Assuming images are stored in a comma-separated string
-                        $images = explode(',', $property['images'] ?? '');
-                        foreach ($images as $index => $image) {
-                            if (trim($image)) {
-                                $active = $index === 0 ? 'active' : '';
-                                echo "<div class='carousel-item $active'>
-                                        <img src='$image' class='d-block w-100' alt='Property Image'>
+                        // Get additional media
+                        $sql = "SELECT * FROM house_media WHERE house_id = ? ORDER BY created_at DESC";
+                        $stmt = $conn->prepare($sql);
+                        $stmt->bind_param('i', $property_id);
+                        $stmt->execute();
+                        $media = $stmt->get_result();
+                        
+                        while($media_row = $media->fetch_assoc()) {
+                            $media_type = $media_row['media_type'];
+                            $file_path = $media_row['file_path'];
+                            
+                            if($media_type === 'image') {
+                                echo "<div class='carousel-item'>
+                                        <img src='../uploads/$file_path' class='d-block w-100' alt='Additional Property Image'>
                                       </div>";
                             }
                         }
                         ?>
                     </div>
+                    
+                    <!-- Navigation Controls -->
                     <button class="carousel-control-prev" type="button" data-bs-target="#propertyCarousel" data-bs-slide="prev">
                         <span class="carousel-control-prev-icon"></span>
                     </button>
                     <button class="carousel-control-next" type="button" data-bs-target="#propertyCarousel" data-bs-slide="next">
                         <span class="carousel-control-next-icon"></span>
                     </button>
+                </div>
+
+                <!-- Video Container -->
+                <div class="mt-4">
+                    <h4>Videos</h4>
+                    <div class="row">
+                        <?php
+                        $stmt->execute();
+                        $media = $stmt->get_result();
+                        
+                        while($media_row = $media->fetch_assoc()) {
+                            if($media_row['media_type'] === 'video') {
+                                $video_path = '../uploads/' . $media_row['file_path'];
+                                echo "<div class='col-md-6 mb-3'>
+                                        <div class='video-container'>
+                                            <video controls class='w-100'>
+                                                <source src='$video_path' type='video/mp4'>
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        </div>
+                                      </div>";
+                            }
+                        }
+                        ?>
+                    </div>
                 </div>
             </div>
 
@@ -72,8 +113,8 @@ if (!$property) {
                     </p>
                     <div class="price">
                         <h3>
-                            <i class="fas fa-dollar-sign"></i>
-                            <?php echo number_format($property['price']); ?>
+                            <i class="fas fa-money-bill-wave"></i>
+                            Ksh. <?php echo number_format($property['price']); ?>
                         </h3>
                         <span class="period">Per Month</span>
                     </div>
@@ -96,6 +137,28 @@ if (!$property) {
                     <div class="description">
                         <h4>Description</h4>
                         <p><?php echo nl2br(htmlspecialchars($property['description'])); ?></p>
+                    </div>
+
+                    <!-- Additional Media Section -->
+                    <div class="additional-media mt-4">
+                        <h4>Additional Media</h4>
+                        <div class="row">
+                            <?php
+                            // Get additional media again
+                            $stmt->execute();
+                            $media = $stmt->get_result();
+                            
+                            while($media_row = $media->fetch_assoc()) {
+                                if($media_row['media_type'] === 'image') {
+                                    $image_path = '../uploads/' . $media_row['file_path'];
+                                    echo "<div class='col-md-6 mb-3'>
+                                            <img src='$image_path' 
+                                          class='property-image img-fluid' alt='Additional Property Image'>
+                                          </div>";
+                                }
+                            }
+                            ?>
+                        </div>
                     </div>
 
                     <div class="amenities">

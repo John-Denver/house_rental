@@ -63,6 +63,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Rental - Find Your Perfect Home</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/index.css">
     <style>
     .hero-section {
         position: relative;
@@ -234,28 +235,32 @@ $result = $conn->query($sql);
         <div class="row g-4">
             <?php while($row = $result->fetch_assoc()): ?>
                 <div class="col-md-4">
-                    <div class="card h-100">
-                        <img src="<?php echo $row['image'] ? '../uploads/' . $row['image'] : 'assets/images/default-property.jpg'; ?>" 
-                             class="card-img-top" alt="<?php echo $row['house_no']; ?>">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <?php echo $row['house_no']; ?>
-                                <?php if($row['featured']): ?>
-                                    <span class="badge bg-danger">Featured</span>
-                                <?php endif; ?>
-                            </h5>
-                            <p class="card-text">
-                                <i class="fas fa-map-marker-alt text-primary"></i> <?php echo $row['location']; ?>
-                                <br>
-                                <i class="fas fa-bed text-primary"></i> <?php echo $row['bedrooms']; ?> Beds
-                                <i class="fas fa-bath text-primary"></i> <?php echo $row['bathrooms']; ?> Baths
-                                <br>
-                                <i class="fas fa-ruler-combined text-primary"></i> <?php echo $row['area']; ?> sqft
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h4 class="text-primary mb-0">
-                                    $<?php echo number_format($row['price']); ?>/month
-                                </h4>
+                    <div class="property-card">
+                        <div class="card">
+                            <div class="property-image-container">
+                                <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/default-property.jpg'; ?>" 
+                                     class="property-image" alt="<?php echo $row['house_no']; ?>">
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <?php echo $row['house_no']; ?>
+                                    <?php if($row['featured']): ?>
+                                        <span class="badge bg-danger">Featured</span>
+                                    <?php endif; ?>
+                                </h5>
+                                <p class="card-text">
+                                    <i class="fas fa-map-marker-alt text-primary"></i> <?php echo $row['location']; ?>
+                                    <br>
+                                    <i class="fas fa-bed text-primary"></i> <?php echo $row['bedrooms']; ?> Beds
+                                    <i class="fas fa-bath text-primary"></i> <?php echo $row['bathrooms']; ?> Baths
+                                    <br>
+                                    <i class="fas fa-ruler-combined text-primary"></i> <?php echo $row['area']; ?> sqft
+                                </p>
+                            </div>
+                            <div class="card-footer">
+                                <div class="price">
+                                    Ksh. <?php echo number_format($row['price']); ?>/month
+                                </div>
                                 <a href="property.php?id=<?php echo $row['id']; ?>" class="btn btn-primary">
                                     View Details
                                 </a>

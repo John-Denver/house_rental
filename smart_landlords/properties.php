@@ -160,73 +160,28 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
                 <?php endif; ?>
 
-                <!-- Add Property Form -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Add New Property</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="house_no" class="form-label">Property Number</label>
-                                    <input type="text" class="form-control" id="house_no" name="house_no" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="category_id" class="form-label">Property Type</label>
-                                    <select class="form-select" id="category_id" name="category_id" required>
-                                        <option value="">Select Property Type</option>
-                                        <?php foreach ($categories as $category): ?>
-                                            <option value="<?php echo $category['id']; ?>">
-                                                <?php echo htmlspecialchars($category['name']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2>My Properties</h2>
+                    <a href="add_property.php" class="btn btn-primary">
+                        Add Property
+                    </a>
+                </div>
+
+                <!-- Add Property Modal -->
+                <div class="modal fade" id="addPropertyModal" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addPropertyModalLabel">Add New Property</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <p>Please click the "Add Property" button above to add a new property.</p>
+                                    <p>This modal is no longer used as we now have a dedicated page for adding properties.</p>
                                 </div>
                             </div>
-                            
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
-                            </div>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label for="price" class="form-label">Price</label>
-                                    <input type="number" class="form-control" id="price" name="price" step="0.01" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="bedrooms" class="form-label">Bedrooms</label>
-                                    <input type="number" class="form-control" id="bedrooms" name="bedrooms" min="0" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="bathrooms" class="form-label">Bathrooms</label>
-                                    <input type="number" class="form-control" id="bathrooms" name="bathrooms" min="0" required>
-                                </div>
-                            </div>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" id="location" name="location" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="area" class="form-label">Area (sqm)</label>
-                                    <input type="number" class="form-control" id="area" name="area" step="0.01" required>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status" name="status" checked>
-                                    <label class="form-check-label" for="status">
-                                        Active Status
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <button type="submit" name="add_property" class="btn btn-primary">Add Property</button>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
@@ -275,6 +230,116 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Handle form submission
+        document.getElementById('propertyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Validate required fields
+            const requiredFields = ['house_no', 'description', 'category_id', 'price', 'location'];
+            let isValid = true;
+            let missingFields = [];
+            let fieldValues = {};
+            
+            // Debug output to console
+            console.log('Form data:', formData);
+            
+            // Check each required field
+            for (const field of requiredFields) {
+                const element = document.querySelector(`[name="${field}"]`);
+                if (!element) {
+                    console.error(`Field not found: ${field}`);
+                    continue;
+                }
+                
+                let value;
+                if (element.type === 'file') {
+                    value = element.files[0];
+                } else {
+                    value = element.value;
+                }
+                
+                fieldValues[field] = value;
+                
+                if (!value || (typeof value === 'string' && value.trim() === '')) {
+                    isValid = false;
+                    missingFields.push(field);
+                    console.log(`Missing value for field: ${field}`);
+                }
+            }
+            
+            // Check if category is selected
+            const categorySelect = document.getElementById('property_category');
+            if (categorySelect && categorySelect.value === '') {
+                isValid = false;
+                missingFields.push('category_id');
+                console.log('Category not selected');
+            }
+            
+            // Check if main image is selected
+            const mainImageInput = document.getElementById('property_main_image');
+            if (!mainImageInput || !mainImageInput.files[0]) {
+                isValid = false;
+                missingFields.push('main_image');
+                console.log('Main image not selected');
+            }
+            
+            if (!isValid) {
+                let message = 'Please fill in the following required fields:\n';
+                missingFields.forEach(field => {
+                    message += '- ' + field.replace('_', ' ').toUpperCase() + '\n';
+                });
+                
+                // Show detailed error message
+                alert(message + '\n\nPlease check the console for more details.');
+                console.error('Missing fields:', missingFields);
+                console.error('Field values:', fieldValues);
+                return;
+            }
+            
+            // Submit the form
+            fetch('process_property.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    // Close modal and refresh property list
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addPropertyModal'));
+                    modal.hide();
+                    window.location.reload();
+                } else {
+                    console.error('Server error:', data.message);
+                    alert(data.message || 'Failed to add property');
+                }
+            })
+            .catch(error => {
+                console.error('Network error:', error);
+                alert('An error occurred while saving the property');
+            });
+        });
+
+        // Add event listener for file input change to show selected files
+        document.getElementById('property_main_image').addEventListener('change', function() {
+            const files = this.files;
+            if (files.length > 0) {
+                document.getElementById('property_main_image').nextElementSibling.textContent = 
+                    `Selected file: ${files[0].name}`;
+            }
+        });
+
+        document.getElementById('property_additional_media').addEventListener('change', function() {
+            const files = this.files;
+            if (files.length > 0) {
+                document.getElementById('property_additional_media').nextElementSibling.textContent = 
+                    `Selected ${files.length} files`;
+            }
+        });
+    </script>
     <script src="assets/js/main.js"></script>
 </body>
 </html>

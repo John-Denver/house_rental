@@ -111,7 +111,7 @@ class Action {
     // Secure user management
     function save_user() {
         if(empty($_POST['name']) || empty($_POST['username']) || empty($_POST['type'])) {
-            return "Required fields are missing";
+            return 3; // Required fields are missing
         }
 
         $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
@@ -126,7 +126,7 @@ class Action {
         $check_stmt->execute();
         
         if($check_stmt->get_result()->num_rows > 0) {
-            return 2;
+            return 2; // Username already exists
         }
 
         if($id > 0) {
@@ -140,14 +140,18 @@ class Action {
             }
         } else {
             if(empty($password)) {
-                return "Password is required for new users";
+                return 3; // Password is required for new users
             }
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $this->db->prepare("INSERT INTO users (name, username, password, type) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("sssi", $name, $username, $hashed_password, $type);
         }
 
-        return $stmt->execute() ? 1 : $this->db->error;
+        if($stmt->execute()) {
+            return 1; // Success
+        } else {
+            return 3; // Database error
+        }
     }
 
     function delete_user() {
