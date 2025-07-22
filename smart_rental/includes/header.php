@@ -161,11 +161,11 @@ require_once '../config/auth.php';
                         </a>
                     </li>
                 <?php else: ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../login.php">Login</a>
+                    <li class="nav-item me-2 d-flex align-items-center">
+                        <a class="btn btn-outline-primary px-3 py-2" style="line-height: 1.5; height: 40px; display: flex; align-items: center;" href="../login.php">Login</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-warning text-white px-3" href="../register.php">Register</a>
+                    <li class="nav-item d-flex align-items-center">
+                        <a class="btn btn-primary text-white px-3 py-2" style="line-height: 1.5; height: 40px; display: flex; align-items: center;" href="../register.php">Register</a>
                     </li>
                 <?php endif; ?>
             </ul>
