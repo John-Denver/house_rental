@@ -208,10 +208,18 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                             <?php foreach ($properties as $property): ?>
                             <tr>
                                 <td>
-                                    <img src="../uploads/<?php echo htmlspecialchars($property['main_image']); ?>" 
-                                         alt="<?php echo htmlspecialchars($property['house_no']); ?>" 
-                                         class="property-image" 
-                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                    <?php
+                                    $imagePath = '../uploads/' . $property['main_image'];
+                                    if (file_exists($imagePath)) {
+                                        echo '<img src="' . htmlspecialchars($imagePath) . '" 
+                                              alt="' . htmlspecialchars($property['house_no']) . '" 
+                                              class="property-image" 
+                                              style="width: 50px; height: 50px; object-fit: cover;">';
+                                    } else {
+                                        echo '<div class="text-muted">No image available</div>';
+                                        error_log("Image not found: $imagePath for property {$property['id']}");
+                                    }
+                                    ?>
                                 </td>
                                 <td><?php echo htmlspecialchars($property['house_no']); ?></td>
                                 <td><?php echo htmlspecialchars($property['category_name']); ?></td>
@@ -528,12 +536,6 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </div>
 
                         <div class="mb-3">
-                            <label for="editMainImage" class="form-label">Main Image</label>
-                            <input type="file" class="form-control" id="editMainImage" name="main_image">
-                            <div class="form-text">Leave empty to keep existing image</div>
-                        </div>
-
-                        <div class="mb-3">
                             <label for="editAdditionalMedia" class="form-label">Additional Images</label>
                             <input type="file" class="form-control" id="editAdditionalMedia" name="additional_media[]" multiple>
                             <div id="currentAdditionalImages"></div>
@@ -680,8 +682,22 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
         // Handle form submission
         function setupEditForm() {
-            document.getElementById('editPropertyForm').addEventListener('submit', async function(e) {
+            const form = document.getElementById('editPropertyForm');
+            const modalBody = document.querySelector('#editPropertyModal .modal-body');
+            const modalFooter = document.querySelector('#editPropertyModal .modal-footer');
+            
+            form.addEventListener('submit', async function(e) {
                 e.preventDefault();
+                
+                // Clear any existing error messages
+                const errorDiv = modalBody.querySelector('.error-message');
+                if (errorDiv) errorDiv.remove();
+                
+                // Add loading state
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Saving...';
                 
                 // Get form data
                 const formData = new FormData(this);
@@ -709,16 +725,49 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                             // Refresh the page
                             location.reload();
                         } else {
-                            alert('Error: ' + (data.error || 'Unknown error'));
+                            // Show error in modal with debug info
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'alert alert-danger error-message mt-3';
+                            
+                            const errorContent = document.createElement('div');
+                            errorContent.innerHTML = `
+                                <h6>Error: ${data.error || 'Unknown error'}</h6>
+                                <pre>${JSON.stringify(data.debug || {}, null, 2)}</pre>
+                            `;
+                            
+                            errorDiv.appendChild(errorContent);
+                            modalBody.insertBefore(errorDiv, modalFooter);
+                            
+                            // Re-enable submit button
+                            submitButton.disabled = false;
+                            submitButton.textContent = originalText;
                         }
                     } catch (parseError) {
                         console.error('Failed to parse JSON:', parseError);
                         console.error('Response text:', text);
-                        alert('Error: Invalid response from server. Please check the console for details.');
+                        
+                        // Show error in modal
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert alert-danger error-message mt-3';
+                        errorDiv.textContent = 'Error: Invalid response from server. Please check the console for details.';
+                        modalBody.insertBefore(errorDiv, modalFooter);
+                        
+                        // Re-enable submit button
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalText;
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while saving the property: ' + error.message);
+                    
+                    // Show error in modal
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert alert-danger error-message mt-3';
+                    errorDiv.textContent = 'Error: ' + error.message;
+                    modalBody.insertBefore(errorDiv, modalFooter);
+                    
+                    // Re-enable submit button
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
                 }
             });
         }
