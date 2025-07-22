@@ -186,31 +186,54 @@ if (!$property) {
                     </p>
                     
                     <!-- Navigation Button -->
-                    <div class="mt-3">
-                        <a href="https://www.google.com/maps/dir/current+location/<?php echo $property['latitude']; ?>,<?php echo $property['longitude']; ?>" 
-                           class="btn btn-outline-success w-100" 
-                           target="_blank" 
-                           onclick="return confirm('Open Google Maps for directions?')">
-                            <i class="fas fa-car"></i> Get Directions
-                        </a>
+                    <form id="bookingForm" action="process_booking.php" method="POST" class="mt-3">
+                        <input type="hidden" name="house_id" value="<?php echo $property_id; ?>">
+                        <div class="mb-3">
+                            <a href="https://www.google.com/maps/dir/current+location/<?php echo $property['latitude']; ?>,<?php echo $property['longitude']; ?>" 
+                               class="btn btn-outline-success w-100" 
+                               target="_blank" 
+                               onclick="return confirm('Open Google Maps for directions?')">
+                                <i class="fas fa-car"></i> Get Directions
+                            </a>
                         </div>
                         
+                        <!-- Move Date Input -->
+                        <div class="mb-3">
+                            <label for="startDate" class="form-label">Move-in Date</label>
+                            <input type="date" class="form-control form-control-lg" 
+                                   id="startDate" name="start_date" required
+                                   min="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        
+                        <!-- Lease Duration -->
                         <div class="mb-3">
                             <label for="leaseDuration" class="form-label">Lease Duration</label>
-                            <select class="form-select form-select-lg" id="leaseDuration" required>
+                            <select class="form-select form-select-lg" id="leaseDuration" name="rental_period" required>
                                 <option value="">Select Duration</option>
                                 <option value="6">6 Months</option>
-                                <option value="12">12 Months</option>
+                                <option value="12" selected>12 Months</option>
                                 <option value="24">24 Months</option>
                             </select>
                         </div>
                         
-                        <input type="hidden" name="property_id" value="<?php echo $property_id; ?>">
+                        <!-- Special Requests -->
+                        <div class="mb-3">
+                            <label for="specialRequests" class="form-label">Special Requests (Optional)</label>
+                            <textarea class="form-control" id="specialRequests" name="special_requests" 
+                                     rows="2" placeholder="Any special requirements or questions"></textarea>
+                        </div>
                         
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg btn-book">
-                                <i class="fas fa-calendar-check me-2"></i>Book Now
-                            </button>
+                        <div class="d-grid gap-2">
+                            <?php if (isset($_SESSION['user_id'])): ?>
+                                <button type="submit" class="btn btn-primary btn-lg btn-book">
+                                    <i class="fas fa-calendar-check me-2"></i>Book Now
+                                </button>
+                            <?php else: ?>
+                                <a href="login.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" 
+                                   class="btn btn-primary btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Login to Book
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </form>
                     

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 10, 2025 at 10:52 AM
+-- Generation Time: Jul 22, 2025 at 10:56 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -74,15 +74,18 @@ CREATE TABLE `houses` (
   `featured` tinyint(1) DEFAULT 0,
   `status` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `address` text DEFAULT NULL,
+  `total_units` int(11) NOT NULL DEFAULT 1,
+  `available_units` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `houses`
 --
 
-INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`) VALUES
-(26, 4, 'Springvale', 22, 'Located in 100 sq/m area, this is your serene landing arena for everything good you need', 'Juja, Kenya', NULL, NULL, NULL, NULL, NULL, 25000, 2, 1, 100.00, NULL, '1752137362_main_20250709_2037_Golden Hour Neighborhood_simple_compose_01jzr4742qf8cvdt91y5c8fqva.png', 0, 1, '2025-07-10 08:49:22', '2025-07-10 08:49:22');
+INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
+(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-22 12:52:41', '', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -94,18 +97,18 @@ CREATE TABLE `house_media` (
   `id` int(11) NOT NULL,
   `house_id` int(11) NOT NULL,
   `media_type` enum('image','video') NOT NULL,
+  `media_path` varchar(255) NOT NULL,
   `file_path` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `house_media`
 --
 
-INSERT INTO `house_media` (`id`, `house_id`, `media_type`, `file_path`, `created_at`) VALUES
-(4, 26, 'image', '1752137362_20250709_2037_Golden Hour Neighborhood_simple_compose_01jzr4742qf8cvdt91y5c8fqva.png', '2025-07-10 08:49:22'),
-(5, 26, 'image', '1752137362_WhatsApp Image 2025-07-04 at 17.26.08.jpeg', '2025-07-10 08:49:22'),
-(6, 26, 'image', '1752137362_WhatsApp Image 2025-07-04 at 17.26.07.jpeg', '2025-07-10 08:49:22');
+INSERT INTO `house_media` (`id`, `house_id`, `media_type`, `media_path`, `file_path`, `created_at`, `updated_at`) VALUES
+(28, 37, 'image', '', '1753188761_boda-mama mboga.png', '2025-07-22 12:52:41', '2025-07-22 12:52:41');
 
 -- --------------------------------------------------------
 
@@ -207,6 +210,7 @@ CREATE TABLE `users` (
   `id` int(30) NOT NULL,
   `name` text NOT NULL,
   `username` varchar(200) NOT NULL,
+  `phone_number` varchar(20) DEFAULT NULL COMMENT 'User''s contact phone number',
   `password` text NOT NULL,
   `type` enum('admin','landlord','caretaker','customer') NOT NULL DEFAULT 'customer'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -215,10 +219,11 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `username`, `password`, `type`) VALUES
-(1, 'Administrator', 'denver@gmail.com', '$2y$10$JB4x5av/DBOFe1iE022UF.OXuV4.Wg.2T1MkR37KVXUwlYv8g0vcm', 'admin'),
-(3, 'Thiira Elizabeth', 'thiira@gmail.com', '$2y$10$BtkTBVY4vkjF1g1U4D.ytOiWdw2.3Eewzogwv3DhCT.rHsgfBgPKm', 'customer'),
-(4, 'Maureen Tallam ', 'tallam@gmail.com', '$2y$10$o3s9/cRzHmWMUDa0CkdJvOG07OZkNqTnk8UbBjedr6.bFfU501WI.', 'landlord');
+INSERT INTO `users` (`id`, `name`, `username`, `phone_number`, `password`, `type`) VALUES
+(1, 'Administrator', 'denver@gmail.com', NULL, '$2y$10$JB4x5av/DBOFe1iE022UF.OXuV4.Wg.2T1MkR37KVXUwlYv8g0vcm', 'admin'),
+(3, 'Thiira Elizabeth', 'thiira@gmail.com', NULL, '$2y$10$BtkTBVY4vkjF1g1U4D.ytOiWdw2.3Eewzogwv3DhCT.rHsgfBgPKm', 'customer'),
+(4, 'Maureen Tallam ', 'tallam@gmail.com', '0712512358', '$2y$10$o3s9/cRzHmWMUDa0CkdJvOG07OZkNqTnk8UbBjedr6.bFfU501WI.', 'landlord'),
+(7, 'New Landlord', 'new@gmail.com', '0712512358', '$2y$10$KpA95L7aJhqMigyrEBfmFuu9A8TfxnBSd1KaDkRPdwFstiivhmK0.', 'landlord');
 
 --
 -- Indexes for dumped tables
@@ -244,14 +249,17 @@ ALTER TABLE `houses`
   ADD KEY `idx_location` (`location`),
   ADD KEY `idx_city` (`city`),
   ADD KEY `idx_state` (`state`),
-  ADD KEY `idx_country` (`country`);
+  ADD KEY `idx_country` (`country`),
+  ADD KEY `idx_houses_location` (`latitude`,`longitude`),
+  ADD KEY `idx_houses_units` (`available_units`);
 
 --
 -- Indexes for table `house_media`
 --
 ALTER TABLE `house_media`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_house_media` (`house_id`,`media_type`);
+  ADD KEY `idx_house_media` (`house_id`,`media_type`),
+  ADD KEY `idx_house_media_updated` (`updated_at`);
 
 --
 -- Indexes for table `payments`
@@ -300,13 +308,13 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `houses`
 --
 ALTER TABLE `houses`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT for table `house_media`
 --
 ALTER TABLE `house_media`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -336,7 +344,7 @@ ALTER TABLE `tenants`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables
