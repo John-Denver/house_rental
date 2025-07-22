@@ -4,10 +4,11 @@ require_once '../config/db.php';
 // Get property ID from URL
 $property_id = $_GET['id'] ?? 0;
 
-// Get property details
-$sql = "SELECT h.*, c.name as category_name 
+// Get property details with owner information
+$sql = "SELECT h.*, c.name as category_name, u.name as owner_name, u.phone_number as owner_phone
         FROM houses h 
         LEFT JOIN categories c ON h.category_id = c.id 
+        LEFT JOIN users u ON h.landlord_id = u.id 
         WHERE h.id = ? AND h.status = 1";
 
 $stmt = $conn->prepare($sql);
@@ -220,11 +221,27 @@ if (!$property) {
                                 <i class="fas fa-user-circle fa-3x text-primary"></i>
                             </div>
                             <div>
-                                <h6 class="mb-1"><?php echo htmlspecialchars($property['agent_name'] ?? 'Property Manager'); ?></h6>
-                                <p class="text-muted mb-0">
-                                    <i class="fas fa-phone-alt me-2"></i>
-                                    <?php echo htmlspecialchars($property['agent_phone'] ?? '+254 700 000000'); ?>
-                                </p>
+                                <h6 class="mb-1"><?php echo htmlspecialchars($property['owner_name'] ?? 'Property Owner'); ?></h6>
+                                <?php if (!empty($property['owner_phone'])): ?>
+                                    <div class="text-muted">
+                                        <i class="fas fa-phone-alt me-2"></i>
+                                        <a href="tel:<?php echo htmlspecialchars($property['owner_phone']); ?>">
+                                            <?php echo htmlspecialchars($property['owner_phone']); ?>
+                                        </a>
+                                    </div>
+                                <?php elseif (!empty($property['agent_phone'])): ?>
+                                    <div class="text-muted">
+                                        <i class="fas fa-phone-alt me-2"></i>
+                                        <a href="tel:<?php echo htmlspecialchars($property['agent_phone']); ?>">
+                                            <?php echo htmlspecialchars($property['agent_phone']); ?>
+                                        </a>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-muted">
+                                        <i class="fas fa-phone-alt me-2"></i>
+                                        <span>No contact number available</span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
