@@ -167,34 +167,38 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     </a>
                 </div>
 
-                <!-- Add Property Modal -->
-                <div class="modal fade" id="addPropertyModal" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="addPropertyModalLabel">Add New Property</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="alert alert-info">
-                                    <p>Please click the "Add Property" button above to add a new property.</p>
-                                    <p>This modal is no longer used as we now have a dedicated page for adding properties.</p>
-                                </div>
-                            </div>
+
+
+                <!-- Search and Filter -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search properties...">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="btn-group float-end">
+                            <button class="btn btn-outline-primary" onclick="sortTable(0)">Property</button>
+                            <button class="btn btn-outline-primary" onclick="sortTable(2)">Price</button>
+                            <button class="btn btn-outline-primary" onclick="sortTable(3)">Location</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Properties Table -->
                 <div class="table-responsive">
-                    <table class="table table-striped table-sm">
-                        <thead>
+                    <table class="table table-hover" id="propertiesTable">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Property</th>
+                                <th>Property Name</th>
                                 <th>Type</th>
                                 <th>Price</th>
                                 <th>Location</th>
                                 <th>Status</th>
+                                <th>Coordinates</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -203,22 +207,27 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                             <tr>
                                 <td><?php echo htmlspecialchars($property['house_no']); ?></td>
                                 <td><?php echo htmlspecialchars($property['category_name']); ?></td>
-                                <td>$<?php echo number_format($property['price'], 2); ?></td>
+                                <td><?php echo htmlspecialchars($property['price']); ?></td>
                                 <td><?php echo htmlspecialchars($property['location']); ?></td>
                                 <td>
-                                    <span class="badge bg-<?php echo $property['status'] ? 'success' : 'danger'; ?>">
+                                    <span class="badge <?php echo $property['status'] ? 'bg-success' : 'bg-danger'; ?>">
                                         <?php echo $property['status'] ? 'Active' : 'Inactive'; ?>
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="edit-property.php?id=<?php echo $property['id']; ?>" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <a href="delete-property.php?id=<?php echo $property['id']; ?>" 
-                                       class="btn btn-sm btn-danger" 
-                                       onclick="return confirm('Are you sure you want to delete this property?')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </a>
+                                    <span class="badge bg-info">
+                                        <?php echo htmlspecialchars($property['latitude'] . ', ' . $property['longitude']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-primary" onclick="editProperty(<?php echo $property['id']; ?>)">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deletePropertyModal" data-property-id="<?php echo $property['id']; ?>" data-property-name="<?php echo htmlspecialchars($property['house_no']); ?>">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -231,6 +240,71 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Table sorting
+        function sortTable(n) {
+            const table = document.getElementById("propertiesTable");
+            let switching = true;
+            let shouldSwitch;
+            let switchcount = 0;
+            let direction = "asc";
+
+            while (switching) {
+                switching = false;
+                const rows = table.rows;
+
+                for (let i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    const x = rows[i].getElementsByTagName("TD")[n];
+                    const y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                    if (n === 2) { // Price column
+                        if (parseFloat(x.innerHTML) > parseFloat(y.innerHTML)) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount === 0 && direction === "asc") {
+                        direction = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        // Search functionality
+        document.getElementById("searchInput").addEventListener("input", function() {
+            const filter = this.value.toLowerCase();
+            const table = document.getElementById("propertiesTable");
+            const rows = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i].getElementsByTagName("td");
+                let found = false;
+
+                for (let j = 0; j < cols.length; j++) {
+                    const text = cols[j].textContent || cols[j].innerText;
+                    if (text.toLowerCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                rows[i].style.display = found ? "" : "none";
+            }
+        });
+
         // Handle form submission
         document.getElementById('propertyForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -341,5 +415,217 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         });
     </script>
     <script src="assets/js/main.js"></script>
+
+    <!-- Edit Property Modal -->
+    <div class="modal fade" id="editPropertyModal" tabindex="-1" aria-labelledby="editPropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPropertyModalLabel">Edit Property</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPropertyForm" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="edit_property" value="1">
+                        <input type="hidden" name="property_id" id="editPropertyId">
+                        
+                        <div class="mb-3">
+                            <label for="editHouseNo" class="form-label">Property Name</label>
+                            <input type="text" class="form-control" id="editHouseNo" name="house_no" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editDescription" name="description" rows="3" required></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editPrice" class="form-label">Price</label>
+                            <input type="number" step="0.01" class="form-control" id="editPrice" name="price" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="editLocation" name="location" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editLatitude" class="form-label">Latitude</label>
+                            <input type="text" class="form-control" id="editLatitude" name="latitude" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editLongitude" class="form-label">Longitude</label>
+                            <input type="text" class="form-control" id="editLongitude" name="longitude" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editCategory" class="form-label">Category</label>
+                            <select class="form-select" id="editCategory" name="category_id" required>
+                                <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editStatus" name="status" checked>
+                                <label class="form-check-label" for="editStatus">
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editBedrooms" class="form-label">Bedrooms</label>
+                            <input type="number" class="form-control" id="editBedrooms" name="bedrooms" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editBathrooms" class="form-label">Bathrooms</label>
+                            <input type="number" class="form-control" id="editBathrooms" name="bathrooms" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editArea" class="form-label">Area (sqm)</label>
+                            <input type="number" step="0.01" class="form-control" id="editArea" name="area" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editMainImage" class="form-label">Main Image</label>
+                            <input type="file" class="form-control" id="editMainImage" name="main_image">
+                            <div class="form-text">Leave empty to keep existing image</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editAdditionalMedia" class="form-label">Additional Images</label>
+                            <input type="file" class="form-control" id="editAdditionalMedia" name="additional_media[]" multiple>
+                            <div class="form-text">Select multiple files to upload</div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Property Confirmation Modal -->
+    <div class="modal fade" id="deletePropertyModal" tabindex="-1" aria-labelledby="deletePropertyModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deletePropertyModalLabel">Delete Property</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the property "<span id="deletePropertyName"></span>"?</p>
+                    <p class="text-danger">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete Property</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Edit Property Modal
+        function editProperty(id) {
+            const property = <?php echo json_encode($properties); ?>.find(p => p.id == id);
+            if (!property) return;
+
+            // Fill form fields
+            document.getElementById('editPropertyId').value = property.id;
+            document.getElementById('editHouseNo').value = property.house_no;
+            document.getElementById('editDescription').value = property.description;
+            document.getElementById('editPrice').value = property.price;
+            document.getElementById('editLocation').value = property.location;
+            document.getElementById('editLatitude').value = property.latitude;
+            document.getElementById('editLongitude').value = property.longitude;
+            document.getElementById('editCategory').value = property.category_id;
+            document.getElementById('editStatus').checked = property.status === 1;
+            document.getElementById('editBedrooms').value = property.bedrooms;
+            document.getElementById('editBathrooms').value = property.bathrooms;
+            document.getElementById('editArea').value = property.area;
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('editPropertyModal')).show();
+        }
+
+        // Delete Property Confirmation
+        const deleteModal = new bootstrap.Modal(document.getElementById('deletePropertyModal'));
+        document.getElementById('deletePropertyModal').addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const propertyId = button.getAttribute('data-property-id');
+            const propertyName = button.getAttribute('data-property-name');
+            
+            // Update modal content
+            document.getElementById('deletePropertyName').textContent = propertyName;
+            
+            // Set up delete button
+            const deleteButton = document.getElementById('confirmDelete');
+            deleteButton.onclick = function() {
+                // Make AJAX request to delete property
+                fetch('delete_property.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'property_id=' + encodeURIComponent(propertyId)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close modal
+                        deleteModal.hide();
+                        // Refresh the page
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the property');
+                });
+            };
+        });
+
+        // Handle form submission
+        document.getElementById('editPropertyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Make AJAX request
+            fetch('edit_property.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    new bootstrap.Modal(document.getElementById('editPropertyModal')).hide();
+                    // Refresh the page
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving the property');
+            });
+        });
+    </script>
 </body>
 </html>
