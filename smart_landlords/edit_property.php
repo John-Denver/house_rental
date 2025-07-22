@@ -10,7 +10,7 @@ $response = ['success' => false, 'error' => 'Unknown error'];
 
 try {
     // Check if we have all required fields
-    $required_fields = ['edit_property', 'property_id', 'house_no', 'description', 'price', 'location', 'category_id', 'status', 'bedrooms', 'bathrooms', 'area', 'latitude', 'longitude'];
+    $required_fields = ['edit_property', 'property_id', 'house_no', 'description', 'price', 'location', 'category_id', 'status', 'bedrooms', 'bathrooms', 'area', 'latitude', 'longitude', 'total_units', 'available_units'];
     foreach ($required_fields as $field) {
         if (!isset($_POST[$field])) {
             throw new Exception("Missing required field: $field");
@@ -32,8 +32,13 @@ try {
 
     // Validate total_units
     $total_units = isset($_POST['total_units']) ? (int)$_POST['total_units'] : 0;
-    if ($total_units < 0) {
-        throw new Exception('Total units cannot be negative');
+    $available_units = isset($_POST['available_units']) ? (int)$_POST['available_units'] : 0;
+    
+    if ($total_units < 0 || $available_units < 0) {
+        throw new Exception('Units cannot be negative');
+    }
+    if ($available_units > $total_units) {
+        throw new Exception('Available units cannot be greater than total units');
     }
 
     // Verify if the property exists and belongs to the landlord
@@ -108,7 +113,7 @@ try {
                       available_units = ?
                       WHERE id = ? AND landlord_id = ?");
 
-    $stmt->bind_param('ssdssddiiiiisiii', 
+    $stmt->bind_param('ssddssddiiiiisii', 
         $house_no, 
         $description, 
         $price, 
@@ -122,7 +127,7 @@ try {
         $area,
         $main_image,
         $total_units,
-        $total_units, // Set available_units to match total_units
+        $available_units,
         $property_id,
         $_SESSION['user_id']
     );

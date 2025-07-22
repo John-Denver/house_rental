@@ -193,11 +193,12 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     <table class="table table-hover" id="propertiesTable">
                         <thead class="table-dark">
                             <tr>
-                                <th>Property Name</th>
-                                <th>Type</th>
-                                <th>Price</th>
-                                <th>Location</th>
-                                <th>Status</th>
+                                <th>Image</th>
+                            <th>Property Name</th>
+                            <th>Type</th>
+                            <th>Price</th>
+                            <th>Location</th>
+                            <th>Status</th>
                                 <th>Units</th>
                             <th>Coordinates</th>
                                 <th>Actions</th>
@@ -206,12 +207,18 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <tbody>
                             <?php foreach ($properties as $property): ?>
                             <tr>
+                                <td>
+                                    <img src="../uploads/<?php echo htmlspecialchars($property['main_image']); ?>" 
+                                         alt="<?php echo htmlspecialchars($property['house_no']); ?>" 
+                                         class="property-image" 
+                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                </td>
                                 <td><?php echo htmlspecialchars($property['house_no']); ?></td>
                                 <td><?php echo htmlspecialchars($property['category_name']); ?></td>
-                                <td><?php echo htmlspecialchars($property['price']); ?></td>
+                                <td>Ksh. <?php echo number_format($property['price']); ?>/month</td>
                                 <td><?php echo htmlspecialchars($property['location']); ?></td>
                                 <td>
-                                    <span class="badge <?php echo $property['status'] ? 'bg-success' : 'bg-danger'; ?>">
+                                    <span class="badge bg-<?php echo $property['status'] ? 'success' : 'danger'; ?>">
                                         <?php echo $property['status'] ? 'Active' : 'Inactive'; ?>
                                     </span>
                                 </td>
@@ -498,6 +505,12 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </div>
 
                         <div class="mb-3">
+                            <label for="editMainImage" class="form-label">Main Image</label>
+                            <input type="file" class="form-control" id="editMainImage" name="main_image">
+                            <div class="form-text">Current image: <span id="currentImage"></span></div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="editArea" class="form-label">Area (sqm)</label>
                             <input type="number" step="0.01" class="form-control" id="editArea" name="area" required>
                         </div>
@@ -509,6 +522,12 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </div>
 
                         <div class="mb-3">
+                            <label for="editAvailableUnits" class="form-label">Available Units</label>
+                            <input type="number" class="form-control" id="editAvailableUnits" name="available_units" min="0" required>
+                            <div class="form-text">Enter the number of available units (should be less than or equal to total units)</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="editMainImage" class="form-label">Main Image</label>
                             <input type="file" class="form-control" id="editMainImage" name="main_image">
                             <div class="form-text">Leave empty to keep existing image</div>
@@ -517,7 +536,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <div class="mb-3">
                             <label for="editAdditionalMedia" class="form-label">Additional Images</label>
                             <input type="file" class="form-control" id="editAdditionalMedia" name="additional_media[]" multiple>
-                            <div class="form-text">Select multiple files to upload</div>
+                            <div id="currentAdditionalImages"></div>
                         </div>
 
                         <div class="modal-footer">
@@ -562,28 +581,57 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         }
 
         // Edit Property Modal
-        window.editProperty = function(id) {
+        function editProperty(id) {
             const property = <?php echo json_encode($properties); ?>.find(p => p.id == id);
             if (!property) return;
 
             // Fill form fields
-            document.getElementById('editPropertyId').value = property.id;
-            document.getElementById('editHouseNo').value = property.house_no;
-            document.getElementById('editDescription').value = property.description;
-            document.getElementById('editPrice').value = property.price;
-            document.getElementById('editLocation').value = property.location;
-            document.getElementById('editLatitude').value = property.latitude;
-            document.getElementById('editLongitude').value = property.longitude;
-            document.getElementById('editCategory').value = property.category_id;
-            document.getElementById('editStatus').checked = property.status === 1;
-            document.getElementById('editBedrooms').value = property.bedrooms;
-            document.getElementById('editBathrooms').value = property.bathrooms;
-            document.getElementById('editArea').value = property.area;
-            document.getElementById('editTotalUnits').value = property.total_units;
+            const form = document.getElementById('editPropertyForm');
+            if (!form) return;
 
-            // Show modal
-            editModal.show();
-        };
+            try {
+                form.querySelector('#editPropertyId').value = property.id;
+                form.querySelector('#editHouseNo').value = property.house_no;
+                form.querySelector('#editDescription').value = property.description;
+                form.querySelector('#editPrice').value = property.price;
+                form.querySelector('#editLocation').value = property.location;
+                form.querySelector('#editLatitude').value = property.latitude;
+                form.querySelector('#editLongitude').value = property.longitude;
+                form.querySelector('#editCategory').value = property.category_id;
+                form.querySelector('#editStatus').checked = property.status === 1;
+                form.querySelector('#editBedrooms').value = property.bedrooms;
+                form.querySelector('#editBathrooms').value = property.bathrooms;
+                form.querySelector('#editArea').value = property.area;
+                form.querySelector('#editTotalUnits').value = property.total_units;
+                form.querySelector('#editAvailableUnits').value = property.available_units;
+                
+                // Show current image
+                const currentImage = form.querySelector('#currentImage');
+                if (currentImage) {
+                    currentImage.textContent = property.main_image || 'No image';
+                }
+                
+                // Show current additional images
+                const currentImagesDiv = form.querySelector('#currentAdditionalImages');
+                if (currentImagesDiv) {
+                    currentImagesDiv.innerHTML = '';
+                    if (property.additional_images) {
+                        property.additional_images.forEach(img => {
+                            const imgEl = document.createElement('div');
+                            imgEl.className = 'current-image';
+                            imgEl.textContent = img;
+                            currentImagesDiv.appendChild(imgEl);
+                        });
+                    }
+                }
+
+                // Show modal
+                editModal.show();
+            } catch (error) {
+                console.error('Error setting form values:', error);
+                alert('Error: Unable to edit property. Please refresh the page and try again.');
+            }
+        }
 
         // Delete Property Confirmation
         function setupDeleteModal() {
@@ -677,6 +725,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
         // Initialize everything when the DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            window.editProperty = editProperty; // Make it global
             initializeModals();
             setupDeleteModal();
             setupEditForm();
