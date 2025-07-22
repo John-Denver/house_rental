@@ -179,17 +179,18 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <?php include('./includes/header.php'); ?>
 
     <!-- Hero Section -->
-    <div class="hero-section">
-        <div class="container">
-            <div class="row align-items-center position-relative">
-                    <h1>Find Your Perfect Home</h1>
+    <section class="hero-section">
+        <div class="container h-100">
+            <div class="row h-100 align-items-center">
+                <div class="col-12 text-center text-white zindex-2">
+                    <h1 class="display-4 fw-bold mb-4">Find Your Perfect Home</h1>
                     <form id="searchForm" class="search-form" method="GET" action="index.php">
-                        <div class="row g-3">
+                        <div class="row g-3 justify-content-center">
                             <div class="col-md-4">
-                                <input type="text" class="form-control" placeholder="Location" id="location" name="location" value="<?php echo htmlspecialchars($location); ?>">
+                                <input type="text" class="form-control form-control-lg" placeholder="Location" id="location" name="location" value="<?php echo htmlspecialchars($location); ?>">
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select bg-dark text-white" id="propertyType" name="propertyType">
+                                <select class="form-select form-select-lg bg-dark text-white" id="propertyType" name="propertyType">
                                     <option value="">Property Type</option>
                                     <?php foreach ($categories as $cat): ?>
                                         <option value="<?php echo $cat['id']; ?>" <?php echo ($propertyType == $cat['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cat['name']); ?></option>
@@ -198,20 +199,70 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                             </div>
                             <div class="col-md-3">
                                 <div class="input-group">
-                                    <input type="number" class="form-control" placeholder="Min Price" id="min_price" name="min_price" value="<?php echo htmlspecialchars($min_price); ?>">
-                                    <span class="input-group-text">-</span>
-                                    <input type="number" class="form-control" placeholder="Max Price" id="max_price" name="max_price" value="<?php echo htmlspecialchars($max_price); ?>">
+                                    <input type="number" class="form-control form-control-lg" placeholder="Min Price" id="min_price" name="min_price" value="<?php echo htmlspecialchars($min_price); ?>">
+                                    <span class="input-group-text bg-dark text-white">-</span>
+                                    <input type="number" class="form-control form-control-lg" placeholder="Max Price" id="max_price" name="max_price" value="<?php echo htmlspecialchars($max_price); ?>">
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                <button type="submit" class="btn btn-primary btn-lg w-100">Search</button>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
+    
+    <style>
+    .hero-section {
+        position: relative;
+        min-height: 500px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        margin-top: -76px;
+        padding-top: 176px;
+        z-index: 1;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('assets/images/hero-bg.png') center/cover no-repeat;
+        z-index: -2;
+    }
+    
+    .hero-section::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: -1;
+    }
+    
+    .zindex-2 {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .search-form .form-control,
+    .search-form .form-select {
+        height: 50px;
+        border-radius: 0.25rem;
+    }
+    
+    .search-form .btn {
+        height: 50px;
+    }
+    </style>
 
 <!-- Featured Properties -->
 <section class="featured-properties">
@@ -241,7 +292,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <div class="property-card">
                             <div class="card">
                                 <div class="property-image-container">
-                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/default-property.jpg'; ?>" 
+                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.png'; ?>" 
                                          class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
                                     <div class="units-badge">
                                         <span class="badge bg-primary">
