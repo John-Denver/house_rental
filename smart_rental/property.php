@@ -180,7 +180,9 @@ if (!$property) {
                         <form id="bookingForm">
                             <div class="form-group">
                                 <label>Move-in Date</label>
-                                <input type="date" class="form-control" name="move_in_date" required>
+                                <input type="date" class="form-control" name="move_in_date" 
+                                       min="<?php echo date('Y-m-d', strtotime('+1 month')); ?>" 
+                                       required>
                             </div>
                             <div class="form-group">
                                 <label>Lease Duration (months)</label>
@@ -193,16 +195,23 @@ if (!$property) {
                             </div>
                             <div class="form-group">
                                 <label>Full Name</label>
-                                <input type="text" class="form-control" name="full_name" required>
+                                <input type="text" class="form-control" name="full_name" 
+                                       value="<?php echo htmlspecialchars($_SESSION['user']['name'] ?? ''); ?>" 
+                                       required>
                             </div>
                             <div class="form-group">
                                 <label>Email</label>
-                                <input type="email" class="form-control" name="email" required>
+                                <input type="email" class="form-control" name="email" 
+                                       value="<?php echo htmlspecialchars($_SESSION['user']['email'] ?? ''); ?>" 
+                                       required>
                             </div>
                             <div class="form-group">
                                 <label>Phone</label>
-                                <input type="tel" class="form-control" name="phone" required>
+                                <input type="tel" class="form-control" name="phone" 
+                                       value="<?php echo htmlspecialchars($_SESSION['user']['phone'] ?? ''); ?>" 
+                                       required>
                             </div>
+                            <input type="hidden" name="property_id" value="<?php echo $property['id']; ?>">
                             <button type="submit" class="btn btn-primary w-100">Book Now</button>
                         </form>
                     </div>
