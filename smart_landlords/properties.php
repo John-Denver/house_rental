@@ -198,7 +198,8 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <th>Price</th>
                                 <th>Location</th>
                                 <th>Status</th>
-                                <th>Coordinates</th>
+                                <th>Units</th>
+                            <th>Coordinates</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -213,6 +214,14 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <span class="badge <?php echo $property['status'] ? 'bg-success' : 'bg-danger'; ?>">
                                         <?php echo $property['status'] ? 'Active' : 'Inactive'; ?>
                                     </span>
+                                </td>
+                                <td>
+                                    <span class="badge <?php echo $property['available_units'] > 0 ? 'bg-success' : 'bg-danger'; ?>">
+                                        <?php echo htmlspecialchars($property['available_units'] . '/' . $property['total_units']); ?>
+                                    </span>
+                                    <?php if ($property['available_units'] <= 0): ?>
+                                        <span class="badge bg-secondary ms-2">UNAVAILABLE</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="badge bg-info">
@@ -494,6 +503,12 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </div>
 
                         <div class="mb-3">
+                            <label for="editTotalUnits" class="form-label">Total Units</label>
+                            <input type="number" class="form-control" id="editTotalUnits" name="total_units" min="0" required>
+                            <div class="form-text">Enter the total number of units/apartments in this property (0 for no units)</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="editMainImage" class="form-label">Main Image</label>
                             <input type="file" class="form-control" id="editMainImage" name="main_image">
                             <div class="form-text">Leave empty to keep existing image</div>
@@ -536,8 +551,18 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
 
     <script>
+        // Global variables
+        let editModal;
+        let deleteModal;
+
+        // Initialize modals
+        function initializeModals() {
+            editModal = new bootstrap.Modal(document.getElementById('editPropertyModal'));
+            deleteModal = new bootstrap.Modal(document.getElementById('deletePropertyModal'));
+        }
+
         // Edit Property Modal
-        function editProperty(id) {
+        window.editProperty = function(id) {
             const property = <?php echo json_encode($properties); ?>.find(p => p.id == id);
             if (!property) return;
 
@@ -554,77 +579,107 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             document.getElementById('editBedrooms').value = property.bedrooms;
             document.getElementById('editBathrooms').value = property.bathrooms;
             document.getElementById('editArea').value = property.area;
+            document.getElementById('editTotalUnits').value = property.total_units;
 
             // Show modal
-            new bootstrap.Modal(document.getElementById('editPropertyModal')).show();
-        }
+            editModal.show();
+        };
 
         // Delete Property Confirmation
-        const deleteModal = new bootstrap.Modal(document.getElementById('deletePropertyModal'));
-        document.getElementById('deletePropertyModal').addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const propertyId = button.getAttribute('data-property-id');
-            const propertyName = button.getAttribute('data-property-name');
-            
-            // Update modal content
-            document.getElementById('deletePropertyName').textContent = propertyName;
-            
-            // Set up delete button
-            const deleteButton = document.getElementById('confirmDelete');
-            deleteButton.onclick = function() {
-                // Make AJAX request to delete property
-                fetch('delete_property.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: 'property_id=' + encodeURIComponent(propertyId)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Close modal
-                        deleteModal.hide();
-                        // Refresh the page
-                        location.reload();
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the property');
-                });
-            };
-        });
+        function setupDeleteModal() {
+            document.getElementById('deletePropertyModal').addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const propertyId = button.getAttribute('data-property-id');
+                const propertyName = button.getAttribute('data-property-name');
+                
+                // Update modal content
+                document.getElementById('deletePropertyName').textContent = propertyName;
+                
+                // Set up delete button
+                const deleteButton = document.getElementById('confirmDelete');
+                deleteButton.onclick = function() {
+                    // Make AJAX request to delete property
+                    fetch('delete_property.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'property_id=' + encodeURIComponent(propertyId)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Close modal
+                            deleteModal.hide();
+                            // Refresh the page
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while deleting the property: ' + error.message);
+                    });
+                };
+            });
+        }
 
         // Handle form submission
-        document.getElementById('editPropertyForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Get form data
-            const formData = new FormData(this);
-            
-            // Make AJAX request
-            fetch('edit_property.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Close modal
-                    new bootstrap.Modal(document.getElementById('editPropertyModal')).hide();
-                    // Refresh the page
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.error);
+        function setupEditForm() {
+            document.getElementById('editPropertyForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Get form data
+                const formData = new FormData(this);
+                
+                try {
+                    // Make AJAX request
+                    const response = await fetch('edit_property.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Server returned status: ' + response.status);
+                    }
+
+                    const text = await response.text();
+                    console.log('Response text:', text); // Log the raw response
+
+                    try {
+                        const data = JSON.parse(text);
+                        
+                        if (data.success) {
+                            // Close modal
+                            editModal.hide();
+                            // Refresh the page
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (parseError) {
+                        console.error('Failed to parse JSON:', parseError);
+                        console.error('Response text:', text);
+                        alert('Error: Invalid response from server. Please check the console for details.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while saving the property: ' + error.message);
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while saving the property');
             });
+        }
+
+        // Initialize everything when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeModals();
+            setupDeleteModal();
+            setupEditForm();
         });
     </script>
 </body>

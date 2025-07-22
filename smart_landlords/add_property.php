@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bedrooms = $_POST['bedrooms'] ?? '';
     $bathrooms = $_POST['bathrooms'] ?? '';
     $area = $_POST['area'] ?? '';
+    $total_units = $_POST['total_units'] ?? 1;
     $latitude = $_POST['latitude'] ?? '';
     $longitude = $_POST['longitude'] ?? '';
     $address = $_POST['address'] ?? '';
@@ -38,8 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Insert house record
-    $sql = "INSERT INTO houses (house_no, description, price, location, category_id, status, main_image, landlord_id, bedrooms, bathrooms, area, latitude, longitude, address) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO houses (house_no, description, price, location, category_id, status, main_image, landlord_id, bedrooms, bathrooms, area, latitude, longitude, address, total_units, available_units) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         error_log('Database error: ' . $conn->error);
@@ -51,21 +52,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log('Binding parameters: lat=' . $latitude . ', lng=' . $longitude);
     
     // Bind parameters in the correct order matching the table structure
-    $stmt->bind_param("ssdsiisiiiddds", 
-        $house_no,
-        $description,
-        $price,
-        $location,
-        $category_id,
-        $status,
-        $main_image,
-        $_SESSION['user_id'],
-        $bedrooms,
-        $bathrooms,
-        $area,
-        $latitude,
-        $longitude,
-        $address
+    $stmt->bind_param("ssdssssiiiiidddd", 
+        $house_no,         // string
+        $description,      // string
+        $price,           // decimal
+        $location,        // string
+        $category_id,     // integer
+        $status,          // integer
+        $main_image,      // string
+        $_SESSION['user_id'], // integer
+        $bedrooms,        // integer
+        $bathrooms,      // integer
+        $area,           // decimal
+        $latitude,       // decimal
+        $longitude,      // decimal
+        $address,        // string
+        $total_units,    // integer
+        $total_units     // integer (same as total_units for available_units)
     );
     
     if (!$stmt->execute()) {
@@ -211,9 +214,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="number" class="form-control" id="property_bathrooms" name="bathrooms" required>
                             </div>
 
-                            <div class="form-group mb-3">
+                            <div class="mb-3">
                                 <label for="property_area" class="form-label">Area (sqm)</label>
-                                <input type="number" class="form-control" id="property_area" name="area" required>
+                                <input type="number" step="0.01" class="form-control" id="property_area" name="area" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="property_total_units" class="form-label">Total Units</label>
+                                <input type="number" class="form-control" id="property_total_units" name="total_units" min="1" value="1" required>
+                                <div class="form-text">Enter the total number of units/apartments in this property</div>
                             </div>
 
                             <div class="d-flex justify-content-end">
