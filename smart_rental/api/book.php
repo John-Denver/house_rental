@@ -5,9 +5,7 @@ require_login();
 
 header('Content-Type: application/json');
 
-    echo json_encode(['error' => 'Please login to book a property']);
-    exit;
-}
+// Only show login error if user is not logged in (handled by require_login())
 
 // Get POST data
 $data = json_decode(file_get_contents('php://input'), true);

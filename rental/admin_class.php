@@ -106,7 +106,6 @@ class Action {
         require_once '../config/auth.php';
         logout();
     }
-    }
 
     // Secure user management
     function save_user() {

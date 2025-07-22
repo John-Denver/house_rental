@@ -108,7 +108,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     .hero-section .search-form .form-select {
         background-color: transparent;
         border: 1px solid #0d6efd;
-        color: white;
+        color: grey;
         padding: 0.75rem;
         border-radius: 8px;
     }
@@ -147,10 +147,10 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     <form id="searchForm" class="search-form">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <input type="text" class="form-control" placeholder="Location" id="location">
+                                <input type="text" class="form-control" name="search" placeholder="Location" id="location">
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select" id="propertyType">
+                                <select class="form-select" style="color:black;" id="propertyType">
                                     <option value="">Property Type</option>
                                     <option value="apartment">Apartment</option>
                                     <option value="house">House</option>
@@ -172,14 +172,18 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <?php
 // Get featured properties
-$sql = "SELECT h.*, c.name as category_name 
-        FROM houses h 
-        LEFT JOIN categories c ON h.category_id = c.id 
-        WHERE h.status = 1 
-        ORDER BY h.created_at DESC 
-        LIMIT 6";
+// Use the earlier statement with filters and pagination
+$stmt = $conn->prepare("SELECT h.*, c.name as category_name FROM houses h 
+                        LEFT JOIN categories c ON h.category_id = c.id 
+                        $conditions 
+                        ORDER BY h.created_at DESC 
+                        LIMIT ?, ?");
 
-$result = $conn->query($sql);
+// Add types: strings first, then two integers at the end
+$types = str_repeat('s', count($params) - 2) . 'ii';
+$stmt->bind_param($types, ...$params);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 
 <!-- Featured Properties -->
@@ -224,7 +228,7 @@ $result = $conn->query($sql);
                         <p class="mb-0">
                             <?php 
                             if(!empty($search)) {
-                                echo "Showing " . $current_page_records . " of " . $total_records . " results for '" . htmlspecialchars($search) . "'";
+                                echo "Showing " . $result->num_rows . " of " . $total_records . " results for '" . htmlspecialchars($search) . "'";
                             } else {
                                 echo "Showing " . $total_records . " properties";
                             }

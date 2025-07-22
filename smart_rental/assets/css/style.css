@@ -93,6 +93,10 @@ body {
     transition: transform 0.3s;
 }
 
+carousel-inner .carousel-item img {
+    height: 800px;
+}
+
 .property-card:hover .property-image {
     transform: scale(1.05);
 }
