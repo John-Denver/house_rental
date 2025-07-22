@@ -4,6 +4,9 @@ require_once '../config/auth.php';
 require_landlord();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Debug: Log all POST data
+    error_log('Received POST data: ' . print_r($_POST, true));
+    
     $house_no = $_POST['house_no'] ?? '';
     $description = $_POST['description'] ?? '';
     $category_id = $_POST['category_id'] ?? '';
@@ -13,6 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bedrooms = $_POST['bedrooms'] ?? '';
     $bathrooms = $_POST['bathrooms'] ?? '';
     $area = $_POST['area'] ?? '';
+    $latitude = $_POST['latitude'] ?? '';
+    $longitude = $_POST['longitude'] ?? '';
+    $address = $_POST['address'] ?? '';
+
+    // Debug: Log location data
+    error_log('Location data: lat=' . $latitude . ', lng=' . $longitude);
 
     // Handle main image
     if (!isset($_FILES['main_image']) || $_FILES['main_image']['error'] !== 0) {
@@ -29,21 +38,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Insert house record
-    $sql = "INSERT INTO houses (house_no, description, category_id, price, status, location, main_image, landlord_id, bedrooms, bathrooms, area) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO houses (house_no, description, price, location, category_id, status, main_image, landlord_id, bedrooms, bathrooms, area, latitude, longitude, address) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
+        error_log('Database error: ' . $conn->error);
         echo "<script>alert('Database error: " . $conn->error . "'); window.history.back();</script>";
         exit;
     }
 
-    $stmt->bind_param("sssssssssss", $house_no, $description, $category_id, $price, $status, $location, $main_image, $_SESSION['user_id'], $bedrooms, $bathrooms, $area);
+    // Debug: Log bind parameters
+    error_log('Binding parameters: lat=' . $latitude . ', lng=' . $longitude);
+    
+    // Bind parameters in the correct order matching the table structure
+    $stmt->bind_param("ssdsiisiiiddds", 
+        $house_no,
+        $description,
+        $price,
+        $location,
+        $category_id,
+        $status,
+        $main_image,
+        $_SESSION['user_id'],
+        $bedrooms,
+        $bathrooms,
+        $area,
+        $latitude,
+        $longitude,
+        $address
+    );
     
     if (!$stmt->execute()) {
+        error_log('Error saving property: ' . $stmt->error);
         echo "<script>alert('Error saving property: " . $stmt->error . "'); window.history.back();</script>";
         exit;
     }
-
+    
     $house_id = $stmt->insert_id;
     
     // Handle additional media
@@ -99,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="card-body">
                         <form method="POST" enctype="multipart/form-data" id="propertyForm">
                             <div class="form-group mb-3">
-                                <label for="property_house_no" class="form-label">House Number</label>
+                                <label for="property_house_no" class="form-label">Property Name</label>
                                 <input type="text" class="form-control" id="property_house_no" name="house_no" required>
                             </div>
 
@@ -199,6 +229,174 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ&libraries=places"></script>
+    <script>
+        // Initialize map
+        let map;
+        let marker;
+        let currentLocationMarker;
+        
+        function initMap() {
+            // Set initial location to Nairobi
+            const initialLocation = { lat: -1.2833, lng: 36.8167 };
+            
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: initialLocation,
+                zoom: 15,
+                mapTypeId: 'roadmap',
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
+            });
+
+            // Add draggable marker
+            marker = new google.maps.Marker({
+                position: initialLocation,
+                map: map,
+                draggable: true,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                    scaledSize: new google.maps.Size(30, 30)
+                }
+            });
+
+            // Add click event to map
+            map.addListener('click', function(event) {
+                marker.setPosition(event.latLng);
+                updateLocation(event.latLng);
+            });
+
+            // Add drag event to marker
+            marker.addListener('dragend', function(event) {
+                updateLocation(event.latLng);
+            });
+
+            // Add place search
+            const input = document.getElementById('address');
+            const autocomplete = new google.maps.places.Autocomplete(input);
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                if (place.geometry) {
+                    map.setCenter(place.geometry.location);
+                    marker.setPosition(place.geometry.location);
+                    updateLocation(place.geometry.location);
+                }
+            });
+
+            // Add current location marker
+            currentLocationMarker = new google.maps.Marker({
+                position: initialLocation,
+                map: map,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                    scaledSize: new google.maps.Size(20, 20)
+                }
+            });
+        }
+
+        function updateLocation(latLng) {
+            // Create LatLng object if we have a plain object
+            if (typeof latLng === 'object' && !latLng instanceof google.maps.LatLng) {
+                latLng = new google.maps.LatLng(latLng.lat, latLng.lng);
+            }
+
+            // Ensure we have a valid LatLng object
+            if (!latLng || !(latLng instanceof google.maps.LatLng)) {
+                console.error('Invalid LatLng object:', latLng);
+                return;
+            }
+
+            // Update hidden input fields
+            const lat = latLng.lat();
+            const lng = latLng.lng();
+            
+            document.getElementById('latitude').value = lat.toFixed(6);
+            document.getElementById('longitude').value = lng.toFixed(6);
+            
+            // Update visible address fields
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ 'location': latLng }, function(results, status) {
+                if (status === 'OK' && results[0]) {
+                    document.getElementById('address').value = results[0].formatted_address;
+                    document.getElementById('property_location').value = results[0].formatted_address;
+                }
+            });
+        }
+
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        // Update map center and marker
+                        map.setCenter(pos);
+                        marker.setPosition(pos);
+                        currentLocationMarker.setPosition(pos);
+                        
+                        // Update location fields
+                        updateLocation(pos);
+                    },
+                    function() {
+                        handleLocationError(true);
+                    }
+                );
+            } else {
+                handleLocationError(false);
+            }
+        }
+
+        function handleLocationError(browserHasGeolocation) {
+            alert(browserHasGeolocation ? 
+                'Error: The Geolocation service failed.' :
+                'Error: Your browser doesn\'t support geolocation.');
+        }
+
+        // Initialize map when page loads
+        window.addEventListener('load', initMap);
+
+        // Form submission handling
+        document.getElementById('propertyForm').addEventListener('submit', function(e) {
+            // Debug: Show current marker position
+            const markerPosition = marker.getPosition();
+            if (!markerPosition) {
+                e.preventDefault();
+                alert('Please select a location on the map first');
+                return;
+            }
+            
+            // Debug: Show coordinates
+            console.log('Submitting with coordinates:', markerPosition.lat(), markerPosition.lng());
+            
+            // Update hidden fields with current marker position
+            document.getElementById('latitude').value = markerPosition.lat().toFixed(6);
+            document.getElementById('longitude').value = markerPosition.lng().toFixed(6);
+            
+            // Debug: Show form values
+            console.log('Form values:', {
+                latitude: document.getElementById('latitude').value,
+                longitude: document.getElementById('longitude').value,
+                location: document.getElementById('property_location').value
+            });
+            
+            // Update the location field with formatted address
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({
+                'location': markerPosition
+            }, function(results, status) {
+                if (status === 'OK' && results[0]) {
+                    document.getElementById('property_location').value = results[0].formatted_address;
+                }
+            });
+        });
+    </script>
     <script>
         // Initialize map
         let map;

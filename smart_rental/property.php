@@ -111,6 +111,22 @@ if (!$property) {
                         <i class="fas fa-map-marker-alt"></i>
                         <?php echo htmlspecialchars($property['location']); ?>
                     </p>
+                    
+                    <!-- Navigation Button -->
+                    <div class="mt-3">
+                        <a href="https://www.google.com/maps/dir/current+location/<?php echo $property['latitude']; ?>,<?php echo $property['longitude']; ?>" 
+                           class="btn btn-outline-success w-100" 
+                           target="_blank" 
+                           onclick="return confirm('Open Google Maps for directions?')">
+                            <i class="fas fa-car"></i> Get Directions
+                        </a>
+                    </div>
+                    
+                    <!-- Location Map -->
+                    <div class="mt-4">
+                        <h4>Location</h4>
+                        <div id="propertyMap" style="height: 300px; border: 1px solid #ddd; border-radius: 4px;"></div>
+                    </div>
                     <div class="price">
                         <h3>
                             <i class="fas fa-money-bill-wave"></i>
@@ -222,6 +238,55 @@ if (!$property) {
 
     <?php include 'includes/footer.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ"></script>
+    <script>
+        function initPropertyMap() {
+            const propertyLocation = { 
+                lat: <?php echo $property['latitude']; ?>, 
+                lng: <?php echo $property['longitude']; ?> 
+            };
+
+            const map = new google.maps.Map(document.getElementById('propertyMap'), {
+                center: propertyLocation,
+                zoom: 15,
+                mapTypeId: 'roadmap',
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
+            });
+
+            // Add marker for the property
+            const marker = new google.maps.Marker({
+                position: propertyLocation,
+                map: map,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                    scaledSize: new google.maps.Size(30, 30)
+                }
+            });
+
+            // Add info window
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div class="info-window">
+                        <h5><?php echo htmlspecialchars($property['house_no']); ?></h5>
+                        <p><?php echo htmlspecialchars($property['location']); ?></p>
+                        <p>Price: <?php echo number_format($property['price']); ?></p>
+                    </div>
+                `
+            });
+
+            marker.addListener('click', function() {
+                infoWindow.open(map, marker);
+            });
+        }
+
+        window.addEventListener('load', initPropertyMap);
+    </script>
     <script src="assets/js/property.js"></script>
 </body>
 </html>
