@@ -128,7 +128,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <div class="form-group mb-3">
                                 <label for="property_location" class="form-label">Location</label>
-                                <textarea class="form-control" id="property_location" name="location" rows="2" required></textarea>
+                                <div class="location-container">
+                                    <div class="mb-2">
+                                        <textarea class="form-control" id="property_location" name="location" rows="2" required></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="address" placeholder="Enter address or use map" readonly>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="getCurrentLocation()">
+                                                <i class="fas fa-location-arrow"></i> Use Current Location
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div id="map" style="height: 300px; border: 1px solid #ddd; border-radius: 4px;"></div>
+                                    </div>
+                                    <input type="hidden" id="latitude" name="latitude" required>
+                                    <input type="hidden" id="longitude" name="longitude" required>
+                                </div>
                             </div>
 
                             <!-- Main Image -->
@@ -181,8 +198,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ&libraries=places"></script>
     <script>
-        // Add file selection feedback
+        // Initialize map
+        let map;
+        let marker;
+        let currentLocationMarker;
+        
+        function initMap() {
+            // Set initial location to Nairobi
+            const initialLocation = { lat: -1.2833, lng: 36.8167 };
+            
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: initialLocation,
+                zoom: 15,
+                mapTypeId: 'roadmap',
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
+            });
+
+            // Add draggable marker
+            marker = new google.maps.Marker({
+                position: initialLocation,
+                map: map,
+                draggable: true,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                    scaledSize: new google.maps.Size(30, 30)
+                }
+            });
+
+            // Add click event to map
+            map.addListener('click', function(event) {
+                marker.setPosition(event.latLng);
+                updateLocation(event.latLng);
+            });
+
+            // Add drag event to marker
+            marker.addListener('dragend', function(event) {
+                updateLocation(event.latLng);
+            });
+
+            // Add place search
+            const input = document.getElementById('address');
+            const autocomplete = new google.maps.places.Autocomplete(input);
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                if (place.geometry) {
+                    map.setCenter(place.geometry.location);
+                    marker.setPosition(place.geometry.location);
+                    updateLocation(place.geometry.location);
+                }
+            });
+
+            // Add current location marker
+            currentLocationMarker = new google.maps.Marker({
+                position: initialLocation,
+                map: map,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                    scaledSize: new google.maps.Size(20, 20)
+                }
+            });
+        }
+
+        function updateLocation(latLng) {
+            document.getElementById('latitude').value = latLng.lat().toFixed(6);
+            document.getElementById('longitude').value = latLng.lng().toFixed(6);
+            
+            // Reverse geocode to get address
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ 'location': latLng }, function(results, status) {
+                if (status === 'OK' && results[0]) {
+                    document.getElementById('address').value = results[0].formatted_address;
+                    document.getElementById('property_location').value = results[0].formatted_address;
+                }
+            });
+        }
+
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        // Update map center and marker
+                        map.setCenter(pos);
+                        marker.setPosition(pos);
+                        currentLocationMarker.setPosition(pos);
+                        
+                        // Update location fields
+                        updateLocation(pos);
+                    },
+                    function() {
+                        handleLocationError(true);
+                    }
+                );
+            } else {
+                handleLocationError(false);
+            }
+        }
+
+        function handleLocationError(browserHasGeolocation) {
+            alert(browserHasGeolocation ? 
+                'Error: The Geolocation service failed.' :
+                'Error: Your browser doesn\'t support geolocation.');
+        }
+
+        // Initialize map when page loads
+        window.addEventListener('load', initMap);
+    </script>
+
+    <script>
         document.getElementById('property_main_image').addEventListener('change', function() {
             const files = this.files;
             if (files.length > 0) {

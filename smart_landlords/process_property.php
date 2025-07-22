@@ -56,14 +56,14 @@ try {
     }
 
     // Insert house record
-    $sql = "INSERT INTO houses (name, description, category_id, price, status, address, main_image, landlord_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO houses (house_no, description, category_id, price, status, location, main_image, landlord_id, bedrooms, bathrooms, area, latitude, longitude, address) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception('Database error: ' . $conn->error);
     }
     
-    $stmt->bind_param("sssssssi", $name, $description, $category_id, $price, $status, $address, $main_image, $_SESSION['user_id']);
+    $stmt->bind_param('ssdssiiiiiddd', $house_no, $description, $price, $location, $category_id, $status, $main_image, $_SESSION['user_id'], $bedrooms, $bathrooms, $area, $latitude, $longitude, $address);
     
     if (!$stmt->execute()) {
         throw new Exception('Error saving property: ' . $stmt->error);
