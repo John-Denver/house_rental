@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 22, 2025 at 10:56 PM
+-- Generation Time: Jul 23, 2025 at 08:33 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,57 @@ SET time_zone = "+00:00";
 --
 -- Database: `house_rental`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `booking_documents`
+--
+
+CREATE TABLE `booking_documents` (
+  `id` int(30) NOT NULL,
+  `booking_id` int(30) NOT NULL,
+  `document_type` varchar(100) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `admin_notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `booking_payments`
+--
+
+CREATE TABLE `booking_payments` (
+  `id` int(30) NOT NULL,
+  `booking_id` int(30) NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `payment_date` datetime NOT NULL,
+  `payment_method` varchar(50) NOT NULL,
+  `transaction_id` varchar(100) DEFAULT NULL,
+  `status` enum('pending','completed','failed','refunded') NOT NULL DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `booking_reviews`
+--
+
+CREATE TABLE `booking_reviews` (
+  `id` int(30) NOT NULL,
+  `booking_id` int(30) NOT NULL,
+  `rating` tinyint(1) NOT NULL CHECK (`rating` >= 1 and `rating` <= 5),
+  `review` text DEFAULT NULL,
+  `review_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `admin_notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -66,6 +117,10 @@ CREATE TABLE `houses` (
   `latitude` decimal(10,8) DEFAULT NULL,
   `longitude` decimal(11,8) DEFAULT NULL,
   `price` double NOT NULL,
+  `security_deposit` decimal(10,2) DEFAULT NULL,
+  `min_rental_period` int(11) DEFAULT 1 COMMENT 'In months',
+  `max_rental_period` int(11) DEFAULT 12 COMMENT 'In months',
+  `advance_rent_months` int(11) DEFAULT 1 COMMENT 'Number of months rent to pay in advance',
   `bedrooms` int(11) DEFAULT 0,
   `bathrooms` int(11) DEFAULT 0,
   `area` decimal(10,2) DEFAULT NULL,
@@ -84,8 +139,8 @@ CREATE TABLE `houses` (
 -- Dumping data for table `houses`
 --
 
-INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
-(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-22 12:52:41', '', 1, 1);
+INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `security_deposit`, `min_rental_period`, `max_rental_period`, `advance_rent_months`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
+(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 1000000.00, 1, 12, 1, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-22 21:27:20', '', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -142,11 +197,23 @@ INSERT INTO `payments` (`id`, `tenant_id`, `amount`, `invoice`, `date_created`) 
 CREATE TABLE `rental_bookings` (
   `id` int(30) NOT NULL,
   `house_id` int(30) NOT NULL,
+  `landlord_id` int(30) NOT NULL,
   `user_id` int(30) NOT NULL,
   `start_date` date NOT NULL,
+  `check_in_time` time DEFAULT NULL,
   `end_date` date NOT NULL,
+  `check_out_time` time DEFAULT NULL,
+  `special_requests` text DEFAULT NULL,
   `rental_period` int(11) NOT NULL COMMENT 'Number of months',
-  `status` enum('pending','confirmed','cancelled','expired') NOT NULL DEFAULT 'pending',
+  `total_amount` decimal(15,2) NOT NULL,
+  `security_deposit` decimal(15,2) DEFAULT 0.00,
+  `payment_status` enum('pending','partial','paid','refunded','cancelled') NOT NULL DEFAULT 'pending',
+  `payment_method` varchar(50) DEFAULT NULL,
+  `payment_reference` varchar(100) DEFAULT NULL,
+  `status` enum('pending','confirmed','cancelled','expired','completed','rejected') NOT NULL DEFAULT 'pending',
+  `cancellation_reason` text DEFAULT NULL,
+  `cancelled_by` enum('tenant','landlord','system') DEFAULT NULL,
+  `documents` text DEFAULT NULL COMMENT 'JSON array of document paths',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -230,6 +297,27 @@ INSERT INTO `users` (`id`, `name`, `username`, `phone_number`, `password`, `type
 --
 
 --
+-- Indexes for table `booking_documents`
+--
+ALTER TABLE `booking_documents`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_booking_doc` (`booking_id`);
+
+--
+-- Indexes for table `booking_payments`
+--
+ALTER TABLE `booking_payments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_booking` (`booking_id`);
+
+--
+-- Indexes for table `booking_reviews`
+--
+ALTER TABLE `booking_reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_booking_review` (`booking_id`);
+
+--
 -- Indexes for table `categories`
 --
 ALTER TABLE `categories`
@@ -272,8 +360,9 @@ ALTER TABLE `payments`
 --
 ALTER TABLE `rental_bookings`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `house_id` (`house_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `fk_booking_house` (`house_id`),
+  ADD KEY `fk_booking_tenant` (`user_id`),
+  ADD KEY `fk_booking_landlord` (`landlord_id`);
 
 --
 -- Indexes for table `system_settings`
@@ -297,6 +386,24 @@ ALTER TABLE `users`
 --
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `booking_documents`
+--
+ALTER TABLE `booking_documents`
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `booking_payments`
+--
+ALTER TABLE `booking_payments`
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `booking_reviews`
+--
+ALTER TABLE `booking_reviews`
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -351,6 +458,24 @@ ALTER TABLE `users`
 --
 
 --
+-- Constraints for table `booking_documents`
+--
+ALTER TABLE `booking_documents`
+  ADD CONSTRAINT `fk_document_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `booking_payments`
+--
+ALTER TABLE `booking_payments`
+  ADD CONSTRAINT `fk_payment_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `booking_reviews`
+--
+ALTER TABLE `booking_reviews`
+  ADD CONSTRAINT `fk_review_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `house_media`
 --
 ALTER TABLE `house_media`
@@ -360,8 +485,9 @@ ALTER TABLE `house_media`
 -- Constraints for table `rental_bookings`
 --
 ALTER TABLE `rental_bookings`
-  ADD CONSTRAINT `rental_bookings_ibfk_1` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`),
-  ADD CONSTRAINT `rental_bookings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `fk_booking_house` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_booking_landlord` FOREIGN KEY (`landlord_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_booking_tenant` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
