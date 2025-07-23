@@ -11,14 +11,20 @@ ini_set('display_errors', 0);
 
 try {
     // Validate required fields
-    $name = $_POST['name'] ?? '';
+    $house_no = $_POST['house_no'] ?? '';
     $description = $_POST['description'] ?? '';
     $category_id = $_POST['category_id'] ?? '';
     $price = $_POST['price'] ?? '';
-    $address = $_POST['address'] ?? '';
     $status = isset($_POST['status']) ? 1 : 0;
-    
-    if (empty($name) || empty($description) || empty($category_id) || empty($price) || empty($address)) {
+    $location = $_POST['location'] ?? '';
+    $bedrooms = $_POST['bedrooms'] ?? '';
+    $bathrooms = $_POST['bathrooms'] ?? '';
+    $area = $_POST['area'] ?? '';
+    $latitude = $_POST['latitude'] ?? '';
+    $longitude = $_POST['longitude'] ?? '';
+    $address = $_POST['address'] ?? '';
+
+    if (empty($house_no) || empty($description) || empty($category_id) || empty($price) || empty($location) || empty($bedrooms) || empty($bathrooms) || empty($area) || empty($latitude) || empty($longitude) || empty($address)) {
         throw new Exception('All fields are required');
     }
 

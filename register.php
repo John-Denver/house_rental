@@ -7,8 +7,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log("Registration form submitted");
     
     // Get POST data
-    $name = isset($_POST['name']) ? $_POST['name'] : '';
-    $username = isset($_POST['username']) ? $_POST['username'] : '';
+    $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+    $username = isset($_POST['username']) ? trim($_POST['username']) : '';
+    $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
     $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
     $user_type = isset($_POST['user_type']) ? $_POST['user_type'] : '';
@@ -25,6 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Name is required";
     } elseif (empty($username)) {
         $error = "Username is required";
+    } elseif (empty($phone)) {
+        $error = "Phone number is required";
+    } elseif (!preg_match('/^[0-9+\-\s()]{10,20}$/', $phone)) {
+        $error = "Please enter a valid phone number (10-20 digits, may include + - ( ) and spaces)";
     } elseif (empty($password)) {
         $error = "Password is required";
     } elseif ($password !== $confirm_password) {
@@ -46,11 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Insert new user
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare("INSERT INTO users (name, username, password, type) VALUES (?, ?, ?, ?)");
+                $stmt = $conn->prepare("INSERT INTO users (name, username, phone_number, password, type) VALUES (?, ?, ?, ?, ?)");
                 if (!$stmt) {
                     throw new Exception("Error preparing insert statement: " . $conn->error);
                 }
-                $stmt->bind_param('ssss', $name, $username, $hashed_password, $user_type);
+                $stmt->bind_param('sssss', $name, $username, $phone, $hashed_password, $user_type);
                 
                 if (!$stmt->execute()) {
                     throw new Exception("Error executing insert: " . $stmt->error);
@@ -144,6 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <label for="customer-name" class="form-label">Full Name</label>
                                     <input type="text" class="form-control" id="customer-name" name="name" required>
                                 </div>
+                                <div class="mb-3">
+                                    <label for="customer-phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="customer-phone" name="phone" required
+                                           placeholder="e.g., +1234567890" 
+                                           pattern="[0-9+\-\s()]{10,20}"
+                                           title="Please enter a valid phone number (10-20 digits, may include + - ( ) and spaces)">
+                                </div>
                                 
                                 <div class="mb-3">
                                     <label for="customer-username" class="form-label">Username</label>
@@ -183,6 +195,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="mb-3">
                                     <label for="landlord-name" class="form-label">Full Name</label>
                                     <input type="text" class="form-control" id="landlord-name" name="name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="landlord-phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="landlord-phone" name="phone" required
+                                           placeholder="e.g., +1234567890" 
+                                           pattern="[0-9+\-\s()]{10,20}"
+                                           title="Please enter a valid phone number (10-20 digits, may include + - ( ) and spaces)">
                                 </div>
                                 
                                 <div class="mb-3">
@@ -232,66 +251,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function validateCustomerForm() {
-        // Get all required fields in customer form
-        const requiredFields = document.querySelectorAll('#customerForm input[required]');
-        let isValid = true;
-
-        // Check if all required fields are filled
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                field.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                field.classList.remove('is-invalid');
+            const form = document.getElementById('customerForm');
+            const phone = form.querySelector('input[name="phone"]').value;
+            const password = form.querySelector('input[name="password"]').value;
+            const confirmPassword = form.querySelector('input[name="confirm_password"]').value;
+            
+            // Validate phone number format
+            const phoneRegex = /^[0-9+\-\s()]{10,20}$/;
+            if (!phoneRegex.test(phone)) {
+                alert('Please enter a valid phone number (10-20 digits, may include + - ( ) and spaces)');
+                return false;
             }
-        });
-
-        // Check if passwords match
-        const password = document.getElementById('customer-password').value;
-        const confirmPassword = document.getElementById('customer-confirm-password').value;
-        
-        if (password !== confirmPassword) {
-            document.getElementById('customer-confirm-password').classList.add('is-invalid');
-            document.getElementById('customer-confirm-password').setCustomValidity('Passwords do not match');
-            isValid = false;
-        } else {
-            document.getElementById('customer-confirm-password').classList.remove('is-invalid');
-            document.getElementById('customer-confirm-password').setCustomValidity('');
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return false;
+            }
+            return true;
         }
 
-        return isValid;
-    }
-
-    function validateLandlordForm() {
-        // Get all required fields in landlord form
-        const requiredFields = document.querySelectorAll('#landlordForm input[required]');
-        let isValid = true;
-
-        // Check if all required fields are filled
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                field.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                field.classList.remove('is-invalid');
+        function validateLandlordForm() {
+            const form = document.getElementById('landlordForm');
+            const phone = form.querySelector('input[name="phone"]').value;
+            const password = form.querySelector('input[name="password"]').value;
+            const confirmPassword = form.querySelector('input[name="confirm_password"]').value;
+            
+            // Validate phone number format
+            const phoneRegex = /^[0-9+\-\s()]{10,20}$/;
+            if (!phoneRegex.test(phone)) {
+                alert('Please enter a valid phone number (10-20 digits, may include + - ( ) and spaces)');
+                return false;
             }
-        });
-
-        // Check if passwords match
-        const password = document.getElementById('landlord-password').value;
-        const confirmPassword = document.getElementById('landlord-confirm-password').value;
-        
-        if (password !== confirmPassword) {
-            document.getElementById('landlord-confirm-password').classList.add('is-invalid');
-            document.getElementById('landlord-confirm-password').setCustomValidity('Passwords do not match');
-            isValid = false;
-        } else {
-            document.getElementById('landlord-confirm-password').classList.remove('is-invalid');
-            document.getElementById('landlord-confirm-password').setCustomValidity('');
+            
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return false;
+            }
+            return true;
         }
-
-        return isValid;
-    }
 
     // Add event listener for tab change
     document.addEventListener('DOMContentLoaded', function() {

@@ -110,6 +110,12 @@ if (!$property) {
                             <a href="#" class="btn btn-outline-primary" onclick="addToFavorites(<?php echo $property_id; ?>)">
                                 <i class="fas fa-heart"></i> Add to Favorites
                             </a>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo $property['latitude']; ?>,<?php echo $property['longitude']; ?>" 
+                               class="btn btn-outline-success" 
+                               target="_blank" 
+                               onclick="return confirm('Open Google Maps for directions?')">
+                                <i class="fas fa-car"></i> Get Directions
+                            </a>
                         </div>
                     </div>
                 </div>
