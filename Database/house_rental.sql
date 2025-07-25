@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 23, 2025 at 08:33 AM
+-- Generation Time: Jul 25, 2025 at 08:57 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -140,7 +140,10 @@ CREATE TABLE `houses` (
 --
 
 INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `security_deposit`, `min_rental_period`, `max_rental_period`, `advance_rent_months`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
-(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 1000000.00, 1, 12, 1, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-22 21:27:20', '', 1, 1);
+(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 1000000.00, 1, 12, 1, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-25 04:46:35', '', 10, 1),
+(38, 7, 'Zetech', 21, 'A new place to live your life', 'RXW7+W5G, Ruiru, Kenya', NULL, NULL, NULL, -1.15324800, 36.96296000, 25000, NULL, 1, 12, 1, 1, 1, 500.00, NULL, '1753309042_main_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', 0, 1, '2025-07-23 22:17:22', '2025-07-23 22:17:22', '', 1, 1),
+(39, 4, 'Luxury Villa', 25, '<p>A lot of amenities are present here</p>', 'New Admin Block, PAUS Science St, Juja, Kenya', NULL, NULL, NULL, -1.09793100, 37.01464400, 150000, NULL, 1, 12, 1, 5, 3, 498.00, NULL, '1753423510_main_phone splash.png', 0, 1, '2025-07-25 06:05:10', '2025-07-25 06:05:10', '', 1, 1),
+(41, 7, 'Posta Makongo', 18, '<p>A single room apartment</p>', 'W225+468, Juja, Kenya', NULL, NULL, NULL, -1.09913200, 37.00781300, 4500, NULL, 1, 12, 1, 0, 1, 100.00, NULL, '1753425619_main_EV125_1 (2).png', 0, 1, '2025-07-25 06:40:19', '2025-07-25 06:40:19', 'W225+468, Juja, Kenya', 7, 5);
 
 -- --------------------------------------------------------
 
@@ -163,7 +166,14 @@ CREATE TABLE `house_media` (
 --
 
 INSERT INTO `house_media` (`id`, `house_id`, `media_type`, `media_path`, `file_path`, `created_at`, `updated_at`) VALUES
-(28, 37, 'image', '', '1753188761_boda-mama mboga.png', '2025-07-22 12:52:41', '2025-07-22 12:52:41');
+(28, 37, 'image', '', '1753188761_boda-mama mboga.png', '2025-07-22 12:52:41', '2025-07-22 12:52:41'),
+(29, 38, 'image', '', '1753309042_Washing Machine with Colourful Laundry.png', '2025-07-23 22:17:22', '2025-07-23 22:17:22'),
+(30, 38, 'image', '', '1753309042_ChatGPT Image Jul 21, 2025, 11_14_07 AM.png', '2025-07-23 22:17:22', '2025-07-23 22:17:22'),
+(31, 39, 'image', '', '1753423510_Washing Machine with Colourful Laundry.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
+(32, 39, 'image', '', '1753423510_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
+(33, 39, 'image', '', '1753423510_ChatGPT Image Jul 20, 2025, 07_19_21 PM.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
+(34, 39, 'image', '', '1753423510_Rectangle.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
+(38, 41, 'image', '', '1753425619_logo23.bmp', '2025-07-25 06:40:19', '2025-07-25 06:40:19');
 
 -- --------------------------------------------------------
 
@@ -415,13 +425,13 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `houses`
 --
 ALTER TABLE `houses`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `house_media`
 --
 ALTER TABLE `house_media`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `payments`

@@ -3,7 +3,7 @@ require_once '../config/db.php';
 require_once '../config/auth.php';
 
 // Pagination settings
-$records_per_page = 9;
+$records_per_page = 12;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start = ($page - 1) * $records_per_page;
 
@@ -12,6 +12,7 @@ $location = isset($_GET['location']) ? trim($_GET['location']) : '';
 $propertyType = isset($_GET['propertyType']) ? trim($_GET['propertyType']) : '';
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : '';
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : '';
+$category_id = isset($_GET['category']) ? (int)$_GET['category'] : '';
 
 // Build query conditions
 $conditions = "WHERE h.status = 1";
@@ -29,6 +30,13 @@ if (!empty($location)) {
 if (!empty($propertyType)) {
     $conditions .= " AND c.id = ?";
     $params[] = $propertyType;
+    $types .= 'i';
+}
+
+// Add category filter
+if (!empty($category_id)) {
+    $conditions .= " AND h.category_id = ?";
+    $params[] = $category_id;
     $types .= 'i';
 }
 if ($min_price !== '') {
@@ -53,7 +61,7 @@ $total_records = $stmt->get_result()->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $records_per_page);
 
 // Prepare and execute main query with limit
-$main_sql = "SELECT h.*, c.name as category_name FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions ORDER BY h.created_at DESC LIMIT ?, ?";
+$main_sql = "SELECT h.*, c.name as category_name, h.available_units, h.total_units FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions ORDER BY h.created_at DESC LIMIT ?, ?";
 $stmt = $conn->prepare($main_sql);
 $main_params = $params;
 $main_types = $types . 'ii';
@@ -63,7 +71,7 @@ $stmt->bind_param($main_types, ...$main_params);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Get categories for dropdown (for hero section)
+// Get categories for dropdown
 $stmt = $conn->prepare("SELECT id, name FROM categories ORDER BY name");
 $stmt->execute();
 $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -76,262 +84,548 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Rental - Find Your Perfect Home</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/index.css">
-    <style>
-    .units-badge {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 1;
-    }
-    .units-badge .badge {
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
-        border-radius: 20px;
-    }
-    .property-image-container {
-        position: relative;
-        overflow: hidden;
-    }
-    .property-image {
-        width: 100%;
-        height: 200px;
-        object-fit: cover;
-    }
-    .hero-section {
-        position: relative;
-        min-height: 400px;
-        overflow: hidden;
-    }
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: url('assets/images/hero-bg.png') center/cover no-repeat;
-        z-index: -1;
-    }
-    .hero-section::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.05);
-        z-index: -1;
-    }
-    .hero-section .container {
-        position: relative;
-        z-index: 1;
-    }
-    .hero-section h1 {
-        color: white;
-        font-weight: bold;
-        margin-bottom: 2rem;
-    }
-    .hero-section .search-form {
-        padding: 1.5rem;
-        border-radius: 10px;
-        background: transparent;
-    }
-    .hero-section .search-form .form-control,
-    .hero-section .search-form .form-select {
-        background-color: transparent;
-        border: 1px solid #0d6efd;
-        color: white;
-        padding: 0.75rem;
-        border-radius: 8px;
-    }
-    .hero-section .search-form .form-control:focus,
-    .hero-section .search-form .form-select:focus {
-        background-color: transparent;
-        border-color: #0b5ed7;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .hero-section .search-form .btn-primary {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-        color: white;
-        border-radius: 8px;
-    }
-    .hero-section .search-form .btn-primary:hover {
-        background-color: #0b5ed7;
-        border-color: #0a58ca;
-    }
-    .hero-section .search-form .form-control::placeholder,
-    .hero-section .search-form .form-select::placeholder {
-        color: rgba(255, 255, 255, 0.7);
-    }
-    .hero-section .search-form .form-select,
-    .hero-section .search-form .form-select option {
-        background-color: #212529 !important;
-        color: #fff !important;
-        border: 1px solid #0d6efd !important;
-    }
-</style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        :root {
+            --primary-blue: #1976D2;
+            --dark-blue: #0D47A1;
+            --light-blue: #E3F2FD;
+            --accent-blue: #2196F3;
+            --text-dark: #212121;
+            --text-light: #757575;
+            --white: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Circular', -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif;
+            color: var(--text-dark);
+            background-color: var(--white);
+        }
+        
+        /* Header Styles */
+        .navbar {
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            background-color: var(--white);
+        }
+        
+        .navbar-brand {
+            color: var(--primary-blue) !important;
+            font-weight: 800;
+            font-size: 1.5rem;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            color: var(--text-dark);
+        }
+        
+        .btn-primary-blue {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border: none;
+        }
+        
+        .btn-outline-blue {
+            border: 1px solid var(--primary-blue);
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            color: var(--primary-blue);
+        }
+        
+        /* Hero Section with Background Image */
+        .hero-section {
+            position: relative;
+            padding: 8rem 0 6rem;
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+                        url('assets/images/hero-bg.png') center/cover no-repeat;
+            color: var(--white);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        .hero-section p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .search-bar {
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--white);
+            border-radius: 40px;
+            padding: 0.5rem;
+            background-color: rgba(255,255,255,0.2);
+            max-width: 850px;
+            margin: 0 auto;
+            backdrop-filter: blur(5px);
+        }
+        
+        .search-option {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: all 0.2s ease;
+            color: var(--white);
+        }
+        
+        .search-option:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .search-option.active {
+            background-color: var(--primary-blue);
+            color: var(--white);
+        }
+        
+        .search-divider {
+            width: 1px;
+            height: 24px;
+            background-color: rgba(255,255,255,0.5);
+        }
+        
+        .search-button {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Property Cards - 4 per row with equal height */
+        .property-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            padding: 2rem 0;
+        }
+        
+        .property-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background-color: var(--white);
+        }
+        
+        .property-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .property-image-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%; /* 4:3 aspect ratio */
+            overflow: hidden;
+        }
+        
+        .property-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .property-info {
+            padding: 1rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .property-location {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-dark);
+        }
+        
+        .property-distance, .property-dates {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .property-price {
+            font-weight: 700;
+            margin-top: auto;
+            padding-top: 0.5rem;
+            color: var(--primary-blue);
+        }
+        
+        .property-price span {
+            font-weight: 400;
+            color: var(--text-light);
+        }
+        
+        .property-card-actions {
+            position: absolute;
+            top: 16px;
+            left: 0;
+            right: 0;
+            padding: 0 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+        }
+        
+        .wishlist-icon {
+            color: var(--white);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: rgba(0, 0, 0, 0.5);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+        
+        .wishlist-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .available-badge {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-right: auto;
+        }
+        
+        .available-badge i {
+            font-size: 0.9rem;
+        }
+        
+        /* Category Filters */
+        .category-filters {
+            display: flex;
+            gap: 1.5rem;
+            padding: 2rem 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        
+        .category-filters::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            min-width: 80px;
+        }
+        
+        .category-item:hover {
+            border-bottom-color: var(--light-blue);
+        }
+        
+        .category-item.active {
+            border-bottom-color: var(--primary-blue);
+        }
+        
+        .category-icon {
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: var(--light-blue);
+            padding: 3rem 0;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .footer-section {
+            margin-bottom: 2rem;
+        }
+        
+        .footer-title {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark-blue);
+        }
+        
+        .footer-link {
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            display: block;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        .footer-link:hover {
+            color: var(--primary-blue);
+            text-decoration: none;
+        }
+        
+        /* Form Elements */
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ced4da;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.25rem rgba(25, 118, 210, 0.25);
+        }
+        
+        /* Responsive Adjustments */
+        @media (max-width: 1200px) {
+            .property-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .property-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .hero-section {
+                padding: 6rem 0 4rem;
+            }
+            
+            .hero-section h1 {
+                font-size: 2.5rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .search-bar {
+                flex-direction: column;
+                border-radius: 12px;
+                padding: 1rem;
+                background-color: rgba(255,255,255,0.3);
+            }
+            
+            .search-option {
+                width: 100%;
+                border-radius: 8px;
+                margin-bottom: 0.5rem;
+                text-align: center;
+            }
+            
+            .search-divider {
+                display: none;
+            }
+            
+            .property-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-section {
+                padding: 5rem 0 3rem;
+            }
+            
+            .hero-section h1 {
+                font-size: 2rem;
+            }
+            
+            .hero-section p {
+                font-size: 1rem;
+            }
+            
+            .navbar {
+                padding: 0.75rem 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <?php include('./includes/header.php'); ?>
-
-    <!-- Hero Section -->
-    <section class="hero-section">
-        <div class="container h-100">
-            <div class="row h-100 align-items-center">
-                <div class="col-12 text-center text-white zindex-2">
-                    <h1 class="display-4 fw-bold mb-4">Find Your Perfect Home</h1>
-                    <form id="searchForm" class="search-form" method="GET" action="index.php">
-                        <div class="row g-3 justify-content-center">
-                            <div class="col-md-4">
-                                <input type="text" class="form-control form-control-lg" placeholder="Location" id="location" name="location" value="<?php echo htmlspecialchars($location); ?>">
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select form-select-lg bg-dark text-white" id="propertyType" name="propertyType">
-                                    <option value="">Property Type</option>
-                                    <?php foreach ($categories as $cat): ?>
-                                        <option value="<?php echo $cat['id']; ?>" <?php echo ($propertyType == $cat['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cat['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <input type="number" class="form-control form-control-lg" placeholder="Min Price" id="min_price" name="min_price" value="<?php echo htmlspecialchars($min_price); ?>">
-                                    <span class="input-group-text bg-dark text-white">-</span>
-                                    <input type="number" class="form-control form-control-lg" placeholder="Max Price" id="max_price" name="max_price" value="<?php echo htmlspecialchars($max_price); ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary btn-lg w-100">Search</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <style>
-    .hero-section {
-        position: relative;
-        min-height: 500px;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        margin-top: -76px;
-        padding-top: 176px;
-        z-index: 1;
-    }
-    
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: url('assets/images/hero-bg.png') center/cover no-repeat;
-        z-index: -2;
-    }
-    
-    .hero-section::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: -1;
-    }
-    
-    .zindex-2 {
-        position: relative;
-        z-index: 2;
-    }
-    
-    .search-form .form-control,
-    .search-form .form-select {
-        height: 50px;
-        border-radius: 0.25rem;
-    }
-    
-    .search-form .btn {
-        height: 50px;
-    }
-    </style>
-
-<!-- Featured Properties -->
-<section class="featured-properties">
-    <div class="container">
-        <div class="row">
-            <div class="col-12">
-                <h1 class="text-center mb-4">Available Properties</h1>
-
-                <!-- Results Count -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <p class="mb-0">
-                            <?php 
-                            if ($total_records > 0) {
-                                echo "Showing $total_records properties";
-                            } else {
-                                echo "No properties found for your search.";
-                            }
-                            ?>
-                        </p>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">SmartRental</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="search-bar ms-auto me-3 d-lg-none d-block">
+                    <div class="search-option active">Anywhere</div>
+                    <div class="search-divider"></div>
+                    <div class="search-option">Any week</div>
+                    <div class="search-divider"></div>
+                    <div class="search-option">Add guests</div>
+                    <div class="search-button">
+                        <i class="fas fa-search"></i>
                     </div>
                 </div>
-        <div class="row g-4">
+                <ul class="navbar-nav ms-auto">
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <li class="nav-item dropdown d-lg-block d-none">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i> My Account
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="my_bookings.php">My Bookings</a></li>
+                                <li><a class="dropdown-item" href="favorites.php">Favorites</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="logout.php">Logout</a></li>
+                            </ul>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item d-lg-block d-none">
+                            <a class="btn btn-outline-blue me-2" href="../login.php">Log in</a>
+                        </li>
+                        <li class="nav-item d-lg-block d-none">
+                            <a class="btn btn-primary-blue" href="../register.php">Sign up</a>
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section with Background Image -->
+    <section class="hero-section">
+        <div class="container">
+            <h1>Find Your Perfect Home</h1>
+            <p>Discover the best rental properties in your desired location</p>
+           
+            
+            <form id="searchForm" class="mt-4" method="GET" action="index.php">
+                <div class="row g-3 justify-content-center">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control form-control-lg" placeholder="Location" id="location" name="location" value="<?php echo htmlspecialchars($location); ?>">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select form-select-lg" id="propertyType" name="propertyType">
+                            <option value="">Property Type</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?php echo $cat['id']; ?>" <?php echo ($propertyType == $cat['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cat['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <input type="number" class="form-control form-control-lg" placeholder="Min Price" id="min_price" name="min_price" value="<?php echo htmlspecialchars($min_price); ?>">
+                            <span class="input-group-text">-</span>
+                            <input type="number" class="form-control form-control-lg" placeholder="Max Price" id="max_price" name="max_price" value="<?php echo htmlspecialchars($max_price); ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary-blue btn-lg w-100">Search</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Category Filters -->
+    <?php
+    // Fetch categories from database
+    $category_query = "SELECT id, name FROM categories ORDER BY name";
+    $category_result = $conn->query($category_query);
+    
+    // Default icons for categories
+    $category_icons = [
+        'Beach' => 'umbrella-beach',
+        'Mountain' => 'mountain',
+        'Pool' => 'swimming-pool',
+        'City' => 'city',
+        'Camping' => 'campground',
+        'Unique' => 'igloo',
+        'Lakefront' => 'water',
+        'Countryside' => 'tree',
+        'Apartment' => 'building',
+        'House' => 'home',
+        'Villa' => 'home',
+        'Cottage' => 'home'
+    ];
+    ?>
+    <div class="container">
+        <div class="category-filters">
+            <div class="category-item active" data-category="all">
+                <i class="fas fa-home category-icon"></i>
+                <span>All</span>
+            </div>
+            <?php if ($category_result && $category_result->num_rows > 0): ?>
+                <?php while($category = $category_result->fetch_assoc()): ?>
+                    <div class="category-item" data-category="<?php echo htmlspecialchars($category['id']); ?>">
+                        <i class="fas fa-<?php echo htmlspecialchars($category_icons[$category['name']] ?? 'home'); ?> category-icon"></i>
+                        <span><?php echo htmlspecialchars($category['name']); ?></span>
+                    </div>
+                <?php endwhile; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Property Listings -->
+    <div class="container">
+        <h2 class="mb-4">Explore nearby properties</h2>
+        
+        <div class="property-grid">
             <?php if ($total_records > 0): ?>
                 <?php while($row = $result->fetch_assoc()): ?>
-                    <div class="col-md-4">
-                        <div class="property-card">
-                            <div class="card">
+                    <div class="property-card">
+                        <a href="property.php?id=<?php echo $row['id']; ?>" class="text-decoration-none text-dark d-block h-100">
+                            <div class="position-relative h-100 d-flex flex-column">
                                 <div class="property-image-container">
-                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.png'; ?>" 
+                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.jpg'; ?>" 
                                          class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
-                                    <div class="units-badge">
-                                        <span class="badge bg-primary">
-                                            <?php echo $row['available_units'] . '/' . $row['total_units']; ?>
-                                        </span>
+                                </div>
+                                <div class="property-card-actions">
+                                    <div class="available-badge">
+                                        <i class="fas fa-home me-1"></i> <?php echo ($row['available_units'] ?? 0) . '/' . ($row['total_units'] ?? 1); ?> units
+                                    </div>
+                                    <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
+                                        <i class="far fa-heart"></i>
                                     </div>
                                 </div>
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        <?php echo htmlspecialchars($row['house_no']); ?>
-                                        <?php if(isset($row['featured']) && $row['featured']): ?>
-                                            <span class="badge bg-danger">Featured</span>
-                                        <?php endif; ?>
-                                    </h5>
-                                    <p class="card-text">
-                                        <i class="fas fa-map-marker-alt text-primary"></i> <?php echo htmlspecialchars($row['location']); ?>
-                                        <br>
-                                        <i class="fas fa-bed text-primary"></i> <?php echo htmlspecialchars($row['bedrooms']); ?> Beds
-                                        <i class="fas fa-bath text-primary"></i> <?php echo htmlspecialchars($row['bathrooms']); ?> Baths
-                                        <br>
-                                        <i class="fas fa-ruler-combined text-primary"></i> <?php echo htmlspecialchars($row['area']); ?> sqft
-                                    </p>
-                                </div>
-                                <div class="card-footer">
-                                    <div class="price">
-                                        Ksh. <?php echo number_format($row['price']); ?>/month
+                                <div class="property-info mt-auto">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="property-location"><?php echo htmlspecialchars($row['house_no']); ?></h5>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-star text-warning"></i>
+                                            <span class="ms-1">4.8</span>
+                                        </div>
                                     </div>
-                                    <?php if($row['available_units'] > 0): ?>
-                                        <a href="property.php?id=<?php echo $row['id']; ?>" class="btn btn-primary">
-                                            View Details
-                                        </a>
-                                    <?php else: ?>
-                                        <button class="btn btn-secondary" disabled>
-                                            Unavailable
-                                        </button>
-                                    <?php endif; ?>
+                                    <p class="property-distance"><?php echo htmlspecialchars($row['location']); ?></p>
+                                    <p class="property-dates"><?php echo htmlspecialchars($row['bedrooms']); ?> beds</p>
+                                    <p class="property-price">Ksh <?php echo number_format($row['price']); ?> <span>/month</span></p>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -370,35 +664,121 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         </nav>
         <?php endif; ?>
     </div>
-</section>
 
     <!-- Footer -->
-    <footer class="footer bg-dark text-white">
+    <footer class="footer">
         <div class="container">
             <div class="row">
-                <div class="col-md-4">
-                    <h5>About Smart Rental</h5>
-                    <p>Find your perfect home with ease. Smart Rental connects renters with amazing properties.</p>
+                <div class="col-md-3 footer-section">
+                    <h5 class="footer-title">Support</h5>
+                    <a href="#" class="footer-link">Help Center</a>
+                    <a href="#" class="footer-link">Safety information</a>
+                    <a href="#" class="footer-link">Cancellation options</a>
+                    <a href="#" class="footer-link">Our COVID-19 Response</a>
                 </div>
-                <div class="col-md-4">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li><a href="#">Terms & Conditions</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                    </ul>
+                <div class="col-md-3 footer-section">
+                    <h5 class="footer-title">Community</h5>
+                    <a href="#" class="footer-link">Disaster relief housing</a>
+                    <a href="#" class="footer-link">Support refugees</a>
+                    <a href="#" class="footer-link">Combating discrimination</a>
                 </div>
-                <div class="col-md-4">
-                    <h5>Contact Us</h5>
-                    <p>Email: info@smartrental.com</p>
-                    <p>Phone: +254 700 000 000</p>
+                <div class="col-md-3 footer-section">
+                    <h5 class="footer-title">Hosting</h5>
+                    <a href="#" class="footer-link">Try hosting</a>
+                    <a href="#" class="footer-link">AirCover for Hosts</a>
+                    <a href="#" class="footer-link">Explore hosting resources</a>
+                    <a href="#" class="footer-link">Visit our community forum</a>
+                </div>
+                <div class="col-md-3 footer-section">
+                    <h5 class="footer-title">About</h5>
+                    <a href="#" class="footer-link">Newsroom</a>
+                    <a href="#" class="footer-link">Learn about new features</a>
+                    <a href="#" class="footer-link">Careers</a>
+                    <a href="#" class="footer-link">Investors</a>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <p>© 2025 SmartRental, Inc. All rights reserved</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-decoration-none me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-decoration-none me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-decoration-none"><i class="fab fa-instagram"></i></a>
                 </div>
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/main.js"></script>
+    <script>
+        // Add active class to clicked category filter and update URL
+        document.querySelectorAll('.category-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                const url = new URL(window.location.href);
+                
+                // Update active class
+                document.querySelector('.category-item.active').classList.remove('active');
+                this.classList.add('active');
+                
+                // Update URL with category parameter
+                if (category === 'all') {
+                    url.searchParams.delete('category');
+                } else {
+                    url.searchParams.set('category', category);
+                }
+                
+                // Reset to first page when changing categories
+                url.searchParams.set('page', '1');
+                
+                // Navigate to the new URL
+                window.location.href = url.toString();
+            });
+        });
+        
+        // Set active category based on URL parameter on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryParam = urlParams.get('category');
+            
+            if (categoryParam) {
+                const activeItem = document.querySelector(`.category-item[data-category="${categoryParam}"]`);
+                if (activeItem) {
+                    document.querySelector('.category-item.active').classList.remove('active');
+                    activeItem.classList.add('active');
+                }
+            }
+        });
+        
+        // Wishlist toggle function
+        function toggleWishlist(element, propertyId) {
+            const heart = element.querySelector('i');
+            
+            // Check if user is logged in
+            <?php if (!isset($_SESSION['user_id'])): ?>
+                window.location.href = '../login.php';
+                return;
+            <?php endif; ?>
+            
+            // Toggle heart icon
+            if (heart.classList.contains('far')) {
+                heart.classList.remove('far');
+                heart.classList.add('fas');
+                heart.style.color = 'var(--primary-blue)';
+                
+                // Add to wishlist (AJAX call would go here)
+                console.log('Added property ' + propertyId + ' to wishlist');
+            } else {
+                heart.classList.remove('fas');
+                heart.classList.add('far');
+                heart.style.color = 'var(--white)';
+                
+                // Remove from wishlist (AJAX call would go here)
+                console.log('Removed property ' + propertyId + ' from wishlist');
+            }
+        }
+    </script>
 </body>
 </html>
