@@ -276,7 +276,7 @@ if (!$property) {
     <?php include 'includes/header.php'; ?>
 
     <!-- Hero Section -->
-    <div class="property-hero" style="background-image: url('<?php echo $property['main_image'] ? '../uploads/' . htmlspecialchars($property['main_image']) : 'assets/images/default-property.jpg'; ?>')">
+    <div class="property-hero" style="background-image: url('<?php echo $property['main_image'] ? '../uploads/' . htmlspecialchars($property['main_image']) : 'assets/images/hero-bg.png'; ?>')">
         <div class="status-badge <?php echo $property['status'] == 1 ? 'status-available' : 'status-rented'; ?>">
             <?php echo $property['status'] == 1 ? 'Available' : 'Rented'; ?>
         </div>
