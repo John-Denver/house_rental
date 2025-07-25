@@ -12,6 +12,7 @@ $location = isset($_GET['location']) ? trim($_GET['location']) : '';
 $propertyType = isset($_GET['propertyType']) ? trim($_GET['propertyType']) : '';
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : '';
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : '';
+$category_id = isset($_GET['category']) ? (int)$_GET['category'] : '';
 
 // Build query conditions
 $conditions = "WHERE h.status = 1";
@@ -29,6 +30,13 @@ if (!empty($location)) {
 if (!empty($propertyType)) {
     $conditions .= " AND c.id = ?";
     $params[] = $propertyType;
+    $types .= 'i';
+}
+
+// Add category filter
+if (!empty($category_id)) {
+    $conditions .= " AND h.category_id = ?";
+    $params[] = $category_id;
     $types .= 'i';
 }
 if ($min_price !== '') {
@@ -371,15 +379,26 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Become a Host</a>
-                    </li>
-                    <li class="nav-item d-lg-block d-none">
-                        <a class="btn btn-airbnb-outline me-2" href="#">Log in</a>
-                    </li>
-                    <li class="nav-item d-lg-block d-none">
-                        <a class="btn btn-airbnb" href="#">Sign up</a>
-                    </li>
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <li class="nav-item dropdown d-lg-block d-none">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i> My Account
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="my_bookings.php">My Bookings</a></li>
+                                <li><a class="dropdown-item" href="favorites.php">Favorites</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="logout.php">Logout</a></li>
+                            </ul>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item d-lg-block d-none">
+                            <a class="btn btn-airbnb-outline me-2" href="../login.php">Log in</a>
+                        </li>
+                        <li class="nav-item d-lg-block d-none">
+                            <a class="btn btn-airbnb" href="register.php">Sign up</a>
+                        </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -428,44 +447,41 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </section>
 
     <!-- Category Filters -->
+    <?php
+    // Fetch categories from database
+    $category_query = "SELECT id, name FROM categories ORDER BY name";
+    $category_result = $conn->query($category_query);
+    
+    // Default icons for categories (you can add more as needed)
+    $category_icons = [
+        'Beach' => 'umbrella-beach',
+        'Mountain' => 'mountain',
+        'Pool' => 'swimming-pool',
+        'City' => 'city',
+        'Camping' => 'campground',
+        'Unique' => 'igloo',
+        'Lakefront' => 'water',
+        'Countryside' => 'tree',
+        'Apartment' => 'building',
+        'House' => 'home',
+        'Villa' => 'home',
+        'Cottage' => 'home'
+    ];
+    ?>
     <div class="container">
         <div class="category-filters">
-            <div class="category-item active">
+            <div class="category-item active" data-category="all">
                 <i class="fas fa-home category-icon"></i>
                 <span>All</span>
             </div>
-            <div class="category-item">
-                <i class="fas fa-umbrella-beach category-icon"></i>
-                <span>Beach</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-mountain category-icon"></i>
-                <span>Mountain</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-swimming-pool category-icon"></i>
-                <span>Pool</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-city category-icon"></i>
-                <span>City</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-campground category-icon"></i>
-                <span>Camping</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-igloo category-icon"></i>
-                <span>Unique</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-water category-icon"></i>
-                <span>Lakefront</span>
-            </div>
-            <div class="category-item">
-                <i class="fas fa-tree category-icon"></i>
-                <span>Countryside</span>
-            </div>
+            <?php if ($category_result && $category_result->num_rows > 0): ?>
+                <?php while($category = $category_result->fetch_assoc()): ?>
+                    <div class="category-item" data-category="<?php echo htmlspecialchars($category['id']); ?>">
+                        <i class="fas fa-<?php echo htmlspecialchars($category_icons[$category['name']] ?? 'home'); ?> category-icon"></i>
+                        <span><?php echo htmlspecialchars($category['name']); ?></span>
+                    </div>
+                <?php endwhile; ?>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -477,27 +493,29 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <?php if ($total_records > 0): ?>
                 <?php while($row = $result->fetch_assoc()): ?>
                     <div class="property-card">
-                        <div class="position-relative">
-                            <div class="property-image-container">
-                                <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.png'; ?>" 
-                                     class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
-                            </div>
-                            <div class="wishlist-icon">
-                                <i class="far fa-heart"></i>
-                            </div>
-                        </div>
-                        <div class="property-info">
-                            <div class="d-flex justify-content-between">
-                                <h5 class="property-location"><?php echo htmlspecialchars($row['house_no']); ?></h5>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-star"></i>
-                                    <span class="ms-1">4.8</span>
+                        <a href="property.php?id=<?php echo $row['id']; ?>" class="text-decoration-none text-dark d-block h-100">
+                            <div class="position-relative h-100 d-flex flex-column">
+                                <div class="property-image-container">
+                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.png'; ?>" 
+                                         class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
+                                </div>
+                                <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
+                                    <i class="far fa-heart"></i>
+                                </div>
+                                <div class="property-info mt-auto">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="property-location"><?php echo htmlspecialchars($row['house_no']); ?></h5>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-star"></i>
+                                            <span class="ms-1">4.8</span>
+                                        </div>
+                                    </div>
+                                    <p class="property-distance"><?php echo htmlspecialchars($row['location']); ?></p>
+                                    <p class="property-dates"><?php echo htmlspecialchars($row['bedrooms']); ?> beds</p>
+                                    <p class="property-price">Ksh <?php echo number_format($row['price']); ?> <span>Month</span></p>
                                 </div>
                             </div>
-                            <p class="property-distance"><?php echo htmlspecialchars($row['location']); ?></p>
-                            <p class="property-dates"><?php echo htmlspecialchars($row['bedrooms']); ?> beds</p>
-                            <p class="property-price">Ksh <?php echo number_format($row['price']); ?> <span>night</span></p>
-                        </div>
+                        </a>
                     </div>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -585,12 +603,43 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Add active class to clicked category filter
+        // Add active class to clicked category filter and update URL
         document.querySelectorAll('.category-item').forEach(item => {
             item.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                const url = new URL(window.location.href);
+                
+                // Update active class
                 document.querySelector('.category-item.active').classList.remove('active');
                 this.classList.add('active');
+                
+                // Update URL with category parameter
+                if (category === 'all') {
+                    url.searchParams.delete('category');
+                } else {
+                    url.searchParams.set('category', category);
+                }
+                
+                // Reset to first page when changing categories
+                url.searchParams.set('page', '1');
+                
+                // Navigate to the new URL
+                window.location.href = url.toString();
             });
+        });
+        
+        // Set active category based on URL parameter on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryParam = urlParams.get('category');
+            
+            if (categoryParam) {
+                const activeItem = document.querySelector(`.category-item[data-category="${categoryParam}"]`);
+                if (activeItem) {
+                    document.querySelector('.category-item.active').classList.remove('active');
+                    activeItem.classList.add('active');
+                }
+            }
         });
         
         // Wishlist toggle
