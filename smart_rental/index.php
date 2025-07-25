@@ -61,7 +61,7 @@ $total_records = $stmt->get_result()->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $records_per_page);
 
 // Prepare and execute main query with limit
-$main_sql = "SELECT h.*, c.name as category_name FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions ORDER BY h.created_at DESC LIMIT ?, ?";
+$main_sql = "SELECT h.*, c.name as category_name, h.available_units, h.total_units FROM houses h LEFT JOIN categories c ON h.category_id = c.id $conditions ORDER BY h.created_at DESC LIMIT ?, ?";
 $stmt = $conn->prepare($main_sql);
 $main_params = $params;
 $main_types = $types . 'ii';
@@ -281,18 +281,52 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             color: var(--text-light);
         }
         
-        .wishlist-icon {
+        .property-card-actions {
             position: absolute;
             top: 16px;
-            right: 16px;
+            left: 0;
+            right: 0;
+            padding: 0 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+        }
+        
+        .wishlist-icon {
             color: var(--white);
             font-size: 1.5rem;
             cursor: pointer;
             transition: all 0.2s ease;
+            background-color: rgba(0, 0, 0, 0.5);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
         }
         
         .wishlist-icon:hover {
             transform: scale(1.1);
+        }
+        
+        .available-badge {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-right: auto;
+        }
+        
+        .available-badge i {
+            font-size: 0.9rem;
         }
         
         /* Category Filters */
@@ -570,8 +604,13 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.jpg'; ?>" 
                                          class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
                                 </div>
-                                <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
-                                    <i class="far fa-heart"></i>
+                                <div class="property-card-actions">
+                                    <div class="available-badge">
+                                        <i class="fas fa-home me-1"></i> <?php echo ($row['available_units'] ?? 0) . '/' . ($row['total_units'] ?? 1); ?> units
+                                    </div>
+                                    <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
+                                        <i class="far fa-heart"></i>
+                                    </div>
                                 </div>
                                 <div class="property-info mt-auto">
                                     <div class="d-flex justify-content-between">
@@ -661,7 +700,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <hr class="my-4">
             <div class="row">
                 <div class="col-md-6">
-                    <p>© 2023 SmartRental, Inc. All rights reserved</p>
+                    <p>© 2025 SmartRental, Inc. All rights reserved</p>
                 </div>
                 <div class="col-md-6 text-md-end">
                     <a href="#" class="text-decoration-none me-3"><i class="fab fa-facebook-f"></i></a>
