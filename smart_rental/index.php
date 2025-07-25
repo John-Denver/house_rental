@@ -87,27 +87,30 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --airbnb-pink: #FF385C;
-            --airbnb-dark: #222222;
-            --airbnb-light-gray: #F7F7F7;
-            --airbnb-gray: #DDDDDD;
-            --airbnb-text: #484848;
+            --primary-blue: #1976D2;
+            --dark-blue: #0D47A1;
+            --light-blue: #E3F2FD;
+            --accent-blue: #2196F3;
+            --text-dark: #212121;
+            --text-light: #757575;
+            --white: #FFFFFF;
         }
         
         body {
             font-family: 'Circular', -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif;
-            color: var(--airbnb-text);
-            background-color: white;
+            color: var(--text-dark);
+            background-color: var(--white);
         }
         
         /* Header Styles */
         .navbar {
             padding: 1rem 2rem;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            background-color: var(--white);
         }
         
         .navbar-brand {
-            color: var(--airbnb-pink) !important;
+            color: var(--primary-blue) !important;
             font-weight: 800;
             font-size: 1.5rem;
         }
@@ -115,39 +118,60 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         .nav-link {
             font-weight: 500;
             padding: 0.5rem 1rem !important;
+            color: var(--text-dark);
         }
         
-        .btn-airbnb {
-            background-color: var(--airbnb-pink);
-            color: white;
+        .btn-primary-blue {
+            background-color: var(--primary-blue);
+            color: var(--white);
             border-radius: 8px;
             font-weight: 600;
             padding: 0.5rem 1rem;
+            border: none;
         }
         
-        .btn-airbnb-outline {
-            border: 1px solid var(--airbnb-gray);
+        .btn-outline-blue {
+            border: 1px solid var(--primary-blue);
             border-radius: 8px;
             font-weight: 600;
             padding: 0.5rem 1rem;
+            color: var(--primary-blue);
         }
         
-        /* Hero Section */
+        /* Hero Section with Background Image */
         .hero-section {
             position: relative;
-            padding: 6rem 0 4rem;
-            background-color: white;
+            padding: 8rem 0 6rem;
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+                        url('assets/images/hero-bg.png') center/cover no-repeat;
+            color: var(--white);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        .hero-section p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
         
         .search-bar {
             display: flex;
             align-items: center;
-            border: 1px solid var(--airbnb-gray);
+            border: 1px solid var(--white);
             border-radius: 40px;
             padding: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-color: rgba(255,255,255,0.2);
             max-width: 850px;
             margin: 0 auto;
+            backdrop-filter: blur(5px);
         }
         
         .search-option {
@@ -156,26 +180,27 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             cursor: pointer;
             border-radius: 30px;
             transition: all 0.2s ease;
+            color: var(--white);
         }
         
         .search-option:hover {
-            background-color: var(--airbnb-light-gray);
+            background-color: rgba(255,255,255,0.1);
         }
         
         .search-option.active {
-            background-color: var(--airbnb-dark);
-            color: white;
+            background-color: var(--primary-blue);
+            color: var(--white);
         }
         
         .search-divider {
             width: 1px;
             height: 24px;
-            background-color: var(--airbnb-gray);
+            background-color: rgba(255,255,255,0.5);
         }
         
         .search-button {
-            background-color: var(--airbnb-pink);
-            color: white;
+            background-color: var(--primary-blue);
+            color: var(--white);
             border: none;
             border-radius: 50%;
             width: 48px;
@@ -200,10 +225,13 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             border-radius: 12px;
             overflow: hidden;
             transition: transform 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background-color: var(--white);
         }
         
         .property-card:hover {
-            transform: scale(1.02);
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         
         .property-image-container {
@@ -220,43 +248,51 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 12px;
         }
         
         .property-info {
-            padding: 1rem 0;
+            padding: 1rem;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
         
         .property-location {
-            font-weight: 500;
+            font-weight: 600;
             margin-bottom: 0.25rem;
+            color: var(--text-dark);
         }
         
         .property-distance, .property-dates {
-            color: #717171;
+            color: var(--text-light);
             font-size: 0.9rem;
+            margin-bottom: 0.25rem;
         }
         
         .property-price {
-            font-weight: 600;
+            font-weight: 700;
             margin-top: auto;
             padding-top: 0.5rem;
+            color: var(--primary-blue);
         }
         
         .property-price span {
             font-weight: 400;
+            color: var(--text-light);
         }
         
         .wishlist-icon {
             position: absolute;
             top: 16px;
             right: 16px;
-            color: white;
+            color: var(--white);
             font-size: 1.5rem;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .wishlist-icon:hover {
+            transform: scale(1.1);
         }
         
         /* Category Filters */
@@ -285,22 +321,23 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         }
         
         .category-item:hover {
-            border-bottom-color: var(--airbnb-gray);
+            border-bottom-color: var(--light-blue);
         }
         
         .category-item.active {
-            border-bottom-color: var(--airbnb-dark);
+            border-bottom-color: var(--primary-blue);
         }
         
         .category-icon {
             font-size: 1.5rem;
+            color: var(--primary-blue);
         }
         
         /* Footer */
         .footer {
-            background-color: var(--airbnb-light-gray);
+            background-color: var(--light-blue);
             padding: 3rem 0;
-            border-top: 1px solid var(--airbnb-gray);
+            border-top: 1px solid rgba(0,0,0,0.1);
         }
         
         .footer-section {
@@ -310,17 +347,32 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         .footer-title {
             font-weight: 700;
             margin-bottom: 1rem;
+            color: var(--dark-blue);
         }
         
         .footer-link {
-            color: var(--airbnb-text);
+            color: var(--text-dark);
             margin-bottom: 0.5rem;
             display: block;
             text-decoration: none;
+            transition: color 0.2s ease;
         }
         
         .footer-link:hover {
-            text-decoration: underline;
+            color: var(--primary-blue);
+            text-decoration: none;
+        }
+        
+        /* Form Elements */
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ced4da;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.25rem rgba(25, 118, 210, 0.25);
         }
         
         /* Responsive Adjustments */
@@ -334,6 +386,14 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             .property-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+            
+            .hero-section {
+                padding: 6rem 0 4rem;
+            }
+            
+            .hero-section h1 {
+                font-size: 2.5rem;
+            }
         }
         
         @media (max-width: 768px) {
@@ -341,12 +401,14 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 flex-direction: column;
                 border-radius: 12px;
                 padding: 1rem;
+                background-color: rgba(255,255,255,0.3);
             }
             
             .search-option {
                 width: 100%;
                 border-radius: 8px;
                 margin-bottom: 0.5rem;
+                text-align: center;
             }
             
             .search-divider {
@@ -356,12 +418,28 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             .property-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .hero-section {
+                padding: 5rem 0 3rem;
+            }
+            
+            .hero-section h1 {
+                font-size: 2rem;
+            }
+            
+            .hero-section p {
+                font-size: 1rem;
+            }
+            
+            .navbar {
+                padding: 0.75rem 1rem;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">SmartRental</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -393,10 +471,10 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </li>
                     <?php else: ?>
                         <li class="nav-item d-lg-block d-none">
-                            <a class="btn btn-airbnb-outline me-2" href="../login.php">Log in</a>
+                            <a class="btn btn-outline-blue me-2" href="../login.php">Log in</a>
                         </li>
                         <li class="nav-item d-lg-block d-none">
-                            <a class="btn btn-airbnb" href="register.php">Sign up</a>
+                            <a class="btn btn-primary-blue" href="../register.php">Sign up</a>
                         </li>
                     <?php endif; ?>
                 </ul>
@@ -404,19 +482,12 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         </div>
     </nav>
 
-    <!-- Hero Section with Search -->
+    <!-- Hero Section with Background Image -->
     <section class="hero-section">
         <div class="container">
-            <div class="search-bar d-none d-lg-flex">
-                <div class="search-option active">Anywhere</div>
-                <div class="search-divider"></div>
-                <div class="search-option">Any week</div>
-                <div class="search-divider"></div>
-                <div class="search-option">Add guests</div>
-                <div class="search-button">
-                    <i class="fas fa-search"></i>
-                </div>
-            </div>
+            <h1>Find Your Perfect Home</h1>
+            <p>Discover the best rental properties in your desired location</p>
+           
             
             <form id="searchForm" class="mt-4" method="GET" action="index.php">
                 <div class="row g-3 justify-content-center">
@@ -439,7 +510,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-airbnb btn-lg w-100">Search</button>
+                        <button type="submit" class="btn btn-primary-blue btn-lg w-100">Search</button>
                     </div>
                 </div>
             </form>
@@ -452,7 +523,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $category_query = "SELECT id, name FROM categories ORDER BY name";
     $category_result = $conn->query($category_query);
     
-    // Default icons for categories (you can add more as needed)
+    // Default icons for categories
     $category_icons = [
         'Beach' => 'umbrella-beach',
         'Mountain' => 'mountain',
@@ -487,7 +558,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <!-- Property Listings -->
     <div class="container">
-        <h2 class="mb-4">Explore nearby</h2>
+        <h2 class="mb-4">Explore nearby properties</h2>
         
         <div class="property-grid">
             <?php if ($total_records > 0): ?>
@@ -496,7 +567,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <a href="property.php?id=<?php echo $row['id']; ?>" class="text-decoration-none text-dark d-block h-100">
                             <div class="position-relative h-100 d-flex flex-column">
                                 <div class="property-image-container">
-                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.png'; ?>" 
+                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.jpg'; ?>" 
                                          class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
                                 </div>
                                 <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
@@ -506,13 +577,13 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <div class="d-flex justify-content-between">
                                         <h5 class="property-location"><?php echo htmlspecialchars($row['house_no']); ?></h5>
                                         <div class="d-flex align-items-center">
-                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star text-warning"></i>
                                             <span class="ms-1">4.8</span>
                                         </div>
                                     </div>
                                     <p class="property-distance"><?php echo htmlspecialchars($row['location']); ?></p>
                                     <p class="property-dates"><?php echo htmlspecialchars($row['bedrooms']); ?> beds</p>
-                                    <p class="property-price">Ksh <?php echo number_format($row['price']); ?> <span>Month</span></p>
+                                    <p class="property-price">Ksh <?php echo number_format($row['price']); ?> <span>/month</span></p>
                                 </div>
                             </div>
                         </a>
@@ -642,22 +713,33 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             }
         });
         
-        // Wishlist toggle
-        document.querySelectorAll('.wishlist-icon').forEach(icon => {
-            icon.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const heart = this.querySelector('i');
-                if (heart.classList.contains('far')) {
-                    heart.classList.remove('far');
-                    heart.classList.add('fas');
-                    heart.style.color = 'var(--airbnb-pink)';
-                } else {
-                    heart.classList.remove('fas');
-                    heart.classList.add('far');
-                    heart.style.color = 'white';
-                }
-            });
-        });
+        // Wishlist toggle function
+        function toggleWishlist(element, propertyId) {
+            const heart = element.querySelector('i');
+            
+            // Check if user is logged in
+            <?php if (!isset($_SESSION['user_id'])): ?>
+                window.location.href = '../login.php';
+                return;
+            <?php endif; ?>
+            
+            // Toggle heart icon
+            if (heart.classList.contains('far')) {
+                heart.classList.remove('far');
+                heart.classList.add('fas');
+                heart.style.color = 'var(--primary-blue)';
+                
+                // Add to wishlist (AJAX call would go here)
+                console.log('Added property ' + propertyId + ' to wishlist');
+            } else {
+                heart.classList.remove('fas');
+                heart.classList.add('far');
+                heart.style.color = 'var(--white)';
+                
+                // Remove from wishlist (AJAX call would go here)
+                console.log('Removed property ' + propertyId + ' from wishlist');
+            }
+        }
     </script>
 </body>
 </html>
