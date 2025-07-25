@@ -514,8 +514,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="mb-3">
                                 <label class="form-label">Pin Location on Map</label>
                                 <div class="input-group mb-2">
-                                    <input type="text" class="form-control" id="address" placeholder="Search address or drag the pin on the map" readonly>
-                                    <button class="btn btn-outline-primary" type="button" onclick="getCurrentLocation()">
+                                    <input type="text" class="form-control" id="search_address" placeholder="Search address or drag the pin on the map" readonly>
+                                    <button class="btn btn-outline-primary" type="button" id="currentLocationBtn">
                                         <i class="fas fa-location-arrow"></i> Current Location
                                     </button>
                                 </div>
@@ -632,111 +632,352 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ&libraries=places"></script>
     <script>
-        // Initialize map
-        let map;
-        let marker;
-        let currentLocationMarker;
+        // Initialize map variables in global scope
+        let map = null;
+        let marker = null;
+        let currentLocationMarker = null;
         
         function initMap() {
+            console.log('Initializing map...');
+            
             // Set initial location to Nairobi
             const initialLocation = { lat: -1.2833, lng: 36.8167 };
             
-            // Initialize map
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: initialLocation,
-                zoom: 15,
-                mapTypeId: 'roadmap',
-                styles: [
-                    {
-                        featureType: 'poi',
-                        elementType: 'labels',
-                        stylers: [{ visibility: 'off' }]
+            try {
+                // Initialize map
+                window.map = new google.maps.Map(document.getElementById('map'), {
+                    center: initialLocation,
+                    zoom: 15,
+                    mapTypeId: 'roadmap',
+                    styles: [
+                        {
+                            featureType: 'poi',
+                            elementType: 'labels',
+                            stylers: [{ visibility: 'off' }]
+                        }
+                    ]
+                });
+                
+                console.log('Map initialized:', window.map);
+
+                // Create draggable marker if it doesn't exist
+                if (!window.marker) {
+                    window.marker = new google.maps.Marker({
+                        position: initialLocation,
+                        map: window.map,
+                        draggable: true,
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                            scaledSize: new google.maps.Size(30, 30)
+                        }
+                    });
+                    
+                    // Add drag event to marker
+                    window.marker.addListener('dragend', function(event) {
+                        updateLocation(event.latLng);
+                    });
+                }
+
+                // Create current location marker if it doesn't exist
+                if (!window.currentLocationMarker) {
+                    window.currentLocationMarker = new google.maps.Marker({
+                        position: initialLocation,
+                        map: window.map,
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                            scaledSize: new google.maps.Size(20, 20)
+                        }
+                    });
+                }
+
+                // Add click event to map
+                window.map.addListener('click', function(event) {
+                    if (window.marker) {
+                        window.marker.setPosition(event.latLng);
+                        updateLocation(event.latLng);
                     }
-                ]
-            });
+                });
 
-            // Add draggable marker
-            marker = new google.maps.Marker({
-                position: initialLocation,
-                map: map,
-                draggable: true,
-                icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-                    scaledSize: new google.maps.Size(30, 30)
+                // Initialize place search
+                const input = document.getElementById('search_address');
+                if (input) {
+                    const autocomplete = new google.maps.places.Autocomplete(input);
+                    autocomplete.addListener('place_changed', function() {
+                        const place = autocomplete.getPlace();
+                        if (place.geometry && window.marker) {
+                            window.map.setCenter(place.geometry.location);
+                            window.marker.setPosition(place.geometry.location);
+                            updateLocation(place.geometry.location);
+                        }
+                    });
                 }
-            });
-
-            // Add click event to map
-            map.addListener('click', function(event) {
-                marker.setPosition(event.latLng);
-                updateLocation(event.latLng);
-            });
-
-            // Add drag event to marker
-            marker.addListener('dragend', function(event) {
-                updateLocation(event.latLng);
-            });
-
-            // Add place search
-            const input = document.getElementById('address');
-            const autocomplete = new google.maps.places.Autocomplete(input);
-            autocomplete.addListener('place_changed', function() {
-                const place = autocomplete.getPlace();
-                if (place.geometry) {
-                    map.setCenter(place.geometry.location);
-                    marker.setPosition(place.geometry.location);
-                    updateLocation(place.geometry.location);
-                }
-            });
-
-            // Add current location marker
-            currentLocationMarker = new google.maps.Marker({
-                position: initialLocation,
-                map: map,
-                icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                    scaledSize: new google.maps.Size(20, 20)
-                }
-            });
+                
+                console.log('Map initialization complete');
+                
+            } catch (error) {
+                console.error('Error initializing map:', error);
+            }
+            
+            return window.map;
         }
 
         function updateLocation(latLng) {
-            document.getElementById('latitude').value = latLng.lat().toFixed(6);
-            document.getElementById('longitude').value = latLng.lng().toFixed(6);
+            console.log('updateLocation called with:', latLng);
             
-            // Reverse geocode to get address
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ 'location': latLng }, function(results, status) {
-                if (status === 'OK' && results[0]) {
-                    document.getElementById('address').value = results[0].formatted_address;
-                    document.getElementById('property_location').value = results[0].formatted_address;
-                }
-            });
+            if (!latLng || (typeof latLng.lat !== 'function') || (typeof latLng.lng !== 'function')) {
+                console.error('Invalid location data:', latLng);
+                return;
+            }
+            
+            try {
+                const lat = latLng.lat();
+                const lng = latLng.lng();
+                
+                console.log('Updating location to:', lat, lng);
+                
+                // Update hidden fields
+                document.getElementById('latitude').value = lat.toFixed(6);
+                document.getElementById('longitude').value = lng.toFixed(6);
+                
+                // Update the visible address input
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ 'location': latLng }, function(results, status) {
+                    console.log('Geocoding status:', status, 'Results:', results);
+                    
+                    if (status === 'OK' && results[0]) {
+                        const address = results[0].formatted_address;
+                        console.log('Setting address to:', address);
+                        
+                        // Update the hidden address field
+                        document.getElementById('address').value = address;
+                        
+                        // Update the location description textarea
+                        const locationTextarea = document.getElementById('property_location');
+                        if (locationTextarea) {
+                            locationTextarea.value = address;
+                            console.log('Updated property_location with:', address);
+                        }
+                        
+                        // Update the search input
+                        const searchInput = document.getElementById('search_address');
+                        if (searchInput) {
+                            searchInput.value = address;
+                            console.log('Updated search_address with:', address);
+                        }
+                    } else {
+                        console.error('Geocoding failed:', status);
+                        // At least update the coordinates even if geocoding fails
+                        document.getElementById('property_location').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        document.getElementById('search_address').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    }
+                });
+            } catch (error) {
+                console.error('Error in updateLocation:', error);
+            }
         }
 
         function getCurrentLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const pos = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-                        
-                        // Update map center and marker
-                        map.setCenter(pos);
-                        marker.setPosition(pos);
-                        currentLocationMarker.setPosition(pos);
-                        
-                        // Update location fields
-                        updateLocation(pos);
-                    },
-                    function() {
-                        handleLocationError(true);
+            console.log('getCurrentLocation called');
+            
+            const currentLocationBtn = document.getElementById('currentLocationBtn');
+            if (!currentLocationBtn) {
+                console.error('Current location button not found');
+                return;
+            }
+            
+            // Save original button state
+            const originalHtml = currentLocationBtn.innerHTML;
+            const originalOnClick = currentLocationBtn.onclick;
+            
+            // Show loading state
+            currentLocationBtn.disabled = true;
+            currentLocationBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Locating...';
+            currentLocationBtn.onclick = null; // Prevent multiple clicks
+            
+            // Function to reset button state
+            const resetButton = function() {
+                currentLocationBtn.disabled = false;
+                currentLocationBtn.innerHTML = originalHtml;
+                currentLocationBtn.onclick = originalOnClick;
+            };
+            
+            if (!navigator.geolocation) {
+                console.error('Geolocation is not supported by your browser');
+                handleLocationError(false);
+                resetButton();
+                return;
+            }
+            
+            console.log('Requesting geolocation...');
+            
+            // Set a timeout to ensure button gets reset even if geolocation hangs
+            const timeoutId = setTimeout(function() {
+                console.error('Geolocation request timed out');
+                handleLocationError(true);
+                resetButton();
+            }, 15000); // 15 second timeout
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    clearTimeout(timeoutId); // Clear the timeout
+                    console.log('Got geolocation:', position);
+                    
+                    const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    
+                    console.log('Position object:', pos);
+                    
+                    // Update the map and fields
+                    updateMapAndFields(pos);
+                    
+                    // Reset button state
+                    resetButton();
+                },
+                function(error) {
+                    clearTimeout(timeoutId); // Clear the timeout
+                    console.error('Geolocation error:', error);
+                    handleLocationError(true);
+                    resetButton();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        function updateMapAndFields(pos) {
+            console.log('Updating map and fields with position:', pos);
+            
+            try {
+                // Ensure we have a LatLng object
+                const latLng = new google.maps.LatLng(pos.lat, pos.lng);
+                
+                // Initialize map if not already done
+                if (!window.map) {
+                    console.log('Initializing map...');
+                    initMap();
+                    
+                    // Give the map a moment to initialize
+                    setTimeout(() => {
+                        updateMapPosition(latLng);
+                        updateLocation(latLng);
+                    }, 500); // Increased timeout to ensure map is fully initialized
+                } else {
+                    updateMapPosition(latLng);
+                    updateLocation(latLng);
+                }
+            } catch (error) {
+                console.error('Error in updateMapAndFields:', error);
+            }
+        }
+        
+        function ensureMarkerExists(markerVar, position, options) {
+            if (!markerVar) {
+                console.log('Creating new marker with options:', options);
+                return new google.maps.Marker({
+                    position: position,
+                    map: window.map,
+                    ...options
+                });
+            }
+            
+            // If marker exists but is not on the map, re-create it
+            if (!markerVar.getMap()) {
+                console.log('Marker exists but has no map, re-creating...');
+                markerVar.setMap(null); // Clean up old marker
+                return new google.maps.Marker({
+                    position: position,
+                    map: window.map,
+                    ...options
+                });
+            }
+            
+            // Just update position if marker is valid
+            markerVar.setPosition(position);
+            markerVar.setVisible(true);
+            return markerVar;
+        }
+        
+        function updateMapPosition(latLng) {
+            console.log('updateMapPosition called with:', latLng);
+            
+            if (!latLng) {
+                console.error('No latLng provided to updateMapPosition');
+                return;
+            }
+            
+            // Ensure we have a valid LatLng object
+            const position = new google.maps.LatLng(
+                typeof latLng.lat === 'function' ? latLng.lat() : latLng.lat,
+                typeof latLng.lng === 'function' ? latLng.lng() : latLng.lng
+            );
+            
+            // Initialize map if it doesn't exist
+            if (!window.map) {
+                console.log('Map not initialized, initializing now...');
+                initMap();
+                
+                // Queue the position update after map is initialized
+                setTimeout(() => updateMapPosition(latLng), 500);
+                return;
+            }
+            
+            try {
+                // Update map view
+                window.map.setCenter(position);
+                window.map.setZoom(15);
+                
+                // Update or create main marker
+                window.marker = ensureMarkerExists(
+                    window.marker,
+                    position,
+                    {
+                        draggable: true,
+                        animation: google.maps.Animation.DROP,
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                            scaledSize: new google.maps.Size(30, 30)
+                        },
+                        zIndex: 2
                     }
                 );
-            } else {
-                handleLocationError(false);
+                
+                // Ensure drag event is attached
+                const dragListener = google.maps.event.addListenerOnce(
+                    window.marker,
+                    'dragend',
+                    (event) => updateLocation(event.latLng)
+                );
+                
+                // Update or create current location marker
+                window.currentLocationMarker = ensureMarkerExists(
+                    window.currentLocationMarker,
+                    position,
+                    {
+                        animation: google.maps.Animation.DROP,
+                        icon: {
+                            url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                            scaledSize: new google.maps.Size(20, 20)
+                        },
+                        zIndex: 1
+                    }
+                );
+                
+                console.log('Markers updated successfully');
+                
+            } catch (error) {
+                console.error('Error in updateMapPosition:', error);
+                
+                // If we get here, something is seriously wrong with the map
+                if (!window.map) {
+                    console.log('Map is not available, attempting to reinitialize...');
+                    initMap();
+                    setTimeout(() => updateMapPosition(latLng), 1000);
+                }
             }
         }
 
@@ -746,8 +987,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Error: Your browser doesn\'t support geolocation.');
         }
 
+        // Make getCurrentLocation globally available
+        window.getCurrentLocation = getCurrentLocation;
+        
         // Initialize map when page loads
-        window.addEventListener('load', initMap);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the map
+            initMap();
+            
+            // Add click handler for the current location button
+            document.getElementById('currentLocationBtn').addEventListener('click', function(e) {
+                e.preventDefault();
+                getCurrentLocation();
+            });
+            
+            // For testing: Log when the page is fully loaded
+            console.log('Page fully loaded, event listeners attached');
+        });
 
         // File upload previews
         document.getElementById('property_main_image').addEventListener('change', function(e) {
