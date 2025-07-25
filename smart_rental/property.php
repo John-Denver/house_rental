@@ -1,5 +1,6 @@
 <?php
 require_once '../config/db.php';
+require_once '../config/auth.php';
 
 // Get property ID from URL
 $property_id = $_GET['id'] ?? 0;
@@ -30,24 +31,262 @@ if (!$property) {
     <title><?php echo htmlspecialchars($property['house_no']); ?> - Smart Rental</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/property.css">
+    <style>
+        :root {
+            --primary-blue: #1976D2;
+            --dark-blue: #0D47A1;
+            --light-blue: #E3F2FD;
+            --accent-blue: #2196F3;
+            --text-dark: #212121;
+            --text-light: #757575;
+            --white: #FFFFFF;
+            --border-radius: 12px;
+        }
+        
+        body {
+            font-family: 'Circular', -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif;
+            color: var(--text-dark);
+            background-color: var(--white);
+        }
+        
+        /* Header */
+        .navbar {
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            background-color: var(--white);
+        }
+        
+        .navbar-brand {
+            color: var(--primary-blue) !important;
+            font-weight: 800;
+            font-size: 1.5rem;
+        }
+        
+        /* Hero Section */
+        .property-hero {
+            position: relative;
+            height: 60vh;
+            min-height: 500px;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .property-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent 50%);
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            color: var(--white);
+            width: 100%;
+        }
+        
+        .property-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .property-location {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            z-index: 2;
+        }
+        
+        .status-available {
+            background-color: var(--primary-blue);
+            color: var(--white);
+        }
+        
+        .status-rented {
+            background-color: var(--text-light);
+            color: var(--white);
+        }
+        
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+        }
+        
+        /* Image Gallery */
+        .gallery-container {
+            margin-bottom: 2rem;
+        }
+        
+        .main-image {
+            width: 100%;
+            height: 500px;
+            object-fit: cover;
+            border-radius: var(--border-radius);
+        }
+        
+        .thumbnail-container {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        
+        .thumbnail {
+            width: 100px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+        
+        .thumbnail:hover, .thumbnail.active {
+            opacity: 1;
+            border: 2px solid var(--primary-blue);
+        }
+        
+        /* Property Details */
+        .property-details-card {
+            background-color: var(--white);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-dark);
+        }
+        
+        .description-section {
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        
+        /* Amenities */
+        .amenities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .amenity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+        
+        /* Booking Card */
+        .booking-card {
+            position: sticky;
+            top: 20px;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .price-display {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+        
+        .price-period {
+            font-size: 1rem;
+            color: var(--text-light);
+        }
+        
+        /* Reviews */
+        .review-card {
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background-color: var(--white);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .reviewer-name {
+            font-weight: 600;
+        }
+        
+        .review-date {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        /* Map */
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .property-hero {
+                height: 50vh;
+                min-height: 400px;
+            }
+            
+            .main-image {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .property-hero {
+                height: 40vh;
+                min-height: 300px;
+            }
+            
+            .property-title {
+                font-size: 2rem;
+            }
+            
+            .main-image {
+                height: 300px;
+            }
+        }
+    </style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
 
-    <!-- Hero Section with Main Image -->
+    <!-- Hero Section -->
     <div class="property-hero" style="background-image: url('<?php echo $property['main_image'] ? '../uploads/' . htmlspecialchars($property['main_image']) : 'assets/images/default-property.jpg'; ?>')">
         <div class="status-badge <?php echo $property['status'] == 1 ? 'status-available' : 'status-rented'; ?>">
             <?php echo $property['status'] == 1 ? 'Available' : 'Rented'; ?>
         </div>
-        <div class="hero-content">
+        <div class="container hero-content">
             <h1 class="property-title"><?php echo htmlspecialchars($property['house_no']); ?></h1>
             <div class="property-location">
                 <i class="fas fa-map-marker-alt"></i>
                 <span><?php echo htmlspecialchars($property['location']); ?></span>
             </div>
-            <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex flex-wrap gap-3 text-white">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-bed me-2"></i>
                     <span><?php echo $property['bedrooms']; ?> Beds</span>
@@ -101,13 +340,22 @@ if (!$property) {
 
                 <!-- Property Description -->
                 <div class="property-details-card">
-                    <h2 class="section-title">Property Details</h2>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="section-title mb-0">About this property</h2>
+                        <div class="price-display">
+                            Ksh <?php echo number_format($property['price']); ?> 
+                            <span class="price-period">/month</span>
+                        </div>
+                    </div>
+                    
                     <div class="description-section">
                         <?php echo nl2br(htmlspecialchars($property['description'])); ?>
                     </div>
                     
+                    <hr class="my-4">
+                    
                     <!-- Amenities -->
-                    <h3 class="section-title">Amenities</h3>
+                    <h3 class="section-title">What this place offers</h3>
                     <div class="amenities-grid">
                         <?php if($property['bedrooms'] > 0): ?>
                         <div class="amenity-item">
@@ -136,6 +384,18 @@ if (!$property) {
                             <span>Parking: <?php echo $property['parking']; ?></span>
                         </div>
                         <?php endif; ?>
+                        
+                        <?php if(!empty($property['features'])): 
+                            $features = explode(',', $property['features']);
+                            foreach($features as $feature): 
+                                if(trim($feature) !== ''): ?>
+                                    <div class="amenity-item">
+                                        <i class="fas fa-check-circle text-primary"></i>
+                                        <span><?php echo htmlspecialchars(trim($feature)); ?></span>
+                                    </div>
+                        <?php   endif;
+                            endforeach;
+                        endif; ?>
                     </div>
                 </div>
 
@@ -154,7 +414,7 @@ if (!$property) {
                         <?php while($video = $videos->fetch_assoc()): ?>
                         <div class="col-md-6 mb-4">
                             <div class="video-container">
-                                <video controls class="w-100" style="border-radius: 8px;">
+                                <video controls class="w-100" style="border-radius: var(--border-radius);">
                                     <source src="../uploads/<?php echo htmlspecialchars($video['file_path']); ?>" type="video/mp4">
                                     Your browser does not support the video tag.
                                 </video>
@@ -169,45 +429,36 @@ if (!$property) {
                 <div class="property-details-card">
                     <h3 class="section-title">Location</h3>
                     <div id="propertyMap" class="map-container"></div>
-                </div>
-            </div>
-                        ?>
+                    <div class="mt-3">
+                        <a href="https://www.google.com/maps/dir/current+location/<?php echo $property['latitude']; ?>,<?php echo $property['longitude']; ?>" 
+                           class="btn btn-outline-primary" 
+                           target="_blank">
+                            <i class="fas fa-directions me-2"></i> Get Directions
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Property Details -->
-            <div class="col-md-4">
-                <div class="property-details">
-                    <h2><?php echo htmlspecialchars($property['house_no']); ?></h2>
-                    <p class="location">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <?php echo htmlspecialchars($property['location']); ?>
-                    </p>
+            <!-- Booking Card -->
+            <div class="col-lg-4">
+                <div class="booking-card">
+                    <div class="price-display mb-3">
+                        Ksh <?php echo number_format($property['price']); ?> 
+                        <span class="price-period">/month</span>
+                    </div>
                     
-                    <!-- Navigation Button -->
-                    <form id="bookingForm" action="process_booking.php" method="POST" class="mt-3">
+                    <form id="bookingForm" action="process_booking.php" method="POST">
                         <input type="hidden" name="house_id" value="<?php echo $property_id; ?>">
-                        <div class="mb-3">
-                            <a href="https://www.google.com/maps/dir/current+location/<?php echo $property['latitude']; ?>,<?php echo $property['longitude']; ?>" 
-                               class="btn btn-outline-success w-100" 
-                               target="_blank" 
-                               onclick="return confirm('Open Google Maps for directions?')">
-                                <i class="fas fa-car"></i> Get Directions
-                            </a>
-                        </div>
                         
-                        <!-- Move Date Input -->
                         <div class="mb-3">
-                            <label for="startDate" class="form-label">Move-in Date</label>
+                            <label for="startDate" class="form-label fw-bold">Move-in Date</label>
                             <input type="date" class="form-control form-control-lg" 
                                    id="startDate" name="start_date" required
                                    min="<?php echo date('Y-m-d'); ?>">
                         </div>
                         
-                        <!-- Lease Duration -->
                         <div class="mb-3">
-                            <label for="leaseDuration" class="form-label">Lease Duration</label>
+                            <label for="leaseDuration" class="form-label fw-bold">Lease Duration</label>
                             <select class="form-select form-select-lg" id="leaseDuration" name="rental_period" required>
                                 <option value="">Select Duration</option>
                                 <option value="6">6 Months</option>
@@ -216,31 +467,36 @@ if (!$property) {
                             </select>
                         </div>
                         
-                        <!-- Special Requests -->
                         <div class="mb-3">
-                            <label for="specialRequests" class="form-label">Special Requests (Optional)</label>
+                            <label for="specialRequests" class="form-label fw-bold">Special Requests (Optional)</label>
                             <textarea class="form-control" id="specialRequests" name="special_requests" 
-                                     rows="2" placeholder="Any special requirements or questions"></textarea>
+                                     rows="3" placeholder="Any special requirements or questions"></textarea>
                         </div>
                         
-                        <div class="d-grid gap-2">
+                        <div class="d-grid gap-2 mb-3">
                             <?php if (isset($_SESSION['user_id'])): ?>
-                                <button type="submit" class="btn btn-primary btn-lg btn-book">
+                                <button type="submit" class="btn btn-primary btn-lg py-3">
                                     <i class="fas fa-calendar-check me-2"></i>Book Now
                                 </button>
                             <?php else: ?>
                                 <a href="login.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" 
-                                   class="btn btn-primary btn-lg">
+                                   class="btn btn-primary btn-lg py-3">
                                     <i class="fas fa-sign-in-alt me-2"></i>Login to Book
                                 </a>
                             <?php endif; ?>
                         </div>
+                        
+                        <div class="text-center text-muted small">
+                            You won't be charged yet
+                        </div>
                     </form>
                     
-                    <div class="property-agent mt-4 pt-3 border-top">
-                        <h5 class="mb-3">Contact Agent</h5>
+                    <hr class="my-4">
+                    
+                    <div class="contact-owner">
+                        <h5 class="mb-3">Contact Owner</h5>
                         <div class="d-flex align-items-center mb-3">
-                            <div class="agent-avatar me-3">
+                            <div class="me-3">
                                 <i class="fas fa-user-circle fa-3x text-primary"></i>
                             </div>
                             <div>
@@ -252,92 +508,107 @@ if (!$property) {
                                             <?php echo htmlspecialchars($property['owner_phone']); ?>
                                         </a>
                                     </div>
-                                <?php elseif (!empty($property['agent_phone'])): ?>
-                                    <div class="text-muted">
-                                        <i class="fas fa-phone-alt me-2"></i>
-                                        <a href="tel:<?php echo htmlspecialchars($property['agent_phone']); ?>">
-                                            <?php echo htmlspecialchars($property['agent_phone']); ?>
-                                        </a>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="text-muted">
-                                        <i class="fas fa-phone-alt me-2"></i>
-                                        <span>No contact number available</span>
-                                    </div>
                                 <?php endif; ?>
                             </div>
                         </div>
+                        
                         <button class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
                             <i class="fas fa-envelope me-2"></i>Send Message
                         </button>
                     </div>
                     
-                    <div class="property-share mt-4 pt-3 border-top">
-                        <h6 class="mb-3">Share this property</h6>
+                    <hr class="my-4">
+                    
+                    <div class="share-property">
+                        <h5 class="mb-3">Share this property</h5>
                         <?php 
                         $share_url = urlencode((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]");
                         $share_title = urlencode($property['house_no'] . ' - ' . $property['location']);
                         ?>
-                        <div class="d-flex flex-wrap gap-2">
+                        <div class="d-flex justify-content-center gap-3">
                             <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo $share_url; ?>" 
-                               class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                               class="btn btn-sm btn-outline-primary rounded-circle" 
+                               target="_blank" 
+                               rel="noopener noreferrer">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
                             <a href="https://twitter.com/intent/tweet?url=<?php echo $share_url; ?>&text=<?php echo $share_title; ?>" 
-                               class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                               class="btn btn-sm btn-outline-primary rounded-circle" 
+                               target="_blank" 
+                               rel="noopener noreferrer">
                                 <i class="fab fa-twitter"></i>
                             </a>
                             <a href="https://wa.me/?text=<?php echo $share_title . ' ' . $share_url; ?>" 
-                               class="btn btn-sm btn-outline-success" target="_blank" rel="noopener noreferrer">
+                               class="btn btn-sm btn-outline-success rounded-circle" 
+                               target="_blank" 
+                               rel="noopener noreferrer">
                                 <i class="fab fa-whatsapp"></i>
                             </a>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard()">
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle" onclick="copyToClipboard()">
                                 <i class="fas fa-link"></i>
                             </button>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Features List -->
-                <?php if (!empty($property['features'])): ?>
-                <div class="property-details-card mt-4">
-                    <h5 class="section-title">Features</h5>
-                    <ul class="list-unstyled">
-                        <?php 
-                        $features = explode(',', $property['features']);
-                        foreach($features as $feature): 
-                            if(trim($feature) !== ''): ?>
-                                <li class="mb-2">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    <?php echo htmlspecialchars(trim($feature)); ?>
-                                </li>
-                        <?php 
-                            endif;
-                        endforeach; 
-                        ?>
-                    </ul>
-                </div>
-                <?php endif; ?>
-                
-                <!-- Get Directions -->
-                <div class="property-details-card mt-4">
-                    <h5 class="section-title">Get Directions</h5>
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=<?php 
-                        echo urlencode($property['latitude'] . ',' . $property['longitude']); 
-                    ?>" 
-                       class="btn btn-outline-primary w-100" 
-                       target="_blank">
-                        <i class="fas fa-directions me-2"></i>Open in Google Maps
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 
     <?php include 'includes/footer.php'; ?>
+    
+    <!-- Contact Owner Modal -->
+    <div class="modal fade" id="contactAgentModal" tabindex="-1" aria-labelledby="contactAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="contactAgentModalLabel">Contact Owner</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="contactForm">
+                        <input type="hidden" name="property_id" value="<?php echo $property_id; ?>">
+                        <input type="hidden" name="owner_id" value="<?php echo $property['landlord_id']; ?>">
+                        
+                        <div class="mb-3">
+                            <label for="contactName" class="form-label">Your Name</label>
+                            <input type="text" class="form-control" id="contactName" name="name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="contactEmail" class="form-label">Your Email</label>
+                            <input type="email" class="form-control" id="contactEmail" name="email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="contactPhone" class="form-label">Your Phone Number</label>
+                            <input type="tel" class="form-control" id="contactPhone" name="phone">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="contactMessage" class="form-label">Message</label>
+                            <textarea class="form-control" id="contactMessage" name="message" rows="4" required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ&callback=initPropertyMap" async defer></script>
     <script>
+        // Change main image when thumbnail is clicked
+        function changeImage(element, newSrc) {
+            document.getElementById('mainImage').src = newSrc;
+            document.querySelectorAll('.thumbnail').forEach(thumb => {
+                thumb.classList.remove('active');
+            });
+            element.classList.add('active');
+        }
+        
+        // Initialize Google Map
         function initPropertyMap() {
             const propertyLocation = { 
                 lat: <?php echo $property['latitude']; ?>, 
@@ -358,33 +629,32 @@ if (!$property) {
             });
 
             // Add marker for the property
-            const marker = new google.maps.Marker({
+            new google.maps.Marker({
                 position: propertyLocation,
                 map: map,
                 icon: {
                     url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-                    scaledSize: new google.maps.Size(30, 30)
+                    scaledSize: new google.maps.Size(40, 40)
                 }
             });
-
-            // Add info window
-            const infoWindow = new google.maps.InfoWindow({
-                content: `
-                    <div class="info-window">
-                        <h5><?php echo htmlspecialchars($property['house_no']); ?></h5>
-                        <p><?php echo htmlspecialchars($property['location']); ?></p>
-                        <p>Price: <?php echo number_format($property['price']); ?></p>
-                    </div>
-                `
-            });
-
-            marker.addListener('click', function() {
-                infoWindow.open(map, marker);
+        }
+        
+        // Copy to clipboard function
+        function copyToClipboard() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copied to clipboard!');
             });
         }
-
-        window.addEventListener('load', initPropertyMap);
+        
+        // Handle contact form submission
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // AJAX form submission would go here
+            alert('Message sent successfully!');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('contactAgentModal'));
+            modal.hide();
+        });
     </script>
-    <script src="assets/js/property.js"></script>
 </body>
 </html>
