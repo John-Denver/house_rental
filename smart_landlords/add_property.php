@@ -134,8 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
 
                             <div class="form-group mb-3">
-                                <label for="property_description" class="form-label">Description</label>
-                                <textarea class="form-control" id="property_description" name="description" rows="3" required></textarea>
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                                <small class="form-text text-muted">Use the toolbar above to format your text with bullets, bold, underline, and more.</small>
                             </div>
 
                             <div class="form-group mb-3">
@@ -227,6 +228,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <!-- TinyMCE -->
+    <script src="https://cdn.tiny.cloud/1/8zvwq78ba3v0q7hgjebfye6sr7blxj3jyeaggzyiph4c41hx/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        tinymce.init({
+            selector: '#description',
+            plugins: 'lists link image table code help wordcount',
+            toolbar: 'undo redo | formatselect | bold italic underline | \
+                     alignleft aligncenter alignright | \
+                     bullist numlist outdent indent | link image | \
+                     removeformat | help',
+            menubar: false,
+            height: 300,
+            content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
+            setup: function(editor) {
+                editor.on('change', function() {
+                    editor.save();
+                });
+            }
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD06CBLLmOHLrVccQv7t3x72cG4Rj8bcOQ&libraries=places"></script>
     <script>
