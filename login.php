@@ -387,7 +387,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <button type="submit" class="btn btn-primary btn-login w-100 mb-3">
                             <i class="fas fa-sign-in-alt me-2"></i> Login
                         </button>
-                        
                     </form>
                 </div>
             </div>

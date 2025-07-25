@@ -282,7 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="tab-pane fade show active" id="customer" role="tabpanel" aria-labelledby="customer-tab">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <img src="https://illustrations.popsy.co/amber/digital-nomad.svg" alt="Customer Illustration" class="illustration floating d-none d-md-block">
+                                    <img src="https://cdn.prod.website-files.com/5e51c674258ffe10d286d30a/5e5354c88e249320e005285e_peep-32.svg" alt="Customer Illustration" class="illustration floating d-none d-md-block">
                                 </div>
                                 <div class="col-md-6">
                                     <h4 class="mb-4 text-center text-md-start"><i class="fas fa-user-circle me-2"></i>Customer Registration</h4>
@@ -335,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="tab-pane fade" id="landlord" role="tabpanel" aria-labelledby="landlord-tab">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <img src="https://cdn.prod.website-files.com/5e51c674258ffe10d286d30a/5e5354c88e249320e005285e_peep-32.svg" alt="Landlord Illustration" class="illustration floating d-none d-md-block">
+                                    <img src="https://illustrations.popsy.co/amber/house-search.svg" alt="Landlord Illustration" class="illustration floating d-none d-md-block">
                                 </div>
                                 <div class="col-md-6">
                                     <h4 class="mb-4 text-center text-md-start"><i class="fas fa-building me-2"></i>Landlord Registration</h4>
