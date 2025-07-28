@@ -144,26 +144,26 @@ require_once '../config/db.php';
                 </li>
             </ul>
 
-            <ul class="navbar-nav">
+            <ul class="navbar-nav ms-auto">
                 <?php if (is_logged_in()): ?>
-                    <li class="nav-item">
-                        <span class="nav-link me-2">
-                            <i class="fas fa-user me-1"></i>
-                            <?php echo htmlspecialchars($_SESSION['user_name']); ?>
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-primary" href="../logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i>
-                            Logout
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span><?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="my_bookings.php"><i class="fas fa-calendar-alt me-2"></i> My Bookings</a></li>
+                            <li><a class="dropdown-item" href="favorites.php"><i class="fas fa-heart me-2"></i> Favorites</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                        </ul>
                     </li>
                 <?php else: ?>
-                    <li class="nav-item me-2 d-flex align-items-center">
-                        <a class="btn btn-outline-primary px-3 py-2" style="line-height: 1.5; height: 40px; display: flex; align-items: center;" href="../login.php">Login</a>
+                    <li class="nav-item d-lg-block d-none">
+                        <a class="btn btn-outline-primary me-2" href="../login.php">Log in</a>
                     </li>
-                    <li class="nav-item d-flex align-items-center">
-                        <a class="btn btn-primary text-white px-3 py-2" style="line-height: 1.5; height: 40px; display: flex; align-items: center;" href="../register.php">Register</a>
+                    <li class="nav-item d-lg-block d-none">
+                        <a class="btn btn-primary" href="../register.php">Sign up</a>
                     </li>
                 <?php endif; ?>
             </ul>
