@@ -98,7 +98,7 @@ $viewings = $stmt->get_result();
         </nav>
 
         <!-- Main Content -->
-        <div class="main-content">
+        <div class="main-content mt-4">
             <div class="container-fluid">
                 <div class="page-content">
                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -290,7 +290,7 @@ $viewings = $stmt->get_result();
         </div>
     </div>
 
-    <?php include('./includes/footer.php'); ?>
+    <!-- <?php include('../includes/footer.php'); ?> -->
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
