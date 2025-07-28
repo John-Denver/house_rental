@@ -235,8 +235,8 @@ include 'includes/header.php';
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
                         <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="David Kim" class="img-fluid">
                     </div>
-                    <h5 class="mb-1">David Kim</h5>
-                    <p class="text-muted mb-0">CEO & Founder</p>
+                    <h5 class="mb-1">Denver Bogonko</h5>
+                    <p class="text-muted mb-0">Senior Backend Developer</p>
                 </div>
             </div>
             <div class="col-md-3 col-6">
@@ -244,7 +244,7 @@ include 'includes/header.php';
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
                         <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Jennifer Lee" class="img-fluid">
                     </div>
-                    <h5 class="mb-1">Jennifer Lee</h5>
+                    <h5 class="mb-1">Tallam Maureen</h5>
                     <p class="text-muted mb-0">Head of Operations</p>
                 </div>
             </div>
@@ -253,8 +253,8 @@ include 'includes/header.php';
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
                         <img src="https://randomuser.me/api/portraits/men/67.jpg" alt="Robert Johnson" class="img-fluid">
                     </div>
-                    <h5 class="mb-1">Robert Johnson</h5>
-                    <p class="text-muted mb-0">Lead Developer</p>
+                    <h5 class="mb-1">Elizabeth Thiira</h5>
+                    <p class="text-muted mb-0">Lead UX/UI developer</p>
                 </div>
             </div>
             <div class="col-md-3 col-6">
@@ -262,8 +262,8 @@ include 'includes/header.php';
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
                         <img src="https://randomuser.me/api/portraits/women/28.jpg" alt="Maria Garcia" class="img-fluid">
                     </div>
-                    <h5 class="mb-1">Maria Garcia</h5>
-                    <p class="text-muted mb-0">Customer Success</p>
+                    <h5 class="mb-1">Lec Richard Mathenge</h5>
+                    <p class="text-muted mb-0">Senior C.O.O & Supervisor</p>
                 </div>
             </div>
         </div>

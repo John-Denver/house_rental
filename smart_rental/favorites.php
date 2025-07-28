@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get user's favorites
 $sql = "SELECT f.*, h.*, c.name as category_name 
         FROM favorites f 
-        LEFT JOIN houses h ON f.property_id = h.id 
+        LEFT JOIN houses h ON f.house_id = h.id 
         LEFT JOIN categories c ON h.category_id = c.id
         WHERE f.user_id = ?
         ORDER BY f.created_at DESC";

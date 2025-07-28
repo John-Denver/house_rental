@@ -1,5 +1,6 @@
 <?php
 require_once '../config/db.php';
+require_once '../config/auth.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -133,9 +134,15 @@ require_once '../config/db.php';
                 <li class="nav-item">
                     <a class="nav-link" href="index.php">Home</a>
                 </li>
+                <?php if (is_logged_in()): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="favorites.php">Favorites</a>
+                </li>
+                <?php else: ?>
                 <li class="nav-item">
                     <a class="nav-link" href="browse.php">Browse Properties</a>
                 </li>
+                <?php endif; ?>
                 <li class="nav-item">
                     <a class="nav-link" href="about.php">About Us</a>
                 </li>
