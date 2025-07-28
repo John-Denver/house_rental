@@ -58,6 +58,78 @@ require_once '../config/auth.php';
             color: white;
         }
         
+        /* Favorite Button Styles */
+        .favorite-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+        
+        .favorite-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .favorite-icon i {
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .favorite-icon .fas {
+            color: #dc3545 !important;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: none;
+            min-width: 300px;
+            max-width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .toast-body {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #212529;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast.success .toast-body {
+            border-left: 4px solid #198754;
+            background-color: #f8f9fa;
+        }
+        
+        .toast.error .toast-body {
+            border-left: 4px solid #dc3545;
+            background-color: #f8f9fa;
+        }
+        
+        .btn-close {
+            padding: 1rem;
+            opacity: 0.7;
+        }
+        
+        .btn-close:hover {
+            opacity: 1;
+        }
+        
         .bg-primary {
             background-color: var(--primary-color) !important;
         }

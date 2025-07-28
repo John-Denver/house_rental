@@ -632,9 +632,19 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <div class="available-badge">
                                         <i class="fas fa-home me-1"></i> <?php echo ($row['available_units'] ?? 0) . '/' . ($row['total_units'] ?? 1); ?> units
                                     </div>
-                                    <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
-                                        <i class="far fa-heart"></i>
+                                    <?php if (is_logged_in()): ?>
+                                    <?php
+                                    // Check if this property is in user's favorites
+                                    $is_favorite = false;
+                                    $fav_check = $conn->prepare("SELECT id FROM favorites WHERE user_id = ? AND house_id = ?");
+                                    $fav_check->bind_param('ii', $_SESSION['user_id'], $row['id']);
+                                    $fav_check->execute();
+                                    $is_favorite = $fav_check->get_result()->num_rows > 0;
+                                    ?>
+                                    <div class="favorite-icon" data-property-id="<?php echo $row['id']; ?>" onclick="event.preventDefault(); event.stopPropagation(); toggleFavorite(this, <?php echo $row['id']; ?>);">
+                                        <i class="<?php echo $is_favorite ? 'fas' : 'far'; ?> fa-heart text-danger"></i>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="property-info mt-auto">
                                     <div class="d-flex justify-content-between">
@@ -689,8 +699,87 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         <?php endif; ?>
     </div>
 
+    <!-- Toast Notification -->
+    <div class="position-fixed top-0 start-50 translate-middle-x mt-5" style="z-index: 1100;">
+        <div id="favoriteToast" class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    <!-- Message will be inserted here -->
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <?php include 'includes/footer.php'; ?>
+
+    <script>
+    // Initialize toast
+    const toastEl = document.getElementById('favoriteToast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+
+    async function toggleFavorite(element, propertyId) {
+        if (!<?php echo is_logged_in() ? 'true' : 'false'; ?>) {
+            window.location.href = 'login.php?redirect=' + encodeURIComponent(window.location.pathname);
+            return;
+        }
+
+        const icon = element.querySelector('i');
+        const isFavorite = icon.classList.contains('fas');
+        
+        try {
+            const response = await fetch('api/toggle_favorite.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ house_id: propertyId })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Toggle heart icon
+                if (data.is_favorite) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                    showToast('Property added to favorites!');
+                } else {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    showToast('Property removed from favorites');
+                }
+            } else {
+                showToast(data.message || 'Error updating favorites', true);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', true);
+        }
+    }
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('favoriteToast');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        // Remove previous classes
+        toast.classList.remove('success', 'error');
+        
+        // Add appropriate class based on message type
+        if (isError) {
+            toast.classList.add('error');
+        } else {
+            toast.classList.add('success');
+        }
+        
+        // Set message and show
+        toastMessage.textContent = message;
+        const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+        bsToast.show();
+    }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>

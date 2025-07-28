@@ -6,21 +6,21 @@ require_login('./login.php');
 // Handle favorite actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    $property_id = $_POST['property_id'] ?? 0;
+    $house_id = $_POST['house_id'] ?? 0;
 
     if ($action === 'add') {
-        $stmt = $conn->prepare("INSERT INTO favorites (user_id, property_id, created_at) VALUES (?, ?, NOW())");
-        $stmt->bind_param('ii', $_SESSION['user_id'], $property_id);
+        $stmt = $conn->prepare("INSERT INTO favorites (user_id, house_id, created_at) VALUES (?, ?, NOW())");
+        $stmt->bind_param('ii', $_SESSION['user_id'], $house_id);
         $stmt->execute();
     } elseif ($action === 'remove') {
-        $stmt = $conn->prepare("DELETE FROM favorites WHERE user_id = ? AND property_id = ?");
-        $stmt->bind_param('ii', $_SESSION['user_id'], $property_id);
+        $stmt = $conn->prepare("DELETE FROM favorites WHERE user_id = ? AND house_id = ?");
+        $stmt->bind_param('ii', $_SESSION['user_id'], $house_id);
         $stmt->execute();
     }
 }
 
 // Get user's favorites
-$sql = "SELECT f.*, h.*, c.name as category_name 
+$sql = "SELECT f.*, h.*, c.name as category_name, h.main_image as main_image, h.id as house_id
         FROM favorites f 
         LEFT JOIN houses h ON f.house_id = h.id 
         LEFT JOIN categories c ON h.category_id = c.id
@@ -66,15 +66,17 @@ $favorites = $stmt->get_result();
                                 <?php while ($favorite = $favorites->fetch_assoc()): ?>
                                     <div class="col-md-4 mb-4">
                                         <div class="property-card">
-                                            <div class="property-header">
-                                                <img src="<?php echo $favorite['image'] ?? '../assets/images/default-property.jpg'; ?>" 
-                                                     alt="Property" class="property-image">
-                                                <div class="favorite-btn">
-                                                    <form method="POST" action="" class="d-inline">
-                                                        <input type="hidden" name="property_id" value="<?php echo $favorite['property_id']; ?>">
+                                            <div class="position-relative">
+                                                <img src="<?php echo !empty($favorite['main_image']) ? '../uploads/' . htmlspecialchars($favorite['main_image']) : 'assets/images/hero-bg.png'; ?>" 
+                                                     alt="<?php echo htmlspecialchars($favorite['house_no']); ?>" 
+                                                     class="img-fluid rounded-top property-image" 
+                                                     style="height: 200px; width: 100%; object-fit: cover;">
+                                                <div class="position-absolute top-0 end-0 p-2">
+                                                    <form method="POST" action="" class="m-0" onsubmit="return confirm('Are you sure you want to remove this property from favorites?');">
+                                                        <input type="hidden" name="house_id" value="<?php echo $favorite['house_id']; ?>">
                                                         <input type="hidden" name="action" value="remove">
-                                                        <button type="submit" class="btn btn-sm btn-danger">
-                                                            <i class="fas fa-heart"></i> Remove
+                                                        <button type="submit" class="btn btn-sm btn-danger rounded-circle" style="width: 36px; height: 36px; padding: 0.25rem;">
+                                                            <i class="fas fa-times"></i>
                                                         </button>
                                                     </form>
                                                 </div>
@@ -95,9 +97,9 @@ $favorites = $stmt->get_result();
                                                     <span><i class="fas fa-ruler-combined"></i> <?php echo $favorite['area']; ?> sqft</span>
                                                 </div>
                                                 <div class="property-actions">
-                                                    <a href="property.php?id=<?php echo $favorite['property_id']; ?>" 
+                                                    <a href="property.php?id=<?php echo $favorite['house_id']; ?>" 
                                                        class="btn btn-outline-primary">View Details</a>
-                                                    <a href="booking.php?id=<?php echo $favorite['property_id']; ?>" 
+                                                    <a href="booking.php?id=<?php echo $favorite['house_id']; ?>" 
                                                        class="btn btn-outline-success">Book Now</a>
                                                 </div>
                                             </div>
