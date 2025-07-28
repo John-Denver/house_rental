@@ -208,7 +208,10 @@ require_once '../config/auth.php';
                 </li>
                 <?php if (is_logged_in()): ?>
                 <li class="nav-item">
-                    <a class="nav-link" href="favorites.php">Favorites</a>
+                    <a class="nav-link" href="favorites.php"><i class="fas fa-heart me-1"></i> Favorites</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="my_bookings.php"><i class="fas fa-calendar-alt me-1"></i> My Bookings</a>
                 </li>
                 <?php else: ?>
                 <li class="nav-item">
