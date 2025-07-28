@@ -122,10 +122,21 @@ include 'includes/header.php';
                                 <tr class="<?php echo $isPast ? 'text-muted' : ''; ?>">
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <?php if (!empty($viewing['main_image'])): ?>
-                                            <img src="<?php echo htmlspecialchars($viewing['main_image']); ?>" 
-                                                 alt="<?php echo htmlspecialchars($viewing['property_title']); ?>" 
-                                                 class="rounded me-3" style="width: 60px; height: 45px; object-fit: cover;">
+                                            <?php if (!empty($viewing['main_image'])): 
+                                                $imagePath = '../uploads/' . $viewing['main_image'];
+                                                if (file_exists($imagePath)): ?>
+                                                <img src="<?php echo htmlspecialchars($imagePath); ?>" 
+                                                     alt="<?php echo htmlspecialchars($viewing['property_title']); ?>" 
+                                                     class="rounded me-3" style="width: 60px; height: 45px; object-fit: cover;">
+                                                <?php else: ?>
+                                                <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                                    <i class="fas fa-home text-muted"></i>
+                                                </div>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                                    <i class="fas fa-home text-muted"></i>
+                                                </div>
                                             <?php endif; ?>
                                             <div>
                                                 <h6 class="mb-0"><?php echo htmlspecialchars($viewing['property_title']); ?></h6>
@@ -329,41 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = new bootstrap.Modal(document.getElementById('cancelViewingModal'));
             document.getElementById('cancelViewingId').value = viewingId;
             modal.show();
-        });
-    });
-            
-            // Simulate form submission (replace with actual fetch/AJAX call)
-            setTimeout(() => {
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-                
-                // Show success message
-                const alert = document.createElement('div');
-                alert.className = 'alert alert-success alert-dismissible fade show mt-3';
-                alert.role = 'alert';
-                alert.innerHTML = `
-                    <i class="fas fa-check-circle me-2"></i>
-                    Your request has been processed successfully!
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                
-                // Insert alert before the form
-                this.parentNode.insertBefore(alert, this);
-                
-                // Close modal if this is a modal form
-                const modal = bootstrap.Modal.getInstance(this.closest('.modal'));
-                if (modal) {
-                    setTimeout(() => {
-                        modal.hide();
-                        // Refresh the page after a short delay
-                        setTimeout(() => window.location.reload(), 500);
-                    }, 1500);
-                } else {
-                    // If not in a modal, reset the form
-                    this.reset();
-                }
-            }, 1500);
         });
     });
 });

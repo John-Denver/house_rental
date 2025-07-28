@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 25, 2025 at 08:57 AM
+-- Generation Time: Jul 29, 2025 at 12:20 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -97,6 +97,27 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 (24, '4 bedroom, mansion'),
 (25, '5 bedroom, mansion'),
 (26, '6 bedroom, mansion');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `favorites`
+--
+
+CREATE TABLE `favorites` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `house_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `favorites`
+--
+
+INSERT INTO `favorites` (`id`, `user_id`, `house_id`, `created_at`) VALUES
+(6, 3, 39, '2025-07-28 20:24:52'),
+(7, 3, 38, '2025-07-28 20:24:54');
 
 -- --------------------------------------------------------
 
@@ -197,6 +218,35 @@ INSERT INTO `payments` (`id`, `tenant_id`, `amount`, `invoice`, `date_created`) 
 (15, 18, 7500, '001', '2025-06-23 00:00:00'),
 (17, 19, 3500, '002', '2025-06-23 00:00:00'),
 (18, 20, 5000, '003', '2025-06-23 00:00:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `property_viewings`
+--
+
+CREATE TABLE `property_viewings` (
+  `id` int(11) NOT NULL,
+  `property_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `viewer_name` varchar(100) NOT NULL,
+  `contact_number` varchar(20) NOT NULL,
+  `viewing_date` date NOT NULL,
+  `viewing_time` time NOT NULL,
+  `status` enum('pending','confirmed','completed','cancelled') NOT NULL DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `property_viewings`
+--
+
+INSERT INTO `property_viewings` (`id`, `property_id`, `user_id`, `viewer_name`, `contact_number`, `viewing_date`, `viewing_time`, `status`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 39, 3, 'Thiira Elizabeth', '0712512358', '2025-07-29', '15:00:00', 'pending', '', '2025-07-28 21:04:57', '2025-07-28 21:04:57'),
+(2, 38, 4, 'Maureen Tallam ', '0712512358', '2025-08-09', '14:00:00', 'pending', '', '2025-07-28 21:24:05', '2025-07-28 21:24:05'),
+(3, 37, 7, 'New Landlord', '0712512358', '2025-08-10', '16:00:00', 'pending', '', '2025-07-28 21:58:10', '2025-07-28 21:58:10');
 
 -- --------------------------------------------------------
 
@@ -334,6 +384,14 @@ ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `favorites`
+--
+ALTER TABLE `favorites`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_house_unique` (`user_id`,`house_id`),
+  ADD KEY `house_id` (`house_id`);
+
+--
 -- Indexes for table `houses`
 --
 ALTER TABLE `houses`
@@ -364,6 +422,14 @@ ALTER TABLE `house_media`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `property_viewings`
+--
+ALTER TABLE `property_viewings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `property_id` (`property_id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `rental_bookings`
@@ -422,6 +488,12 @@ ALTER TABLE `categories`
   MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
+-- AUTO_INCREMENT for table `favorites`
+--
+ALTER TABLE `favorites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT for table `houses`
 --
 ALTER TABLE `houses`
@@ -438,6 +510,12 @@ ALTER TABLE `house_media`
 --
 ALTER TABLE `payments`
   MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `property_viewings`
+--
+ALTER TABLE `property_viewings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `rental_bookings`
@@ -486,10 +564,24 @@ ALTER TABLE `booking_reviews`
   ADD CONSTRAINT `fk_review_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `favorites`
+--
+ALTER TABLE `favorites`
+  ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `house_media`
 --
 ALTER TABLE `house_media`
   ADD CONSTRAINT `house_media_ibfk_1` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `property_viewings`
+--
+ALTER TABLE `property_viewings`
+  ADD CONSTRAINT `property_viewings_ibfk_1` FOREIGN KEY (`property_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `property_viewings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `rental_bookings`
