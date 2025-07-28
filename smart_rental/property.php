@@ -345,6 +345,19 @@ if (!$property) {
                         <div class="price-display">
                             Ksh <?php echo number_format($property['price']); ?> 
                             <span class="price-period">/month</span>
+                            <div class="favorite-icon d-inline-block ms-3" id="propertyFavorite" data-property-id="<?php echo $property['id']; ?>">
+                                <?php 
+                                $is_favorite = false;
+                                if (is_logged_in()) {
+                                    $fav_check = $conn->prepare("SELECT id FROM favorites WHERE user_id = ? AND house_id = ?");
+                                    $fav_check->bind_param('ii', $_SESSION['user_id'], $property['id']);
+                                    $fav_check->execute();
+                                    $is_favorite = $fav_check->get_result()->num_rows > 0;
+                                }
+                                ?>
+                                <i class="<?php echo $is_favorite ? 'fas' : 'far'; ?> fa-heart text-danger"></i>
+                                <span class="ms-1"><?php echo $is_favorite ? 'Saved' : 'Save'; ?></span>
+                            </div>
                         </div>
                     </div>
                     
@@ -474,6 +487,10 @@ if (!$property) {
                         </div>
                         
                         <div class="d-grid gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-primary btn-lg py-3 mb-2" data-bs-toggle="modal" data-bs-target="#scheduleViewingModal">
+                                <i class="fas fa-calendar-alt me-2"></i>Schedule Viewing
+                            </button>
+                            
                             <?php if (isset($_SESSION['user_id'])): ?>
                                 <button type="submit" class="btn btn-primary btn-lg py-3">
                                     <i class="fas fa-calendar-check me-2"></i>Book Now
@@ -555,6 +572,207 @@ if (!$property) {
     </div>
 
     <?php include 'includes/footer.php'; ?>
+    
+    <!-- Toast Notifications -->
+    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1100; margin-top: 20px;">
+        <!-- Success Toast -->
+        <div id="viewingSuccessToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+            <div class="toast-header bg-success text-white">
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body bg-white" id="toastMessage"></div>
+        </div>
+        
+        <!-- Error Toast -->
+        <div id="viewingErrorToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div class="toast-header bg-danger text-white">
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body bg-white" id="errorToastMessage"></div>
+        </div>
+    </div>
+    
+    <!-- Schedule Viewing Modal -->
+    <div class="modal fade" id="scheduleViewingModal" tabindex="-1" aria-labelledby="scheduleViewingModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="scheduleViewingModalLabel">Schedule a Viewing</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="viewingForm" action="process_viewing.php" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="house_id" value="<?php echo $property_id; ?>">
+                        
+                        <div class="mb-3">
+                            <label for="viewingDate" class="form-label fw-bold">Preferred Date</label>
+                            <input type="date" class="form-control" id="viewingDate" name="viewing_date" required
+                                   min="<?php echo date('Y-m-d'); ?>" 
+                                   max="<?php echo date('Y-m-d', strtotime('+30 days')); ?>">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="viewingTime" class="form-label fw-bold">Preferred Time</label>
+                            <select class="form-select" id="viewingTime" name="viewing_time" required>
+                                <option value="">Select Time</option>
+                                <option value="09:00">9:00 AM</option>
+                                <option value="10:00">10:00 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="12:00">12:00 PM</option>
+                                <option value="13:00">1:00 PM</option>
+                                <option value="14:00">2:00 PM</option>
+                                <option value="15:00">3:00 PM</option>
+                                <option value="16:00">4:00 PM</option>
+                                <option value="17:00">5:00 PM</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="contactNumber" class="form-label fw-bold">Contact Number</label>
+                            <input type="tel" class="form-control" id="contactNumber" name="contact_number" 
+                                   placeholder="Your phone number" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="viewingNotes" class="form-label fw-bold">Additional Notes (Optional)</label>
+                            <textarea class="form-control" id="viewingNotes" name="viewing_notes" 
+                                     rows="3" placeholder="Any special requirements or questions"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-calendar-plus me-2"></i>Schedule Viewing
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // Handle viewing form submission
+    document.getElementById('viewingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Scheduling...';
+            
+            const response = await fetch('process_viewing.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Show success message
+                const toast = new bootstrap.Toast(document.getElementById('viewingSuccessToast'));
+                document.getElementById('toastMessage').textContent = data.message;
+                toast.show();
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleViewingModal'));
+                modal.hide();
+                
+                // Reset form
+                this.reset();
+            } else {
+                throw new Error(data.message || 'Failed to schedule viewing');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            const toast = new bootstrap.Toast(document.getElementById('viewingErrorToast'));
+            document.getElementById('errorToastMessage').textContent = error.message;
+            toast.show();
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    });
+    
+    // Handle favorite toggle on property page
+    document.getElementById('propertyFavorite').addEventListener('click', async function() {
+        <?php if (!is_logged_in()): ?>
+            window.location.href = 'login.php?redirect=' + encodeURIComponent(window.location.pathname + '?id=<?php echo $property_id; ?>');
+            return;
+        <?php endif; ?>
+        
+        const icon = this.querySelector('i');
+        const text = this.querySelector('span');
+        const propertyId = this.dataset.propertyId;
+        const isFavorite = icon.classList.contains('fas');
+        
+        try {
+            const response = await fetch('api/toggle_favorite.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ house_id: propertyId })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.is_favorite) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                    text.textContent = 'Saved';
+                    showToast('Property added to favorites!');
+                } else {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    text.textContent = 'Save';
+                    showToast('Property removed from favorites');
+                }
+            } else {
+                showToast(data.message || 'Error updating favorites', true);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', true);
+        }
+    });
+    
+    function showToast(message, isError = false) {
+        // Create toast element if it doesn't exist
+        let toastEl = document.getElementById('favoriteToast');
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = 'favoriteToast';
+            toastEl.className = 'position-fixed top-0 start-50 translate-middle-x mt-5';
+            toastEl.style.zIndex = '1100';
+            toastEl.innerHTML = `
+                <div class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toastEl);
+        } else {
+            toastEl.querySelector('.toast-body').textContent = message;
+        }
+        
+        // Toggle error class
+        const toast = toastEl.querySelector('.toast');
+        toast.classList.remove('success', 'error');
+        toast.classList.add(isError ? 'error' : 'success');
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+        bsToast.show();
+    }
+    </script>
     
     <!-- Contact Owner Modal -->
     <div class="modal fade" id="contactAgentModal" tabindex="-1" aria-labelledby="contactAgentModalLabel" aria-hidden="true">

@@ -40,6 +40,9 @@ $bookings = $stmt->get_result();
                             <li><a href="bookings.php" class="text-decoration-none">View All Bookings</a></li>
                             <li><a href="profile.php" class="text-decoration-none">Edit Profile</a></li>
                             <li><a href="favorites.php" class="text-decoration-none">View Favorites</a></li>
+                            <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'landlord'): ?>
+                            <li><a href="scheduled_viewings.php" class="text-decoration-none">Scheduled Viewings</a></li>
+                            <?php endif; ?>
                             <li><a href="settings.php" class="text-decoration-none">Account Settings</a></li>
                         </ul>
                     </div>
