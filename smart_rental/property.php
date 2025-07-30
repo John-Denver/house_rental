@@ -468,16 +468,7 @@ if (!$property) {
                             <input type="date" class="form-control form-control-lg" 
                                    id="startDate" name="start_date" required
                                    min="<?php echo date('Y-m-d'); ?>">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="leaseDuration" class="form-label fw-bold">Lease Duration</label>
-                            <select class="form-select form-select-lg" id="leaseDuration" name="rental_period" required>
-                                <option value="">Select Duration</option>
-                                <option value="6">6 Months</option>
-                                <option value="12" selected>12 Months</option>
-                                <option value="24">24 Months</option>
-                            </select>
+                            <small class="text-muted">Rent will be due on the 1st of each month starting from your move-in date.</small>
                         </div>
                         
                         <div class="mb-3">
@@ -496,7 +487,7 @@ if (!$property) {
                                     <i class="fas fa-calendar-check me-2"></i>Book Now
                                 </button>
                             <?php else: ?>
-                                <a href="login.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" 
+                                <a href="../login.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" 
                                    class="btn btn-primary btn-lg py-3">
                                     <i class="fas fa-sign-in-alt me-2"></i>Login to Book
                                 </a>

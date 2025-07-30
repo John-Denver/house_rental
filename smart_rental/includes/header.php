@@ -213,6 +213,9 @@ require_once '../config/auth.php';
                 <li class="nav-item">
                     <a class="nav-link" href="my_bookings.php"><i class="fas fa-calendar-alt me-1"></i> My Bookings</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="rent_payment.php"><i class="fas fa-credit-card me-1"></i> Payments</a>
+                </li>
                 <?php else: ?>
                 <li class="nav-item">
                     <a class="nav-link" href="browse.php">Browse Properties</a>
@@ -236,6 +239,7 @@ require_once '../config/auth.php';
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="my_bookings.php"><i class="fas fa-calendar-alt me-2"></i> My Bookings</a></li>
                             <li><a class="dropdown-item" href="favorites.php"><i class="fas fa-heart me-2"></i> Favorites</a></li>
+                            <li><a class="dropdown-item" href="rent_payment.php"><i class="fas fa-credit-card me-2"></i> Payments</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                         </ul>

@@ -74,12 +74,11 @@ include 'includes/header.php';
                                     <h6>Booking Dates</h6>
                                     <p class="mb-1">
                                         <i class="far fa-calendar-alt me-2 text-primary"></i>
-                                        <?php echo date('M d, Y', strtotime($booking['start_date'])); ?> - 
-                                        <?php echo date('M d, Y', strtotime($booking['end_date'])); ?>
+                                        Move-in: <?php echo date('M d, Y', strtotime($booking['start_date'])); ?>
                                     </p>
                                     <p class="mb-0">
-                                        <i class="far fa-clock me-2 text-primary"></i>
-                                        <?php echo $booking['rental_period']; ?> months
+                                        <i class="fas fa-sync-alt me-2 text-primary"></i>
+                                        Monthly Rent: KSh <?php echo number_format($booking['property_price'], 2); ?>/month
                                     </p>
                                 </div>
                             </div>
@@ -96,8 +95,8 @@ include 'includes/header.php';
                                 <table class="table">
                                     <tbody>
                                         <tr>
-                                            <td>Monthly Rent (<?php echo $booking['rental_period']; ?> months)</td>
-                                            <td class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'] * $booking['rental_period'], 2); ?></td>
+                                            <td>First Month's Rent</td>
+                                            <td class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'], 2); ?></td>
                                         </tr>
                                         <tr>
                                             <td>Security Deposit (2 months)</td>
@@ -105,7 +104,7 @@ include 'includes/header.php';
                                         </tr>
                                         <tr class="table-active">
                                             <th>Total Amount Due</th>
-                                            <th class="text-end"><?php echo 'KSh ' . number_format(($booking['property_price'] * $booking['rental_period']) + ($booking['property_price'] * 2), 2); ?></th>
+                                            <th class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'] * 3, 2); ?></th>
                                         </tr>
                                     </tbody>
                                 </table>
