@@ -515,7 +515,7 @@ $stats = $stmt->get_result()->fetch_assoc();
                                                             <div class="col-md-6">
                                                                 <h6><i class="fas fa-money-bill me-2"></i>Financial Details</h6>
                                                                 <p><strong>Monthly Rent:</strong> KSh <?php echo number_format($booking['price'], 2); ?></p>
-                                                                <p><strong>Total Rent:</strong> KSh <?php echo number_format($booking['price'] * $booking['rental_months'], 2); ?></p>
+                                                                <p><strong>Monthly Rent:</strong> KSh <?php echo number_format($booking['price'], 2); ?></p>
                                                                 <p><strong>Security Deposit:</strong> KSh <?php echo number_format($booking['security_deposit'] ?? 0, 2); ?></p>
                                                             </div>
                                                         </div>

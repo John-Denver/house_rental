@@ -178,7 +178,7 @@ include 'includes/header.php';
                                 'date' => $booking['payment_status'] === 'paid' ? $booking['payment_date'] : null,
                                 'title' => $booking['payment_status'] === 'paid' ? 'Payment Completed' : 'Payment Pending',
                                 'description' => $booking['payment_status'] === 'paid' 
-                                    ? 'Payment of KSh ' . number_format((floatval($booking['property_price']) * intval($booking['rental_period'] ?? 12)) + floatval($booking['security_deposit'] ?? 0), 2) . ' received.'
+                                    ? 'Payment of KSh ' . number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2) . ' received.'
                                     : 'Complete your payment to secure your booking.'
                             ]
                         ];
@@ -231,19 +231,15 @@ include 'includes/header.php';
                     <hr>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Monthly Rent:</span>
-                        <span>KSh <?php echo number_format($booking['property_price'], 2); ?></span>
+                        <span>KSh <?php echo number_format(floatval($booking['property_price']), 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Subtotal (<?php echo intval($booking['rental_period'] ?? 12); ?> months):</span>
-                        <span>KSh <?php echo number_format(floatval($booking['property_price']) * intval($booking['rental_period'] ?? 12), 2); ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Security Deposit:</span>
+                        <span class="text-muted">Security Deposit (One-time):</span>
                         <span>KSh <?php echo number_format(floatval($booking['security_deposit'] ?? 0), 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
-                        <span>Total Amount:</span>
-                        <span>KSh <?php echo number_format((floatval($booking['property_price']) * intval($booking['rental_period'] ?? 12)) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
+                        <span>Initial Payment Required:</span>
+                        <span>KSh <?php echo number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
                     </div>
                     
                     <?php if ($booking['payment_status'] !== 'paid' && $booking['status'] === 'confirmed'): ?>

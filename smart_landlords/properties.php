@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_property'])) {
     $house_no = $_POST['house_no'] ?? '';
     $description = $_POST['description'] ?? '';
     $price = $_POST['price'] ?? '';
+    $security_deposit = $_POST['security_deposit'] ?? '';
     $location = $_POST['location'] ?? '';
     $category_id = $_POST['category_id'] ?? '';
     $status = isset($_POST['status']) ? 1 : 0;
@@ -24,9 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_property'])) {
             }
 
             // Insert the property with landlord_id
-            $stmt = $conn->prepare("INSERT INTO houses (house_no, description, price, location, category_id, status, landlord_id, bedrooms, bathrooms, area) 
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param('ssdssiiiii', $house_no, $description, $price, $location, $category_id, $status, $_SESSION['user_id'], $bedrooms, $bathrooms, $area);
+            $stmt = $conn->prepare("INSERT INTO houses (house_no, description, price, security_deposit, location, category_id, status, landlord_id, bedrooms, bathrooms, area) 
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param('ssddsiiiiii', $house_no, $description, $price, $security_deposit, $location, $category_id, $status, $_SESSION['user_id'], $bedrooms, $bathrooms, $area);
             $stmt->execute();
             $success = "Property added successfully";
         } catch (Exception $e) {
@@ -44,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
     $house_no = $_POST['house_no'] ?? '';
     $description = $_POST['description'] ?? '';
     $price = $_POST['price'] ?? '';
+    $security_deposit = $_POST['security_deposit'] ?? '';
     $location = $_POST['location'] ?? '';
     $category_id = $_POST['category_id'] ?? '';
     $status = isset($_POST['status']) ? 1 : 0;
@@ -70,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
                                   house_no = ?, 
                                   description = ?, 
                                   price = ?, 
+                                  security_deposit = ?,
                                   location = ?, 
                                   category_id = ?, 
                                   status = ?,
@@ -77,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
                                   bathrooms = ?,
                                   area = ?
                                   WHERE id = ?");
-            $stmt->bind_param('ssdssiiiiii', $house_no, $description, $price, $location, $category_id, $status, $bedrooms, $bathrooms, $area, $property_id);
+            $stmt->bind_param('ssddsiiiiiii', $house_no, $description, $price, $security_deposit, $location, $category_id, $status, $bedrooms, $bathrooms, $area, $property_id);
             $stmt->execute();
             $success = "Property updated successfully";
         } catch (Exception $e) {

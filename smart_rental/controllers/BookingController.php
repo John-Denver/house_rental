@@ -39,14 +39,14 @@ class BookingController {
             // Get property details and set up monthly rent
             $property = $this->getProperty($data['house_id']);
             $monthlyRent = $property['price'];
-            $securityDeposit = $property['security_deposit'] ?? ($property['price'] * 2); // 2 months rent as deposit
+            $securityDeposit = $property['security_deposit'] ?? $property['price']; // Property value as default deposit
             
             // Insert booking with monthly rent and landlord_id
             $stmt = $this->conn->prepare("
                 INSERT INTO rental_bookings (
                     house_id, landlord_id, user_id, start_date, end_date,
-                    special_requests, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+                    special_requests, status, security_deposit, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, NOW())
             ");
             
             // Get user details
@@ -69,13 +69,14 @@ class BookingController {
             $specialRequests = $data['special_requests'] ?? null;
             
             $stmt->bind_param(
-                'iiisss',
+                'iiisssd',
                 $data['house_id'],
                 $landlordId,
                 $_SESSION['user_id'],
                 $data['start_date'],
                 $endDate,
-                $specialRequests
+                $specialRequests,
+                $securityDeposit
             );
             
             if (!$stmt->execute()) {
@@ -251,6 +252,11 @@ class BookingController {
         $result['landlord_name'] = $result['landlord_name'] ?? 'Property Owner';
         $result['landlord_email'] = $result['landlord_email'] ?? 'contact@property.com';
         $result['landlord_phone'] = $result['landlord_phone'] ?? 'N/A';
+        
+        // Handle security deposit fallback for existing bookings
+        if (empty($result['security_deposit']) || $result['security_deposit'] == 0) {
+            $result['security_deposit'] = $result['property_price']; // Use property price as default
+        }
         
         return $result;
     }

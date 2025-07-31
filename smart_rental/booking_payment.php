@@ -132,21 +132,19 @@ include 'includes/header.php';
                                     <span>KSh <?php echo number_format($booking['property_price'], 2); ?></span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Subtotal (<?php echo $booking['rental_period'] ?? 12; ?> months):</span>
-                                    <span>KSh <?php echo number_format($booking['property_price'] * ($booking['rental_period'] ?? 12), 2); ?></span>
+                                    <span class="text-muted">Monthly Rent:</span>
+                                    <span>KSh <?php echo number_format($booking['property_price'], 2); ?></span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Security Deposit:</span>
+                                    <span class="text-muted">Security Deposit (One-time):</span>
                                     <span>KSh <?php echo number_format($booking['security_deposit'] ?? 0, 2); ?></span>
                                 </div>
                                 
                                 <?php 
                                 $additionalFees = $booking['additional_fees'] ?? 0;
                                 $monthlyRent = floatval($booking['property_price']);
-                                $rentalPeriod = intval($booking['rental_period'] ?? 12);
                                 $securityDeposit = floatval($booking['security_deposit'] ?? 0);
-                                $subtotal = $monthlyRent * $rentalPeriod;
-                                $totalAmount = $subtotal + $securityDeposit + $additionalFees;
+                                $totalAmount = $monthlyRent + $securityDeposit + $additionalFees;
                                 ?>
                                 
                                 <?php if ($additionalFees > 0): ?>
@@ -157,7 +155,7 @@ include 'includes/header.php';
                                 <?php endif; ?>
                                 
                                 <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
-                                    <span>Total Amount Due:</span>
+                                    <span>Initial Payment Required:</span>
                                     <span>KSh <?php echo number_format($totalAmount, 2); ?></span>
                                 </div>
                             </div>
