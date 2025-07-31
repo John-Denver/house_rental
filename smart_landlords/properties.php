@@ -52,6 +52,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
     $bedrooms = $_POST['bedrooms'] ?? 0;
     $bathrooms = $_POST['bathrooms'] ?? 0;
     $area = $_POST['area'] ?? 0;
+    $total_units = $_POST['total_units'] ?? 1;
+    $available_units = $_POST['available_units'] ?? 1;
+    
+    // Handle image upload
+    $main_image = null;
+    if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = '../uploads/';
+        $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
+        $file_name = uniqid('property_') . '.' . $file_extension;
+        $upload_path = $upload_dir . $file_name;
+        
+        if (move_uploaded_file($_FILES['main_image']['tmp_name'], $upload_path)) {
+            $main_image = $file_name;
+        }
+    }
     
     if (!empty($property_id) && !empty($house_no) && !empty($description) && !empty($price) && !empty($location) && !empty($category_id)) {
         try {
@@ -68,19 +83,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
             }
 
             // Update the property
-            $stmt = $conn->prepare("UPDATE houses SET 
-                                  house_no = ?, 
-                                  description = ?, 
-                                  price = ?, 
-                                  security_deposit = ?,
-                                  location = ?, 
-                                  category_id = ?, 
-                                  status = ?,
-                                  bedrooms = ?,
-                                  bathrooms = ?,
-                                  area = ?
-                                  WHERE id = ?");
-            $stmt->bind_param('ssddsiiiiiii', $house_no, $description, $price, $security_deposit, $location, $category_id, $status, $bedrooms, $bathrooms, $area, $property_id);
+            if ($main_image) {
+                // New image uploaded - update with new image
+                $stmt = $conn->prepare("UPDATE houses SET 
+                                      house_no = ?, 
+                                      description = ?, 
+                                      price = ?, 
+                                      security_deposit = ?,
+                                      location = ?, 
+                                      category_id = ?, 
+                                      status = ?,
+                                      bedrooms = ?,
+                                      bathrooms = ?,
+                                      area = ?,
+                                      total_units = ?,
+                                      available_units = ?,
+                                      main_image = ?
+                                      WHERE id = ?");
+                $stmt->bind_param('ssddsiiiiiiiss', $house_no, $description, $price, $security_deposit, $location, $category_id, $status, $bedrooms, $bathrooms, $area, $total_units, $available_units, $main_image, $property_id);
+            } else {
+                // No new image - keep existing image
+                $stmt = $conn->prepare("UPDATE houses SET 
+                                      house_no = ?, 
+                                      description = ?, 
+                                      price = ?, 
+                                      security_deposit = ?,
+                                      location = ?, 
+                                      category_id = ?, 
+                                      status = ?,
+                                      bedrooms = ?,
+                                      bathrooms = ?,
+                                      area = ?,
+                                      total_units = ?,
+                                      available_units = ?
+                                      WHERE id = ?");
+                $stmt->bind_param('ssddsiiiiiiii', $house_no, $description, $price, $security_deposit, $location, $category_id, $status, $bedrooms, $bathrooms, $area, $total_units, $available_units, $property_id);
+            }
             $stmt->execute();
             $success = "Property updated successfully";
         } catch (Exception $e) {
@@ -116,6 +154,146 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        /* Enhanced Modal Styles */
+        .modal-xl {
+            max-width: 1200px;
+        }
+        
+        .section-title {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .step-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+        
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #dee2e6;
+            z-index: 1;
+        }
+        
+        .step.active:not(:last-child)::after {
+            background: #0d6efd;
+        }
+        
+        .step span:first-child {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #dee2e6;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .step.active span:first-child {
+            background: #0d6efd;
+            color: white;
+        }
+        
+        .step-label {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .step.active .step-label {
+            color: #0d6efd;
+            font-weight: 600;
+        }
+        
+        .form-label.fw-bold {
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .input-group-text {
+            background: #f8f9fa;
+            border-color: #ced4da;
+            color: #6c757d;
+        }
+        
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .modal-header.bg-primary {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            border: none;
+            padding: 10px 20px;
+            font-weight: 500;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+        }
+        
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .img-thumbnail {
+            border: 2px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .img-thumbnail:hover {
+            border-color: #0d6efd;
+            transform: scale(1.05);
+        }
+        
+        .badge {
+            font-size: 10px;
+            padding: 4px 8px;
+        }
+        
+        .modal-footer.bg-light {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
 </head>
 <body>
     <?php include('./includes/header.php'); ?>
@@ -445,108 +623,198 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <!-- Edit Property Modal -->
     <div class="modal fade" id="editPropertyModal" tabindex="-1" aria-labelledby="editPropertyModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editPropertyModalLabel">Edit Property</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editPropertyModalLabel">
+                        <i class="fas fa-edit me-2"></i>Edit Property
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <form id="editPropertyForm" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="edit_property" value="1">
                         <input type="hidden" name="property_id" id="editPropertyId">
                         
-                        <div class="mb-3">
-                            <label for="editHouseNo" class="form-label">Property Name</label>
-                            <input type="text" class="form-control" id="editHouseNo" name="house_no" required>
+                        <!-- Progress Indicator -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="step-progress d-flex">
+                                    <div class="step active">
+                                        <span>1</span>
+                                        <span class="step-label">Basic Info</span>
+                                    </div>
+                                    <div class="step">
+                                        <span>2</span>
+                                        <span class="step-label">Details</span>
+                                    </div>
+                                    <div class="step">
+                                        <span>3</span>
+                                        <span class="step-label">Location</span>
+                                    </div>
+                                    <div class="step">
+                                        <span>4</span>
+                                        <span class="step-label">Media</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="editDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="editDescription" name="description" rows="3" required></textarea>
+                        
+                        <!-- Basic Information Section -->
+                        <div class="form-section mb-4">
+                            <h5 class="section-title text-primary">
+                                <i class="fas fa-info-circle me-2"></i>Basic Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editHouseNo" class="form-label fw-bold">Property Name</label>
+                                    <input type="text" class="form-control" id="editHouseNo" name="house_no" required placeholder="e.g., Luxury Apartment">
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="editCategory" class="form-label fw-bold">Category</label>
+                                    <select class="form-select" id="editCategory" name="category_id" required>
+                                        <?php foreach ($categories as $category): ?>
+                                        <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="editDescription" class="form-label fw-bold">Description</label>
+                                <textarea class="form-control" id="editDescription" name="description" rows="4" required placeholder="Describe your property in detail..."></textarea>
+                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="editPrice" class="form-label">Price</label>
-                            <input type="number" step="0.01" class="form-control" id="editPrice" name="price" required>
+                        
+                        <!-- Property Details Section -->
+                        <div class="form-section mb-4">
+                            <h5 class="section-title text-primary">
+                                <i class="fas fa-list-ul me-2"></i>Property Details
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="editPrice" class="form-label fw-bold">Monthly Price (Ksh)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Ksh</span>
+                                        <input type="number" class="form-control" id="editPrice" name="price" required placeholder="e.g., 50000">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="editSecurityDeposit" class="form-label fw-bold">Security Deposit (Ksh)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Ksh</span>
+                                        <input type="number" class="form-control" id="editSecurityDeposit" name="security_deposit" placeholder="e.g., 50000">
+                                    </div>
+                                    <small class="form-text text-muted">Leave empty to use monthly price as default</small>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="editBedrooms" class="form-label fw-bold">Bedrooms</label>
+                                    <input type="number" class="form-control" id="editBedrooms" name="bedrooms" required placeholder="e.g., 3">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="editBathrooms" class="form-label fw-bold">Bathrooms</label>
+                                    <input type="number" class="form-control" id="editBathrooms" name="bathrooms" required placeholder="e.g., 2">
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="editArea" class="form-label fw-bold">Area (sqm)</label>
+                                    <input type="number" step="0.01" class="form-control" id="editArea" name="area" required placeholder="e.g., 120">
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="editStatus" name="status" checked>
+                                        <label class="form-check-label" for="editStatus">
+                                            Available for Rent
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editTotalUnits" class="form-label fw-bold">Total Units</label>
+                                    <input type="number" class="form-control" id="editTotalUnits" name="total_units" min="1" required>
+                                    <small class="form-text text-muted">Enter the total number of units/apartments in this property</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="editAvailableUnits" class="form-label fw-bold">Available Units</label>
+                                    <input type="number" class="form-control" id="editAvailableUnits" name="available_units" min="0" required>
+                                    <small class="form-text text-muted">Enter the number of available units (should be less than or equal to total units)</small>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="editLocation" class="form-label">Location</label>
-                            <input type="text" class="form-control" id="editLocation" name="location" required>
+                        
+                        <!-- Location Section -->
+                        <div class="form-section mb-4">
+                            <h5 class="section-title text-primary">
+                                <i class="fas fa-map-marker-alt me-2"></i>Location Details
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editLocation" class="form-label fw-bold">Location</label>
+                                    <input type="text" class="form-control" id="editLocation" name="location" required placeholder="e.g., Nairobi West">
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="editLatitude" class="form-label fw-bold">Latitude</label>
+                                    <input type="text" class="form-control" id="editLatitude" name="latitude" required placeholder="e.g., -1.2921">
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="editLongitude" class="form-label fw-bold">Longitude</label>
+                                    <input type="text" class="form-control" id="editLongitude" name="longitude" required placeholder="e.g., 36.8219">
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="editLatitude" class="form-label">Latitude</label>
-                            <input type="text" class="form-control" id="editLatitude" name="latitude" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editLongitude" class="form-label">Longitude</label>
-                            <input type="text" class="form-control" id="editLongitude" name="longitude" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editCategory" class="form-label">Category</label>
-                            <select class="form-select" id="editCategory" name="category_id" required>
-                                <?php foreach ($categories as $category): ?>
-                                <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="editStatus" name="status" checked>
-                                <label class="form-check-label" for="editStatus">
-                                    Active
-                                </label>
+                        
+                        <!-- Media Section -->
+                        <div class="form-section mb-4">
+                            <h5 class="section-title text-primary">
+                                <i class="fas fa-images me-2"></i>Media & Images
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="editMainImage" class="form-label fw-bold">Main Image</label>
+                                    <input type="file" class="form-control" id="editMainImage" name="main_image" accept="image/*">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Current image: <span id="currentImage" class="fw-bold text-primary"></span>
+                                    </div>
+                                    <div id="currentImagePreview" class="mt-2"></div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="editAdditionalMedia" class="form-label fw-bold">Additional Images</label>
+                                    <input type="file" class="form-control" id="editAdditionalMedia" name="additional_media[]" multiple accept="image/*">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Select multiple images to add to the gallery
+                                    </div>
+                                    <div id="currentAdditionalImages" class="mt-2"></div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="editBedrooms" class="form-label">Bedrooms</label>
-                            <input type="number" class="form-control" id="editBedrooms" name="bedrooms" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editBathrooms" class="form-label">Bathrooms</label>
-                            <input type="number" class="form-control" id="editBathrooms" name="bathrooms" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editMainImage" class="form-label">Main Image</label>
-                            <input type="file" class="form-control" id="editMainImage" name="main_image">
-                            <div class="form-text">Current image: <span id="currentImage"></span></div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editArea" class="form-label">Area (sqm)</label>
-                            <input type="number" step="0.01" class="form-control" id="editArea" name="area" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editTotalUnits" class="form-label">Total Units</label>
-                            <input type="number" class="form-control" id="editTotalUnits" name="total_units" min="0" required>
-                            <div class="form-text">Enter the total number of units/apartments in this property (0 for no units)</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editAvailableUnits" class="form-label">Available Units</label>
-                            <input type="number" class="form-control" id="editAvailableUnits" name="available_units" min="0" required>
-                            <div class="form-text">Enter the number of available units (should be less than or equal to total units)</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="editAdditionalMedia" class="form-label">Additional Images</label>
-                            <input type="file" class="form-control" id="editAdditionalMedia" name="additional_media[]" multiple>
-                            <div id="currentAdditionalImages"></div>
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Save Changes
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -595,6 +863,15 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             if (!form) return;
 
             try {
+                // Reset step progress to first step
+                const steps = form.querySelectorAll('.step');
+                steps.forEach((step, index) => {
+                    if (index === 0) {
+                        step.classList.add('active');
+                    } else {
+                        step.classList.remove('active');
+                    }
+                });
                 form.querySelector('#editPropertyId').value = property.id;
                 form.querySelector('#editHouseNo').value = property.house_no;
                 form.querySelector('#editDescription').value = property.description;
@@ -609,11 +886,27 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 form.querySelector('#editArea').value = property.area;
                 form.querySelector('#editTotalUnits').value = property.total_units;
                 form.querySelector('#editAvailableUnits').value = property.available_units;
+                form.querySelector('#editSecurityDeposit').value = property.security_deposit || '';
                 
                 // Show current image
                 const currentImage = form.querySelector('#currentImage');
+                const currentImagePreview = form.querySelector('#currentImagePreview');
                 if (currentImage) {
                     currentImage.textContent = property.main_image || 'No image';
+                }
+                
+                // Show current image preview
+                if (currentImagePreview && property.main_image) {
+                    currentImagePreview.innerHTML = `
+                        <div class="d-inline-block position-relative">
+                            <img src="../uploads/${property.main_image}" class="img-thumbnail" style="max-height: 100px; max-width: 150px;">
+                            <span class="badge bg-primary position-absolute top-0 start-100 translate-middle">
+                                Current
+                            </span>
+                        </div>
+                    `;
+                } else if (currentImagePreview) {
+                    currentImagePreview.innerHTML = '<span class="text-muted">No image uploaded</span>';
                 }
                 
                 // Show current additional images
@@ -688,6 +981,22 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             const form = document.getElementById('editPropertyForm');
             const modalBody = document.querySelector('#editPropertyModal .modal-body');
             const modalFooter = document.querySelector('#editPropertyModal .modal-footer');
+            
+            // Add step navigation functionality
+            const steps = form.querySelectorAll('.step');
+            steps.forEach((step, index) => {
+                step.addEventListener('click', () => {
+                    // Update active step
+                    steps.forEach(s => s.classList.remove('active'));
+                    step.classList.add('active');
+                    
+                    // Scroll to corresponding section
+                    const sections = form.querySelectorAll('.form-section');
+                    if (sections[index]) {
+                        sections[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
             
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
