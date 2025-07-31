@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'landlord') {
 }
 
 // Get all scheduled viewings for properties owned by this landlord
-$sql = "SELECT pv.*, h.house_no, h.location, u.name as user_name, u.email as user_email 
+$sql = "SELECT pv.*, h.house_no, h.location, u.name as user_name, u.username as user_email 
         FROM property_viewings pv
         JOIN houses h ON pv.property_id = h.id
         LEFT JOIN users u ON pv.user_id = u.id

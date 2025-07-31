@@ -53,7 +53,7 @@ try {
             h.house_no, 
             h.location,
             u.name as user_name,
-            u.email as user_email,
+            u.username as user_email,
             l.name as landlord_name,
             (SELECT status FROM booking_payments WHERE booking_id = b.id ORDER BY payment_date DESC LIMIT 1) as payment_status
         FROM rental_bookings b
@@ -79,7 +79,7 @@ try {
             b.id = ? OR 
             h.house_no LIKE ? OR 
             u.name LIKE ? OR 
-            u.email LIKE ? OR
+            u.username LIKE ? OR
             l.name LIKE ?
         )";
         

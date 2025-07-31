@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config/db.php';
+require_once '../config/db.php';
 require_once 'controllers/BookingController.php';
 
 // Check if user is logged in
@@ -51,9 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $paymentData = [
             'booking_id' => $bookingId,
             'amount' => filter_input(INPUT_POST, 'amount', FILTER_VALIDATE_FLOAT),
-            'payment_method' => filter_input(INPUT_POST, 'payment_method', FILTER_SANITIZE_STRING),
-            'transaction_id' => filter_input(INPUT_POST, 'transaction_id', FILTER_SANITIZE_STRING),
-            'notes' => filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_STRING)
+            'payment_method' => filter_input(INPUT_POST, 'payment_method', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
+            'transaction_id' => filter_input(INPUT_POST, 'transaction_id', FILTER_SANITIZE_FULL_SPECIAL_CHARS),
+            'notes' => filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_FULL_SPECIAL_CHARS)
         ];
         
         // Process the payment

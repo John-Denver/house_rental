@@ -26,16 +26,6 @@ $defaultEndDate = date('Y-m-d', strtotime('+1 year'));
                    value="<?php echo $today; ?>" 
                    required>
             <div class="form-text">Earliest available date: <?php echo date('M d, Y'); ?></div>
-            <input type="hidden" id="rental_period" name="rental_period" value="12">
-        </div>
-        
-        <div class="mb-3">
-            <label for="end_date" class="form-label">Lease End Date</label>
-            <input type="text" 
-                   class="form-control" 
-                   id="end_date" 
-                   value="<?php echo date('M d, Y', strtotime($defaultEndDate)); ?>" 
-                   readonly>
         </div>
         
         <div class="mb-3">
@@ -47,21 +37,17 @@ $defaultEndDate = date('Y-m-d', strtotime('+1 year'));
                         <span id="monthlyRent"><?php echo 'KSh ' . number_format($property['price'], 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span>Rental Period:</span>
-                        <span><span id="periodDisplay">12</span> months</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <span id="subtotal"><?php echo 'KSh ' . number_format($property['price'] * 12, 2); ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
                         <span>Security Deposit (2 months):</span>
                         <span id="deposit"><?php echo 'KSh ' . number_format($property['price'] * 2, 2); ?></span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between fw-bold">
                         <span>Total Due Now:</span>
-                        <span id="totalDue"><?php echo 'KSh ' . number_format($property['price'] * 14, 2); ?></span>
+                        <span id="totalDue"><?php echo 'KSh ' . number_format($property['price'] * 3, 2); ?></span>
+                    </div>
+                    <div class="text-muted small mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Rent is calculated monthly on a rollover basis. Unpaid rent accumulates to the next month.
                     </div>
                 </div>
             </div>
@@ -110,46 +96,14 @@ $defaultEndDate = date('Y-m-d', strtotime('+1 year'));
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const startDateInput = document.getElementById('start_date');
-    const endDateInput = document.getElementById('end_date');
-    const periodDisplay = document.getElementById('periodDisplay');
     const monthlyRent = parseFloat(<?php echo $property['price']; ?>);
-    const subtotalElement = document.getElementById('subtotal');
     const depositElement = document.getElementById('deposit');
     const totalDueElement = document.getElementById('totalDue');
-    const rentalPeriod = 12; // Default to 12 months
     
-    // Update end date when start date changes
-    function updateDates() {
-        const startDate = new Date(startDateInput.value);
-        
-        if (isNaN(startDate.getTime())) return;
-        
-        // Calculate end date
-        const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + rentalPeriod);
-        
-        // Format and display end date
-        endDateInput.value = endDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        });
-        
-        // Update pricing
-        updatePricing(rentalPeriod);
-    }
-    
-    // Update pricing based on rental period
-    function updatePricing(months) {
-        periodDisplay.textContent = months;
-        const subtotal = monthlyRent * months;
+    // Update pricing when start date changes
+    function updatePricing() {
         const deposit = monthlyRent * 2; // 2 months deposit
-        const totalDue = subtotal + deposit;
-        
-        subtotalElement.textContent = 'KSh ' + subtotal.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        const totalDue = monthlyRent + deposit; // First month rent + deposit
         
         depositElement.textContent = 'KSh ' + deposit.toLocaleString('en-US', {
             minimumFractionDigits: 2,
@@ -163,9 +117,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Add event listener for start date changes
-    startDateInput.addEventListener('change', updateDates);
+    startDateInput.addEventListener('change', updatePricing);
     
-    // Initialize
-    updateDates();
+    // Initialize pricing
+    updatePricing();
 });
 </script>

@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Get and validate input
 $viewingId = filter_input(INPUT_POST, 'viewing_id', FILTER_VALIDATE_INT);
-$reason = trim(filter_input(INPUT_POST, 'reason', FILTER_SANITIZE_STRING));
+$reason = trim(filter_input(INPUT_POST, 'reason', FILTER_SANITIZE_FULL_SPECIAL_CHARS));
 
 if (!$viewingId) {
     http_response_code(400);
