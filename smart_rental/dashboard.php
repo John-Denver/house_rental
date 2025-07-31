@@ -105,8 +105,8 @@ $bookings = $stmt->get_result();
                                                     <?php echo htmlspecialchars($booking['location']); ?>
                                                 </p>
                                                 <p class="price">
-                                                    <i class="fas fa-dollar-sign"></i>
-                                                    <?php echo number_format($booking['price']); ?>
+                                                    <i class="fas fa-money-bill"></i>
+                                                    KSh <?php echo number_format($booking['price']); ?>
                                                 </p>
                                                 <div class="booking-details">
                                                     <p><strong>Move-in Date:</strong> 

@@ -94,8 +94,8 @@ $results = $stmt->get_result();
                                         <?php echo htmlspecialchars($property['location']); ?>
                                     </p>
                                     <p class="price">
-                                        <i class="fas fa-dollar-sign"></i>
-                                        <?php echo number_format($property['price']); ?>
+                                                                                        <i class="fas fa-money-bill"></i>
+                                                                                        KSh <?php echo number_format($property['price']); ?>
                                     </p>
                                     <div class="property-features">
                                         <span><i class="fas fa-bed"></i> <?php echo $property['bedrooms']; ?> Beds</span>

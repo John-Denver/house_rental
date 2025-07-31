@@ -57,15 +57,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
     
     // Handle image upload
     $main_image = null;
-    if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = '../uploads/';
-        $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
-        $file_name = uniqid('property_') . '.' . $file_extension;
-        $upload_path = $upload_dir . $file_name;
+    $upload_debug = [];
+    
+    if (isset($_FILES['main_image'])) {
+        $upload_debug['file_exists'] = true;
+        $upload_debug['file_error'] = $_FILES['main_image']['error'];
+        $upload_debug['file_name'] = $_FILES['main_image']['name'] ?? 'not set';
+        $upload_debug['file_size'] = $_FILES['main_image']['size'] ?? 'not set';
         
-        if (move_uploaded_file($_FILES['main_image']['tmp_name'], $upload_path)) {
-            $main_image = $file_name;
+        if ($_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
+            $upload_dir = '../uploads/';
+            $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
+            $file_name = uniqid('property_') . '.' . $file_extension;
+            $upload_path = $upload_dir . $file_name;
+            
+            $upload_debug['upload_dir'] = $upload_dir;
+            $upload_debug['file_extension'] = $file_extension;
+            $upload_debug['file_name'] = $file_name;
+            $upload_debug['upload_path'] = $upload_path;
+            $upload_debug['dir_exists'] = is_dir($upload_dir);
+            $upload_debug['dir_writable'] = is_writable($upload_dir);
+            
+            if (move_uploaded_file($_FILES['main_image']['tmp_name'], $upload_path)) {
+                $main_image = $file_name;
+                $upload_debug['upload_success'] = true;
+            } else {
+                $upload_debug['upload_success'] = false;
+                $upload_debug['upload_error'] = error_get_last();
+            }
         }
+    } else {
+        $upload_debug['file_exists'] = false;
     }
     
     if (!empty($property_id) && !empty($house_no) && !empty($description) && !empty($price) && !empty($location) && !empty($category_id)) {
@@ -120,13 +142,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_property'])) {
                 $stmt->bind_param('ssddsiiiiiiii', $house_no, $description, $price, $security_deposit, $location, $category_id, $status, $bedrooms, $bathrooms, $area, $total_units, $available_units, $property_id);
             }
             $stmt->execute();
-            $success = "Property updated successfully";
+            
+            // Check if this is an AJAX request
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                // Return JSON response for AJAX
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Property updated successfully',
+                    'debug' => [
+                        'main_image' => $main_image,
+                        'upload_debug' => $upload_debug
+                    ]
+                ]);
+                exit;
+            } else {
+                // Regular form submission
+                $success = "Property updated successfully";
+            }
         } catch (Exception $e) {
-            $error = "Error updating property: " . $e->getMessage();
+            $errorMessage = "Error updating property: " . $e->getMessage();
             error_log("Property update error: " . $e->getMessage());
+            
+            // Check if this is an AJAX request
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                // Return JSON response for AJAX
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'error' => $errorMessage,
+                    'debug' => [
+                        'message' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]
+                ]);
+                exit;
+            } else {
+                // Regular form submission
+                $error = $errorMessage;
+            }
         }
     } else {
-        $error = "All fields are required";
+        $errorMessage = "All fields are required";
+        
+        // Check if this is an AJAX request
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            // Return JSON response for AJAX
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error' => $errorMessage
+            ]);
+            exit;
+        } else {
+            // Regular form submission
+            $error = $errorMessage;
+        }
     }
 }
 
@@ -1015,9 +1087,12 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 const formData = new FormData(this);
                 
                 try {
-                    // Make AJAX request
-                    const response = await fetch('edit_property.php', {
+                    // Make AJAX request to the same page
+                    const response = await fetch('properties.php', {
                         method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
                         body: formData
                     });
 

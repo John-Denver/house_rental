@@ -84,8 +84,8 @@ if (!$property) {
                                 <span><?php echo htmlspecialchars($property['address']); ?></span>
                             </div>
                             <div class="info-item">
-                                <i class="fas fa-dollar-sign"></i>
-                                <span><?php echo number_format($property['price']); ?></span>
+                                                                                <i class="fas fa-money-bill"></i>
+                                <span>KSh <?php echo number_format($property['price']); ?></span>
                             </div>
                             <div class="info-item">
                                 <i class="fas fa-bed"></i>
@@ -104,8 +104,8 @@ if (!$property) {
                         <p class="card-text mt-4"><?php echo nl2br(htmlspecialchars($property['description'])); ?></p>
 
                         <div class="mt-4">
-                            <a href="book.php?id=<?php echo $property_id; ?>" class="btn btn-primary">
-                                <i class="fas fa-book"></i> Book Now
+                            <a href="property.php?id=<?php echo $property_id; ?>" class="btn btn-primary">
+                                <i class="fas fa-eye"></i> View Full Details
                             </a>
                             <a href="#" class="btn btn-outline-primary" onclick="addToFavorites(<?php echo $property_id; ?>)">
                                 <i class="fas fa-heart"></i> Add to Favorites
@@ -173,7 +173,7 @@ if (!$property) {
                     <div class="info-window">
                         <h5><?php echo htmlspecialchars($property['house_no']); ?></h5>
                         <p><?php echo htmlspecialchars($property['address']); ?></p>
-                        <p>Price: <?php echo number_format($property['price']); ?></p>
+                        <p>Price: KSh <?php echo number_format($property['price']); ?></p>
                     </div>
                 `
             });

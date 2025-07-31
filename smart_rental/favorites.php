@@ -88,8 +88,8 @@ $favorites = $stmt->get_result();
                                                     <?php echo htmlspecialchars($favorite['location']); ?>
                                                 </p>
                                                 <p class="price">
-                                                    <i class="fas fa-dollar-sign"></i>
-                                                    <?php echo number_format($favorite['price']); ?>
+                                                    <i class="fas fa-money-bill"></i>
+                                                    KSh <?php echo number_format($favorite['price']); ?>
                                                 </p>
                                                 <div class="property-features">
                                                     <span><i class="fas fa-bed"></i> <?php echo $favorite['bedrooms']; ?> Beds</span>
@@ -99,8 +99,6 @@ $favorites = $stmt->get_result();
                                                 <div class="property-actions">
                                                     <a href="property.php?id=<?php echo $favorite['house_id']; ?>" 
                                                        class="btn btn-outline-primary">View Details</a>
-                                                    <a href="booking.php?id=<?php echo $favorite['house_id']; ?>" 
-                                                       class="btn btn-outline-success">Book Now</a>
                                                 </div>
                                             </div>
                                         </div>
