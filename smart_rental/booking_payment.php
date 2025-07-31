@@ -122,7 +122,7 @@ include 'includes/header.php';
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Duration:</span>
-                                    <span><?php echo $booking['rental_period']; ?> months</span>
+                                    <span><?php echo $booking['rental_period'] ?? 12; ?> months</span>
                                 </div>
                                 
                                 <hr>
@@ -132,24 +132,33 @@ include 'includes/header.php';
                                     <span>KSh <?php echo number_format($booking['property_price'], 2); ?></span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Subtotal (<?php echo $booking['rental_period']; ?> months):</span>
-                                    <span>KSh <?php echo number_format($booking['property_price'] * $booking['rental_period'], 2); ?></span>
+                                    <span class="text-muted">Subtotal (<?php echo $booking['rental_period'] ?? 12; ?> months):</span>
+                                    <span>KSh <?php echo number_format($booking['property_price'] * ($booking['rental_period'] ?? 12), 2); ?></span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Security Deposit:</span>
-                                    <span>KSh <?php echo number_format($booking['security_deposit'], 2); ?></span>
+                                    <span>KSh <?php echo number_format($booking['security_deposit'] ?? 0, 2); ?></span>
                                 </div>
                                 
-                                <?php if ($booking['additional_fees'] > 0): ?>
+                                <?php 
+                                $additionalFees = $booking['additional_fees'] ?? 0;
+                                $monthlyRent = floatval($booking['property_price']);
+                                $rentalPeriod = intval($booking['rental_period'] ?? 12);
+                                $securityDeposit = floatval($booking['security_deposit'] ?? 0);
+                                $subtotal = $monthlyRent * $rentalPeriod;
+                                $totalAmount = $subtotal + $securityDeposit + $additionalFees;
+                                ?>
+                                
+                                <?php if ($additionalFees > 0): ?>
                                     <div class="d-flex justify-content-between mb-2">
                                         <span class="text-muted">Additional Fees:</span>
-                                        <span>KSh <?php echo number_format($booking['additional_fees'], 2); ?></span>
+                                        <span>KSh <?php echo number_format($additionalFees, 2); ?></span>
                                     </div>
                                 <?php endif; ?>
                                 
                                 <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
                                     <span>Total Amount Due:</span>
-                                    <span>KSh <?php echo number_format($booking['total_amount'], 2); ?></span>
+                                    <span>KSh <?php echo number_format($totalAmount, 2); ?></span>
                                 </div>
                             </div>
                             

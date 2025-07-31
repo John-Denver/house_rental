@@ -95,10 +95,10 @@ $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 // Get booking statistics
 $stmt = $conn->prepare("SELECT 
     COUNT(*) as total_bookings,
-    COUNT(CASE WHEN rb.status = 'pending' THEN 1 END) as pending_bookings,
-    COUNT(CASE WHEN rb.status = 'confirmed' THEN 1 END) as confirmed_bookings,
-    COUNT(CASE WHEN rb.status = 'cancelled' THEN 1 END) as cancelled_bookings,
-    COUNT(CASE WHEN rb.status = 'completed' THEN 1 END) as completed_bookings
+    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bookings,
+    COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed_bookings,
+    COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bookings,
+    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_bookings
     FROM rental_bookings rb 
     JOIN houses h ON rb.house_id = h.id 
     WHERE h.landlord_id = ?");
@@ -135,25 +135,6 @@ $stats = $stmt->get_result()->fetch_assoc();
             box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
             border-radius: 0.5rem;
         }
-        .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            font-weight: 600;
-        }
-        .table th {
-            background-color: #f8f9fa;
-            border-top: none;
-            font-weight: 600;
-            color: #495057;
-        }
-        .badge {
-            font-size: 0.75rem;
-            padding: 0.5rem 0.75rem;
-        }
-        .btn-sm {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.875rem;
-        }
         .stats-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -167,13 +148,12 @@ $stats = $stmt->get_result()->fetch_assoc();
         .stats-card.info {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
-        .search-box {
-            background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-        }
         .booking-row:hover {
             background-color: #f8f9fa;
+        }
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
         }
     </style>
 </head>
@@ -206,11 +186,6 @@ $stats = $stmt->get_result()->fetch_assoc();
                                 <i class="fas fa-users me-2"></i> Tenants
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="scheduled_viewings.php">
-                                <i class="fas fa-calendar-alt me-2"></i> Viewings
-                            </a>
-                        </li>
                     </ul>
                 </div>
             </nav>
@@ -222,13 +197,6 @@ $stats = $stmt->get_result()->fetch_assoc();
                         <i class="fas fa-book me-2 text-primary"></i>
                         Manage Bookings
                     </h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
-                                <i class="fas fa-print me-1"></i> Print
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Success/Error Messages -->
@@ -578,4 +546,4 @@ $stats = $stmt->get_result()->fetch_assoc();
         }, 5000);
     </script>
 </body>
-</html>
+</html> 

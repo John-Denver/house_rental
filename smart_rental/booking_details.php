@@ -97,7 +97,7 @@ include 'includes/header.php';
                         <div class="col-md-5">
                             <div class="position-relative" style="height: 200px; overflow: hidden; border-radius: 8px;">
                                 <?php if (!empty($booking['main_image'])): ?>
-                                    <img src="<?php echo htmlspecialchars($booking['main_image']); ?>" 
+                                    <img src="../uploads/<?php echo htmlspecialchars($booking['main_image']); ?>" 
                                          alt="<?php echo htmlspecialchars($booking['house_no'] ?? $booking['property_name']); ?>" 
                                          class="w-100 h-100 object-fit-cover">
                                 <?php else: ?>
