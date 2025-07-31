@@ -47,12 +47,12 @@ class BookingController {
             $monthlyRent = $property['price'];
             $securityDeposit = $property['security_deposit'] ?? ($property['price'] * 2); // 2 months rent as deposit
             
-            // Insert booking with monthly rent only
+            // Insert booking with monthly rent and landlord_id
             $stmt = $this->conn->prepare("
                 INSERT INTO rental_bookings (
-                    house_id, user_id, start_date, 
+                    house_id, landlord_id, user_id, start_date, 
                     monthly_rent, status, created_at
-                ) VALUES (?, ?, ?, ?, 'approved', NOW())
+                ) VALUES (?, ?, ?, ?, ?, 'approved', NOW())
             ");
             
             // Get user details
@@ -65,9 +65,13 @@ class BookingController {
                 throw new Exception("User not found");
             }
             
+            // Get landlord_id from the property
+            $landlordId = $property['landlord_id'];
+            
             $stmt->bind_param(
-                'iisd',
+                'iiisd',
                 $data['house_id'],
+                $landlordId,
                 $_SESSION['user_id'],
                 $data['start_date'],
                 $monthlyRent

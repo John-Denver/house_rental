@@ -460,7 +460,18 @@ if (!$property) {
                         <span class="price-period">/month</span>
                     </div>
                     
-                    <form id="bookingForm" action="process_booking.php" method="POST">
+                    <!-- Error Alert -->
+                    <?php if (isset($_SESSION['error'])): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <?php 
+                        echo htmlspecialchars($_SESSION['error']); 
+                        unset($_SESSION['error']);
+                        ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <form id="bookingForm" action="process_booking.php" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="house_id" value="<?php echo $property_id; ?>">
                         
                         <div class="mb-3">
