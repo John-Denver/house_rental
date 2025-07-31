@@ -217,15 +217,24 @@ class BookingController {
         $stmt = $this->conn->prepare("
             SELECT 
                 b.*, 
+                h.house_no,
                 h.house_no as property_name,
                 h.price as property_price,
                 h.location as property_location,
+                h.main_image,
+                h.bedrooms,
+                h.bathrooms,
+                h.description,
                 u.name as tenant_name,
                 u.username as tenant_email,
-                u.phone_number as tenant_phone
+                u.phone_number as tenant_phone,
+                l.name as landlord_name,
+                l.username as landlord_email,
+                l.phone_number as landlord_phone
             FROM rental_bookings b
             JOIN houses h ON b.house_id = h.id
             JOIN users u ON b.user_id = u.id
+            LEFT JOIN users l ON h.landlord_id = l.id
             WHERE b.id = ?
         ");
         
@@ -236,6 +245,12 @@ class BookingController {
         if (!$result) {
             throw new Exception("Booking not found");
         }
+        
+        // Add fallback values for missing fields
+        $result['rental_period'] = 12; // Use numeric value for calculations
+        $result['landlord_name'] = $result['landlord_name'] ?? 'Property Owner';
+        $result['landlord_email'] = $result['landlord_email'] ?? 'contact@property.com';
+        $result['landlord_phone'] = $result['landlord_phone'] ?? 'N/A';
         
         return $result;
     }
@@ -438,6 +453,48 @@ class BookingController {
         $message .= "This link will expire in 30 days.\n";
         
         mail($to, $subject, $message);
+    }
+
+    /**
+     * Get booking documents
+     */
+    public function getBookingDocuments($bookingId) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM booking_documents 
+            WHERE booking_id = ? 
+            ORDER BY uploaded_at DESC
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+    
+    /**
+     * Get booking payments
+     */
+    public function getBookingPayments($bookingId) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM booking_payments 
+            WHERE booking_id = ? 
+            ORDER BY payment_date DESC
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+    
+    /**
+     * Check if booking has review
+     */
+    public function hasBookingReview($bookingId) {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) as count FROM booking_reviews 
+            WHERE booking_id = ?
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        return $result['count'] > 0;
     }
 }
 

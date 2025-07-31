@@ -30,7 +30,8 @@ try {
     // Get related documents and payments
     $documents = $bookingController->getBookingDocuments($bookingId);
     $payments = $bookingController->getBookingPayments($bookingId);
-    $canReview = $booking['status'] === 'completed' && !$booking['has_review'];
+    $hasReview = $bookingController->hasBookingReview($bookingId);
+    $canReview = $booking['status'] === 'completed' && !$hasReview;
     
 } catch (Exception $e) {
     $_SESSION['error'] = $e->getMessage();
@@ -95,9 +96,9 @@ include 'includes/header.php';
                     <div class="row">
                         <div class="col-md-5">
                             <div class="position-relative" style="height: 200px; overflow: hidden; border-radius: 8px;">
-                                <?php if ($booking['main_image']): ?>
+                                <?php if (!empty($booking['main_image'])): ?>
                                     <img src="<?php echo htmlspecialchars($booking['main_image']); ?>" 
-                                         alt="<?php echo htmlspecialchars($booking['house_no']); ?>" 
+                                         alt="<?php echo htmlspecialchars($booking['house_no'] ?? $booking['property_name']); ?>" 
                                          class="w-100 h-100 object-fit-cover">
                                 <?php else: ?>
                                     <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center">
@@ -107,10 +108,10 @@ include 'includes/header.php';
                             </div>
                         </div>
                         <div class="col-md-7">
-                            <h4 class="card-title"><?php echo htmlspecialchars($booking['house_no']); ?></h4>
+                            <h4 class="card-title"><?php echo htmlspecialchars($booking['house_no'] ?? $booking['property_name']); ?></h4>
                             <p class="text-muted mb-3">
                                 <i class="fas fa-map-marker-alt me-2"></i>
-                                <?php echo htmlspecialchars($booking['location']); ?>
+                                <?php echo htmlspecialchars($booking['location'] ?? $booking['property_location']); ?>
                             </p>
                             
                             <div class="row g-3 mb-3">
@@ -177,7 +178,7 @@ include 'includes/header.php';
                                 'date' => $booking['payment_status'] === 'paid' ? $booking['payment_date'] : null,
                                 'title' => $booking['payment_status'] === 'paid' ? 'Payment Completed' : 'Payment Pending',
                                 'description' => $booking['payment_status'] === 'paid' 
-                                    ? 'Payment of KSh ' . number_format($booking['total_amount'], 2) . ' received.'
+                                    ? 'Payment of KSh ' . number_format((floatval($booking['property_price']) * intval($booking['rental_period'] ?? 12)) + floatval($booking['security_deposit'] ?? 0), 2) . ' received.'
                                     : 'Complete your payment to secure your booking.'
                             ]
                         ];
@@ -233,16 +234,16 @@ include 'includes/header.php';
                         <span>KSh <?php echo number_format($booking['property_price'], 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Subtotal (<?php echo $booking['rental_period']; ?> months):</span>
-                        <span>KSh <?php echo number_format($booking['property_price'] * $booking['rental_period'], 2); ?></span>
+                        <span class="text-muted">Subtotal (<?php echo intval($booking['rental_period'] ?? 12); ?> months):</span>
+                        <span>KSh <?php echo number_format(floatval($booking['property_price']) * intval($booking['rental_period'] ?? 12), 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Security Deposit:</span>
-                        <span>KSh <?php echo number_format($booking['security_deposit'], 2); ?></span>
+                        <span>KSh <?php echo number_format(floatval($booking['security_deposit'] ?? 0), 2); ?></span>
                     </div>
                     <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
                         <span>Total Amount:</span>
-                        <span>KSh <?php echo number_format($booking['total_amount'], 2); ?></span>
+                        <span>KSh <?php echo number_format((floatval($booking['property_price']) * intval($booking['rental_period'] ?? 12)) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
                     </div>
                     
                     <?php if ($booking['payment_status'] !== 'paid' && $booking['status'] === 'confirmed'): ?>
@@ -268,8 +269,8 @@ include 'includes/header.php';
                 </div>
                 <div class="card-body">
                     <h6>Property Owner</h6>
-                    <p class="mb-1"><?php echo htmlspecialchars($booking['landlord_name']); ?></p>
-                    <?php if ($booking['landlord_phone']): ?>
+                    <p class="mb-1"><?php echo htmlspecialchars($booking['landlord_name'] ?? 'Property Owner'); ?></p>
+                    <?php if (!empty($booking['landlord_phone']) && $booking['landlord_phone'] !== 'N/A'): ?>
                         <p class="mb-1">
                             <i class="fas fa-phone me-2"></i>
                             <a href="tel:<?php echo htmlspecialchars($booking['landlord_phone']); ?>">
@@ -277,7 +278,7 @@ include 'includes/header.php';
                             </a>
                         </p>
                     <?php endif; ?>
-                    <?php if ($booking['landlord_email']): ?>
+                    <?php if (!empty($booking['landlord_email']) && $booking['landlord_email'] !== 'contact@property.com'): ?>
                         <p class="mb-0">
                             <i class="fas fa-envelope me-2"></i>
                             <a href="mailto:<?php echo htmlspecialchars($booking['landlord_email']); ?>">
