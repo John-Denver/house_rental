@@ -9,7 +9,7 @@ if (!is_logged_in()) {
     exit();
 }
 
-$pageTitle = 'My Scheduled Viewings';
+$pageTitle = 'My Bookings & Viewings';
 
 // Get user's scheduled viewings with house information
 $stmt = $conn->prepare("
@@ -26,8 +26,21 @@ $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $viewings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Set page title
-$pageTitle = 'My Scheduled Viewings';
+// Get user's rental bookings with house information
+$stmt = $conn->prepare("
+    SELECT rb.*, 
+           h.house_no as property_title,
+           h.location as location,
+           h.main_image as main_image,
+           h.price as monthly_rent
+    FROM rental_bookings rb
+    LEFT JOIN houses h ON rb.house_id = h.id
+    WHERE rb.user_id = ?
+    ORDER BY rb.created_at DESC
+");
+$stmt->bind_param('i', $_SESSION['user_id']);
+$stmt->execute();
+$bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Include header after all processing is done
 include 'includes/header.php';
@@ -35,7 +48,7 @@ include 'includes/header.php';
 
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">My Scheduled Viewings</h1>
+        <h1 class="h3 mb-0">My Bookings & Viewings</h1>
         <a href="index.php" class="btn btn-outline-primary">
             <i class="fas fa-home me-1"></i> Back to Properties
         </a>
@@ -50,52 +63,168 @@ include 'includes/header.php';
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
-    
-    <?php if (empty($viewings)): ?>
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i class="fas fa-calendar-check fa-4x text-muted opacity-25"></i>
-            </div>
-            <h3 class="h5 mb-3">No Scheduled Viewings</h3>
-            <p class="text-muted mb-4">You don't have any scheduled viewings. Browse our properties to schedule one.</p>
-            <a href="index.php" class="btn btn-primary">
-                <i class="fas fa-search me-1"></i> Browse Properties
-            </a>
+
+    <!-- Rental Bookings Section -->
+    <div class="card mb-5">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-key me-2"></i>My Rental Bookings
+            </h5>
         </div>
-    <?php else: ?>
-        <?php 
-        // Filter viewings if status filter is applied
-        $filteredViewings = $viewings;
-        if (isset($_GET['status']) && $_GET['status'] !== 'all') {
-            $filteredViewings = array_filter($viewings, function($v) {
-                return $v['status'] === $_GET['status'];
-            });
-        }
-        
-        if (empty($filteredViewings)): 
-        ?>
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i class="far fa-calendar-alt fa-4x text-muted opacity-25"></i>
-            </div>
-            <h3 class="h5 mb-3">No Viewings Found</h3>
-            <p class="text-muted mb-4">No viewings match the selected filter.</p>
-            <a href="?status=all" class="btn btn-primary">
-                <i class="fas fa-undo me-1"></i> Reset Filter
-            </a>
-        </div>
-        <?php else: ?>
-            <div class="card mb-4">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">My Scheduled Viewings</h5>
-                    <div class="btn-group" role="group">
-                        <a href="?status=all" class="btn btn-sm btn-outline-primary <?php echo (!isset($_GET['status']) || $_GET['status'] === 'all') ? 'active' : ''; ?>">All</a>
-                        <a href="?status=pending" class="btn btn-sm btn-outline-warning <?php echo (isset($_GET['status']) && $_GET['status'] === 'pending') ? 'active' : ''; ?>">Pending</a>
-                        <a href="?status=confirmed" class="btn btn-sm btn-outline-success <?php echo (isset($_GET['status']) && $_GET['status'] === 'confirmed') ? 'active' : ''; ?>">Confirmed</a>
-                        <a href="?status=cancelled" class="btn btn-sm btn-outline-danger <?php echo (isset($_GET['status']) && $_GET['status'] === 'cancelled') ? 'active' : ''; ?>">Cancelled</a>
+        <div class="card-body">
+            <?php if (empty($bookings)): ?>
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-home fa-3x text-muted opacity-25"></i>
                     </div>
+                    <h6 class="mb-2">No Rental Bookings</h6>
+                    <p class="text-muted mb-3">You don't have any active rental bookings. Browse our properties to make a booking.</p>
+                    <a href="index.php" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search me-1"></i> Browse Properties
+                    </a>
                 </div>
-                <div class="card-body p-0">
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Property</th>
+                                <th>Move-in Date</th>
+                                <th>Monthly Rent</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bookings as $booking): 
+                                $statusClass = [
+                                    'pending' => 'warning',
+                                    'confirmed' => 'success',
+                                    'cancelled' => 'danger',
+                                    'completed' => 'secondary',
+                                    'active' => 'info'
+                                ][$booking['status']] ?? 'secondary';
+                            ?>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <?php if (!empty($booking['main_image'])): 
+                                            $imagePath = '../uploads/' . $booking['main_image'];
+                                            if (file_exists($imagePath)): ?>
+                                            <img src="<?php echo htmlspecialchars($imagePath); ?>" 
+                                                 alt="<?php echo htmlspecialchars($booking['property_title']); ?>" 
+                                                 class="rounded me-3" style="width: 60px; height: 45px; object-fit: cover;">
+                                            <?php else: ?>
+                                            <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                                <i class="fas fa-home text-muted"></i>
+                                            </div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                                <i class="fas fa-home text-muted"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div>
+                                            <h6 class="mb-0"><?php echo htmlspecialchars($booking['property_title']); ?></h6>
+                                            <small class="text-muted"><?php echo htmlspecialchars($booking['location']); ?></small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div><?php echo date('M j, Y', strtotime($booking['start_date'])); ?></div>
+                                        <small class="text-muted">Booking #<?php echo $booking['id']; ?></small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">KSh <?php echo number_format($booking['monthly_rent'] ?? $booking['price'], 2); ?></div>
+                                    <small class="text-muted">per month</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-<?php echo $statusClass; ?>">
+                                        <?php echo ucfirst($booking['status']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="property.php?id=<?php echo $booking['house_id']; ?>" 
+                                           class="btn btn-outline-primary"
+                                           title="View Property">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="booking_details.php?id=<?php echo $booking['id']; ?>" 
+                                           class="btn btn-outline-info"
+                                           title="View Details">
+                                            <i class="fas fa-info-circle"></i>
+                                        </a>
+                                        <?php if ($booking['status'] === 'pending'): ?>
+                                        <a href="booking_payment.php?booking_id=<?php echo $booking['id']; ?>" 
+                                           class="btn btn-outline-success"
+                                           title="Make Payment">
+                                            <i class="fas fa-credit-card"></i>
+                                        </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Property Viewings Section -->
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-check me-2"></i>My Scheduled Viewings
+            </h5>
+        </div>
+        <div class="card-body">
+            <?php if (empty($viewings)): ?>
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-calendar-check fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="mb-2">No Scheduled Viewings</h6>
+                    <p class="text-muted mb-3">You don't have any scheduled viewings. Browse our properties to schedule one.</p>
+                    <a href="index.php" class="btn btn-info btn-sm">
+                        <i class="fas fa-search me-1"></i> Browse Properties
+                    </a>
+                </div>
+            <?php else: ?>
+                <?php 
+                // Filter viewings if status filter is applied
+                $filteredViewings = $viewings;
+                if (isset($_GET['status']) && $_GET['status'] !== 'all') {
+                    $filteredViewings = array_filter($viewings, function($v) {
+                        return $v['status'] === $_GET['status'];
+                    });
+                }
+                
+                if (empty($filteredViewings)): 
+                ?>
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="far fa-calendar-alt fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="mb-2">No Viewings Found</h6>
+                    <p class="text-muted mb-3">No viewings match the selected filter.</p>
+                    <a href="?status=all" class="btn btn-info btn-sm">
+                        <i class="fas fa-undo me-1"></i> Reset Filter
+                    </a>
+                </div>
+                <?php else: ?>
+                    <div class="mb-3">
+                        <div class="btn-group" role="group">
+                            <a href="?status=all" class="btn btn-sm btn-outline-info <?php echo (!isset($_GET['status']) || $_GET['status'] === 'all') ? 'active' : ''; ?>">All</a>
+                            <a href="?status=pending" class="btn btn-sm btn-outline-warning <?php echo (isset($_GET['status']) && $_GET['status'] === 'pending') ? 'active' : ''; ?>">Pending</a>
+                            <a href="?status=confirmed" class="btn btn-sm btn-outline-success <?php echo (isset($_GET['status']) && $_GET['status'] === 'confirmed') ? 'active' : ''; ?>">Confirmed</a>
+                            <a href="?status=cancelled" class="btn btn-sm btn-outline-danger <?php echo (isset($_GET['status']) && $_GET['status'] === 'cancelled') ? 'active' : ''; ?>">Cancelled</a>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
@@ -180,10 +309,10 @@ include 'includes/header.php';
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-        <?php endif; ?>
-    <?php endif; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
 
 <!-- Cancel Viewing Modal -->
