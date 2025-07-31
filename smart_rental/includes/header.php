@@ -1,5 +1,6 @@
 <?php
 require_once '../config/db.php';
+require_once '../config/auth.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,6 +56,78 @@ require_once '../config/db.php';
         .btn-outline-primary:hover {
             background-color: var(--primary-color);
             color: white;
+        }
+        
+        /* Favorite Button Styles */
+        .favorite-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+        
+        .favorite-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .favorite-icon i {
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .favorite-icon .fas {
+            color: #dc3545 !important;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: none;
+            min-width: 300px;
+            max-width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .toast-body {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #212529;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast.success .toast-body {
+            border-left: 4px solid #198754;
+            background-color: #f8f9fa;
+        }
+        
+        .toast.error .toast-body {
+            border-left: 4px solid #dc3545;
+            background-color: #f8f9fa;
+        }
+        
+        .btn-close {
+            padding: 1rem;
+            opacity: 0.7;
+        }
+        
+        .btn-close:hover {
+            opacity: 1;
         }
         
         .bg-primary {
@@ -133,9 +206,21 @@ require_once '../config/db.php';
                 <li class="nav-item">
                     <a class="nav-link" href="index.php">Home</a>
                 </li>
+                <?php if (is_logged_in()): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="favorites.php"><i class="fas fa-heart me-1"></i> Favorites</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="my_bookings.php"><i class="fas fa-calendar-alt me-1"></i> My Bookings</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="rent_payment.php"><i class="fas fa-credit-card me-1"></i> Payments</a>
+                </li>
+                <?php else: ?>
                 <li class="nav-item">
                     <a class="nav-link" href="browse.php">Browse Properties</a>
                 </li>
+                <?php endif; ?>
                 <li class="nav-item">
                     <a class="nav-link" href="about.php">About Us</a>
                 </li>
@@ -144,26 +229,27 @@ require_once '../config/db.php';
                 </li>
             </ul>
 
-            <ul class="navbar-nav">
+            <ul class="navbar-nav ms-auto">
                 <?php if (is_logged_in()): ?>
-                    <li class="nav-item">
-                        <span class="nav-link me-2">
-                            <i class="fas fa-user me-1"></i>
-                            <?php echo htmlspecialchars($_SESSION['user_name']); ?>
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-primary" href="../logout.php">
-                            <i class="fas fa-sign-out-alt me-1"></i>
-                            Logout
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span><?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="my_bookings.php"><i class="fas fa-calendar-alt me-2"></i> My Bookings</a></li>
+                            <li><a class="dropdown-item" href="favorites.php"><i class="fas fa-heart me-2"></i> Favorites</a></li>
+                            <li><a class="dropdown-item" href="rent_payment.php"><i class="fas fa-credit-card me-2"></i> Payments</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                        </ul>
                     </li>
                 <?php else: ?>
-                    <li class="nav-item me-2 d-flex align-items-center">
-                        <a class="btn btn-outline-primary px-3 py-2" style="line-height: 1.5; height: 40px; display: flex; align-items: center;" href="../login.php">Login</a>
+                    <li class="nav-item d-lg-block d-none">
+                        <a class="btn btn-outline-primary me-2" href="../login.php">Log in</a>
                     </li>
-                    <li class="nav-item d-flex align-items-center">
-                        <a class="btn btn-primary text-white px-3 py-2" style="line-height: 1.5; height: 40px; display: flex; align-items: center;" href="../register.php">Register</a>
+                    <li class="nav-item d-lg-block d-none">
+                        <a class="btn btn-primary" href="../register.php">Sign up</a>
                     </li>
                 <?php endif; ?>
             </ul>

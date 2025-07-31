@@ -1,6 +1,26 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../lib/helpers.php';
+// Database connection
+$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Define helper functions that would be in helpers.php
+if (!function_exists('sanitize_input')) {
+    function sanitize_input($data) {
+        $data = trim($data);
+        $data = stripslashes($data);
+        $data = htmlspecialchars($data);
+        return $data;
+    }
+}
+
+if (!function_exists('redirect')) {
+    function redirect($url) {
+        header("Location: $url");
+        exit();
+    }
+}
 
 class BookingController {
     private $conn;
@@ -22,30 +42,39 @@ class BookingController {
             // Validate input
             $this->validateBookingData($data);
             
-            // Calculate total amount based on rental period and property price
+            // Get property details and set up monthly rent
             $property = $this->getProperty($data['house_id']);
-            $totalAmount = $this->calculateTotalAmount($property, $data);
+            $monthlyRent = $property['price'];
             $securityDeposit = $property['security_deposit'] ?? ($property['price'] * 2); // 2 months rent as deposit
             
-            // Insert booking
+            // Insert booking with monthly rent and landlord_id
             $stmt = $this->conn->prepare("
                 INSERT INTO rental_bookings (
-                    house_id, user_id, landlord_id, start_date, end_date, 
-                    rental_period, total_amount, security_deposit, special_requests
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    house_id, landlord_id, user_id, start_date, 
+                    monthly_rent, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, 'approved', NOW())
             ");
             
+            // Get user details
+            $userStmt = $this->conn->prepare("SELECT id FROM users WHERE id = ?");
+            $userStmt->bind_param('i', $_SESSION['user_id']);
+            $userStmt->execute();
+            $user = $userStmt->get_result()->fetch_assoc();
+            
+            if (!$user) {
+                throw new Exception("User not found");
+            }
+            
+            // Get landlord_id from the property
+            $landlordId = $property['landlord_id'];
+            
             $stmt->bind_param(
-                'iisssidds',
+                'iiisd',
                 $data['house_id'],
+                $landlordId,
                 $_SESSION['user_id'],
-                $property['landlord_id'],
                 $data['start_date'],
-                $data['end_date'],
-                $data['rental_period'],
-                $totalAmount,
-                $securityDeposit,
-                $data['special_requests'] ?? null
+                $monthlyRent
             );
             
             if (!$stmt->execute()) {
@@ -59,8 +88,8 @@ class BookingController {
                 $this->handleDocumentUploads($bookingId, $files['documents']);
             }
             
-            // Create initial payment record
-            $this->createInitialPayment($bookingId, $totalAmount, $securityDeposit);
+            // Create initial payment record for security deposit
+            $this->recordPayment($bookingId, $securityDeposit, 'deposit');
             
             $this->conn->commit();
             
@@ -101,13 +130,13 @@ class BookingController {
         
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as count 
-            FROM rental_bookings 
-            WHERE house_id = ? 
+            FROM bookings 
+            WHERE property_id = ? 
             AND status NOT IN ('cancelled', 'rejected', 'completed')
             AND (
-                (start_date BETWEEN ? AND ?) 
-                OR (end_date BETWEEN ? AND ?)
-                OR (? BETWEEN start_date AND end_date)
+                (move_in_date BETWEEN ? AND ?) 
+                OR (move_out_date BETWEEN ? AND ?)
+                OR (? BETWEEN move_in_date AND move_out_date)
             )
         ");
         
@@ -162,19 +191,15 @@ class BookingController {
         }
     }
     
-    private function createInitialPayment($bookingId, $amount, $deposit) {
+    private function recordPayment($bookingId, $amount, $type = 'rent') {
         $stmt = $this->conn->prepare("
-            INSERT INTO booking_payments 
-            (booking_id, amount, payment_date, payment_method, status) 
-            VALUES (?, ?, NOW(), 'pending', 'pending')
+            INSERT INTO payment_history (
+                booking_id, amount, payment_method, status
+            ) VALUES (?, ?, ?, 'completed')
         ");
         
-        $initialPayment = $amount + $deposit;
-        $stmt->bind_param('id', $bookingId, $initialPayment);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to create payment record");
-        }
+        $stmt->bind_param('ids', $bookingId, $amount, $type);
+        return $stmt->execute();
     }
     
     private function sendBookingConfirmation($bookingId) {

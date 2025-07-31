@@ -16,28 +16,17 @@ $defaultEndDate = date('Y-m-d', strtotime('+1 year'));
     <form id="bookingForm" action="process_booking.php" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="house_id" value="<?php echo $property['id']; ?>">
         
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="start_date" class="form-label">Move-in Date</label>
-                <input type="date" 
-                       class="form-control" 
-                       id="start_date" 
-                       name="start_date" 
-                       min="<?php echo $today; ?>" 
-                       value="<?php echo $today; ?>" 
-                       required>
-                <div class="form-text">Earliest available date: <?php echo date('M d, Y'); ?></div>
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <label for="rental_period" class="form-label">Rental Period (months)</label>
-                <select class="form-select" id="rental_period" name="rental_period" required>
-                    <option value="6">6 Months</option>
-                    <option value="12" selected>12 Months</option>
-                    <option value="24">24 Months</option>
-                    <option value="36">36 Months</option>
-                </select>
-            </div>
+        <div class="mb-3">
+            <label for="start_date" class="form-label">Move-in Date</label>
+            <input type="date" 
+                   class="form-control" 
+                   id="start_date" 
+                   name="start_date" 
+                   min="<?php echo $today; ?>" 
+                   value="<?php echo $today; ?>" 
+                   required>
+            <div class="form-text">Earliest available date: <?php echo date('M d, Y'); ?></div>
+            <input type="hidden" id="rental_period" name="rental_period" value="12">
         </div>
         
         <div class="mb-3">
@@ -121,18 +110,17 @@ $defaultEndDate = date('Y-m-d', strtotime('+1 year'));
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const startDateInput = document.getElementById('start_date');
-    const rentalPeriodSelect = document.getElementById('rental_period');
     const endDateInput = document.getElementById('end_date');
     const periodDisplay = document.getElementById('periodDisplay');
     const monthlyRent = parseFloat(<?php echo $property['price']; ?>);
     const subtotalElement = document.getElementById('subtotal');
     const depositElement = document.getElementById('deposit');
     const totalDueElement = document.getElementById('totalDue');
+    const rentalPeriod = 12; // Default to 12 months
     
-    // Update end date when start date or rental period changes
+    // Update end date when start date changes
     function updateDates() {
         const startDate = new Date(startDateInput.value);
-        const rentalPeriod = parseInt(rentalPeriodSelect.value);
         
         if (isNaN(startDate.getTime())) return;
         
@@ -174,11 +162,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add event listeners
+    // Add event listener for start date changes
     startDateInput.addEventListener('change', updateDates);
-    rentalPeriodSelect.addEventListener('change', function() {
-        updateDates();
-    });
     
     // Initialize
     updateDates();

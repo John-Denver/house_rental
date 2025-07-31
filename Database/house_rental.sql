@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 25, 2025 at 08:57 AM
+-- Generation Time: Jul 31, 2025 at 12:05 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -49,7 +49,9 @@ CREATE TABLE `booking_payments` (
   `amount` decimal(15,2) NOT NULL,
   `payment_date` datetime NOT NULL,
   `payment_method` varchar(50) NOT NULL,
-  `transaction_id` varchar(100) DEFAULT NULL,
+  `payment_gateway` varchar(50) DEFAULT NULL,
+  `transaction_id` varchar(255) DEFAULT NULL,
+  `receipt_url` varchar(255) DEFAULT NULL,
   `status` enum('pending','completed','failed','refunded') NOT NULL DEFAULT 'pending',
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -101,6 +103,27 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `favorites`
+--
+
+CREATE TABLE `favorites` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `house_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `favorites`
+--
+
+INSERT INTO `favorites` (`id`, `user_id`, `house_id`, `created_at`) VALUES
+(6, 3, 39, '2025-07-28 20:24:52'),
+(7, 3, 38, '2025-07-28 20:24:54');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `houses`
 --
 
@@ -121,6 +144,8 @@ CREATE TABLE `houses` (
   `min_rental_period` int(11) DEFAULT 1 COMMENT 'In months',
   `max_rental_period` int(11) DEFAULT 12 COMMENT 'In months',
   `advance_rent_months` int(11) DEFAULT 1 COMMENT 'Number of months rent to pay in advance',
+  `payment_cycle` enum('monthly','quarterly','annually') NOT NULL DEFAULT 'monthly',
+  `late_fee_percentage` decimal(5,2) DEFAULT 5.00,
   `bedrooms` int(11) DEFAULT 0,
   `bathrooms` int(11) DEFAULT 0,
   `area` decimal(10,2) DEFAULT NULL,
@@ -139,11 +164,11 @@ CREATE TABLE `houses` (
 -- Dumping data for table `houses`
 --
 
-INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `security_deposit`, `min_rental_period`, `max_rental_period`, `advance_rent_months`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
-(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 1000000.00, 1, 12, 1, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-25 04:46:35', '', 10, 1),
-(38, 7, 'Zetech', 21, 'A new place to live your life', 'RXW7+W5G, Ruiru, Kenya', NULL, NULL, NULL, -1.15324800, 36.96296000, 25000, NULL, 1, 12, 1, 1, 1, 500.00, NULL, '1753309042_main_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', 0, 1, '2025-07-23 22:17:22', '2025-07-23 22:17:22', '', 1, 1),
-(39, 4, 'Luxury Villa', 25, '<p>A lot of amenities are present here</p>', 'New Admin Block, PAUS Science St, Juja, Kenya', NULL, NULL, NULL, -1.09793100, 37.01464400, 150000, NULL, 1, 12, 1, 5, 3, 498.00, NULL, '1753423510_main_phone splash.png', 0, 1, '2025-07-25 06:05:10', '2025-07-25 06:05:10', '', 1, 1),
-(41, 7, 'Posta Makongo', 18, '<p>A single room apartment</p>', 'W225+468, Juja, Kenya', NULL, NULL, NULL, -1.09913200, 37.00781300, 4500, NULL, 1, 12, 1, 0, 1, 100.00, NULL, '1753425619_main_EV125_1 (2).png', 0, 1, '2025-07-25 06:40:19', '2025-07-25 06:40:19', 'W225+468, Juja, Kenya', 7, 5);
+INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `security_deposit`, `min_rental_period`, `max_rental_period`, `advance_rent_months`, `payment_cycle`, `late_fee_percentage`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
+(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 1000000.00, 1, 12, 1, 'monthly', 5.00, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-25 04:46:35', '', 10, 1),
+(38, 7, 'Zetech', 21, 'A new place to live your life', 'RXW7+W5G, Ruiru, Kenya', NULL, NULL, NULL, -1.15324800, 36.96296000, 25000, NULL, 1, 12, 1, 'monthly', 5.00, 1, 1, 500.00, NULL, '1753309042_main_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', 0, 1, '2025-07-23 22:17:22', '2025-07-23 22:17:22', '', 1, 1),
+(39, 4, 'Luxury Villa', 25, '<p>A lot of amenities are present here</p>', 'New Admin Block, PAUS Science St, Juja, Kenya', NULL, NULL, NULL, -1.09793100, 37.01464400, 150000, NULL, 1, 12, 1, 'monthly', 5.00, 5, 3, 498.00, NULL, '1753423510_main_phone splash.png', 0, 1, '2025-07-25 06:05:10', '2025-07-25 06:05:10', '', 1, 1),
+(41, 7, 'Posta Makongo', 18, '<p>A single room apartment</p>', 'W225+468, Juja, Kenya', NULL, NULL, NULL, -1.09913200, 37.00781300, 4500, NULL, 1, 12, 1, 'monthly', 5.00, 0, 1, 100.00, NULL, '1753425619_main_EV125_1 (2).png', 0, 1, '2025-07-25 06:40:19', '2025-07-25 06:40:19', 'W225+468, Juja, Kenya', 7, 5);
 
 -- --------------------------------------------------------
 
@@ -201,12 +226,43 @@ INSERT INTO `payments` (`id`, `tenant_id`, `amount`, `invoice`, `date_created`) 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `property_viewings`
+--
+
+CREATE TABLE `property_viewings` (
+  `id` int(11) NOT NULL,
+  `property_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `viewer_name` varchar(100) NOT NULL,
+  `contact_number` varchar(20) NOT NULL,
+  `viewing_date` date NOT NULL,
+  `viewing_time` time NOT NULL,
+  `status` enum('pending','confirmed','completed','cancelled') NOT NULL DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `property_viewings`
+--
+
+INSERT INTO `property_viewings` (`id`, `property_id`, `user_id`, `viewer_name`, `contact_number`, `viewing_date`, `viewing_time`, `status`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 39, 3, 'Thiira Elizabeth', '0712512358', '2025-07-29', '15:00:00', 'confirmed', '', '2025-07-28 21:04:57', '2025-07-28 22:34:05'),
+(2, 38, 4, 'Maureen Tallam ', '0712512358', '2025-08-09', '14:00:00', 'pending', '', '2025-07-28 21:24:05', '2025-07-28 21:24:05'),
+(3, 37, 7, 'New Landlord', '0712512358', '2025-08-10', '16:00:00', 'cancelled', '\n[CANCELLED: i dont want it]', '2025-07-28 21:58:10', '2025-07-28 22:28:04'),
+(4, 38, NULL, 'Guest', '0712512358', '2025-08-08', '12:00:00', 'pending', '', '2025-07-30 07:40:51', '2025-07-30 07:40:51');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `rental_bookings`
 --
 
 CREATE TABLE `rental_bookings` (
   `id` int(30) NOT NULL,
   `house_id` int(30) NOT NULL,
+  `monthly_rent` decimal(15,2) NOT NULL,
   `landlord_id` int(30) NOT NULL,
   `user_id` int(30) NOT NULL,
   `start_date` date NOT NULL,
@@ -214,16 +270,37 @@ CREATE TABLE `rental_bookings` (
   `end_date` date NOT NULL,
   `check_out_time` time DEFAULT NULL,
   `special_requests` text DEFAULT NULL,
-  `rental_period` int(11) NOT NULL COMMENT 'Number of months',
-  `total_amount` decimal(15,2) NOT NULL,
+  `last_payment_date` date DEFAULT NULL,
+  `next_payment_due` date DEFAULT NULL,
   `security_deposit` decimal(15,2) DEFAULT 0.00,
   `payment_status` enum('pending','partial','paid','refunded','cancelled') NOT NULL DEFAULT 'pending',
   `payment_method` varchar(50) DEFAULT NULL,
   `payment_reference` varchar(100) DEFAULT NULL,
-  `status` enum('pending','confirmed','cancelled','expired','completed','rejected') NOT NULL DEFAULT 'pending',
+  `status` enum('pending','confirmed','cancelled','completed','active') NOT NULL DEFAULT 'pending',
   `cancellation_reason` text DEFAULT NULL,
   `cancelled_by` enum('tenant','landlord','system') DEFAULT NULL,
   `documents` text DEFAULT NULL COMMENT 'JSON array of document paths',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `rent_payments`
+--
+
+CREATE TABLE `rent_payments` (
+  `id` int(11) NOT NULL,
+  `booking_id` int(11) NOT NULL,
+  `month` date NOT NULL,
+  `amount_due` decimal(15,2) NOT NULL,
+  `amount_paid` decimal(15,2) DEFAULT 0.00,
+  `previous_balance` decimal(15,2) DEFAULT 0.00,
+  `late_fee` decimal(15,2) DEFAULT 0.00,
+  `status` enum('pending','paid','overdue','partial') NOT NULL DEFAULT 'pending',
+  `due_date` date NOT NULL,
+  `paid_date` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -288,6 +365,8 @@ CREATE TABLE `users` (
   `name` text NOT NULL,
   `username` varchar(200) NOT NULL,
   `phone_number` varchar(20) DEFAULT NULL COMMENT 'User''s contact phone number',
+  `current_balance` decimal(15,2) DEFAULT 0.00,
+  `default_payment_method` varchar(50) DEFAULT NULL,
   `password` text NOT NULL,
   `type` enum('admin','landlord','caretaker','customer') NOT NULL DEFAULT 'customer'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -296,11 +375,11 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `username`, `phone_number`, `password`, `type`) VALUES
-(1, 'Administrator', 'denver@gmail.com', NULL, '$2y$10$JB4x5av/DBOFe1iE022UF.OXuV4.Wg.2T1MkR37KVXUwlYv8g0vcm', 'admin'),
-(3, 'Thiira Elizabeth', 'thiira@gmail.com', NULL, '$2y$10$BtkTBVY4vkjF1g1U4D.ytOiWdw2.3Eewzogwv3DhCT.rHsgfBgPKm', 'customer'),
-(4, 'Maureen Tallam ', 'tallam@gmail.com', '0712512358', '$2y$10$o3s9/cRzHmWMUDa0CkdJvOG07OZkNqTnk8UbBjedr6.bFfU501WI.', 'landlord'),
-(7, 'New Landlord', 'new@gmail.com', '0712512358', '$2y$10$KpA95L7aJhqMigyrEBfmFuu9A8TfxnBSd1KaDkRPdwFstiivhmK0.', 'landlord');
+INSERT INTO `users` (`id`, `name`, `username`, `phone_number`, `current_balance`, `default_payment_method`, `password`, `type`) VALUES
+(1, 'Administrator', 'denver@gmail.com', NULL, 0.00, NULL, '$2y$10$JB4x5av/DBOFe1iE022UF.OXuV4.Wg.2T1MkR37KVXUwlYv8g0vcm', 'admin'),
+(3, 'Thiira Elizabeth', 'thiira@gmail.com', NULL, 0.00, NULL, '$2y$10$BtkTBVY4vkjF1g1U4D.ytOiWdw2.3Eewzogwv3DhCT.rHsgfBgPKm', 'customer'),
+(4, 'Maureen Tallam ', 'tallam@gmail.com', '0712512358', 0.00, NULL, '$2y$10$o3s9/cRzHmWMUDa0CkdJvOG07OZkNqTnk8UbBjedr6.bFfU501WI.', 'landlord'),
+(7, 'New Landlord', 'new@gmail.com', '0712512358', 0.00, NULL, '$2y$10$KpA95L7aJhqMigyrEBfmFuu9A8TfxnBSd1KaDkRPdwFstiivhmK0.', 'landlord');
 
 --
 -- Indexes for dumped tables
@@ -332,6 +411,14 @@ ALTER TABLE `booking_reviews`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `favorites`
+--
+ALTER TABLE `favorites`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_house_unique` (`user_id`,`house_id`),
+  ADD KEY `house_id` (`house_id`);
 
 --
 -- Indexes for table `houses`
@@ -366,13 +453,33 @@ ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `property_viewings`
+--
+ALTER TABLE `property_viewings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `property_id` (`property_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `rental_bookings`
 --
 ALTER TABLE `rental_bookings`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_booking_house` (`house_id`),
   ADD KEY `fk_booking_tenant` (`user_id`),
-  ADD KEY `fk_booking_landlord` (`landlord_id`);
+  ADD KEY `fk_booking_landlord` (`landlord_id`),
+  ADD KEY `idx_rental_status` (`status`),
+  ADD KEY `idx_rental_dates` (`start_date`,`end_date`);
+
+--
+-- Indexes for table `rent_payments`
+--
+ALTER TABLE `rent_payments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_booking_month` (`booking_id`,`month`),
+  ADD KEY `idx_booking_id` (`booking_id`),
+  ADD KEY `idx_due_date` (`due_date`),
+  ADD KEY `idx_status` (`status`);
 
 --
 -- Indexes for table `system_settings`
@@ -422,6 +529,12 @@ ALTER TABLE `categories`
   MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
+-- AUTO_INCREMENT for table `favorites`
+--
+ALTER TABLE `favorites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT for table `houses`
 --
 ALTER TABLE `houses`
@@ -440,10 +553,22 @@ ALTER TABLE `payments`
   MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
+-- AUTO_INCREMENT for table `property_viewings`
+--
+ALTER TABLE `property_viewings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `rental_bookings`
 --
 ALTER TABLE `rental_bookings`
   MODIFY `id` int(30) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `rent_payments`
+--
+ALTER TABLE `rent_payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `system_settings`
@@ -486,10 +611,24 @@ ALTER TABLE `booking_reviews`
   ADD CONSTRAINT `fk_review_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `favorites`
+--
+ALTER TABLE `favorites`
+  ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `house_media`
 --
 ALTER TABLE `house_media`
   ADD CONSTRAINT `house_media_ibfk_1` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `property_viewings`
+--
+ALTER TABLE `property_viewings`
+  ADD CONSTRAINT `property_viewings_ibfk_1` FOREIGN KEY (`property_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `property_viewings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `rental_bookings`

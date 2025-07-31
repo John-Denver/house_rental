@@ -2,6 +2,8 @@
 require_once '../config/db.php';
 require_once '../config/auth.php';
 
+$page_title = 'Smart Rental - Find Your Perfect Home';
+
 // Pagination settings
 $records_per_page = 12;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -121,21 +123,30 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             color: var(--text-dark);
         }
         
-        .btn-primary-blue {
-            background-color: var(--primary-blue);
-            color: var(--white);
-            border-radius: 8px;
-            font-weight: 600;
-            padding: 0.5rem 1rem;
-            border: none;
-        }
-        
         .btn-outline-blue {
             border: 1px solid var(--primary-blue);
             border-radius: 8px;
             font-weight: 600;
             padding: 0.5rem 1rem;
             color: var(--primary-blue);
+        }
+        
+        .btn-primary-blue, 
+        .btn-primary-blue:active, 
+        .btn-primary-blue:focus {
+            background-color: var(--primary-blue) !important;
+            color: white !important;
+            border: 1px solid var(--primary-blue) !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            padding: 0.5rem 1rem !important;
+            box-shadow: none !important;
+        }
+        
+        .btn-primary-blue:hover {
+            background-color: #1565c0 !important;
+            border-color: #1565c0 !important;
+            color: white !important;
         }
         
         /* Hero Section with Background Image */
@@ -416,17 +427,72 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             }
         }
         
+        /* Hero Section Styles */
+.hero-section {
+    position: relative;
+    padding: 8rem 0 6rem;
+    text-align: center;
+    color: white;
+    margin-top: -76px; /* Offset for fixed header */
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    z-index: 1; /* Add this to ensure content is above any potential overlapping elements */
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('assets/images/hero-bg.png') center/cover no-repeat;
+    z-index: -1;
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6); /* Dark overlay */
+    z-index: -1;
+}
+
+.hero-section .container {
+    position: relative;
+    z-index: 2; /* Ensure content is above the overlay */
+    width: 100%;
+}
+        
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .hero-section p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
         @media (max-width: 992px) {
             .property-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
             
-            .hero-section {
-                padding: 6rem 0 4rem;
-            }
-            
             .hero-section h1 {
                 font-size: 2.5rem;
+            }
+            
+            .hero-section p {
+                font-size: 1.25rem;
             }
         }
         
@@ -472,49 +538,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">SmartRental</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="search-bar ms-auto me-3 d-lg-none d-block">
-                    <div class="search-option active">Anywhere</div>
-                    <div class="search-divider"></div>
-                    <div class="search-option">Any week</div>
-                    <div class="search-divider"></div>
-                    <div class="search-option">Add guests</div>
-                    <div class="search-button">
-                        <i class="fas fa-search"></i>
-                    </div>
-                </div>
-                <ul class="navbar-nav ms-auto">
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item dropdown d-lg-block d-none">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle me-1"></i> My Account
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" href="my_bookings.php">My Bookings</a></li>
-                                <li><a class="dropdown-item" href="favorites.php">Favorites</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="logout.php">Logout</a></li>
-                            </ul>
-                        </li>
-                    <?php else: ?>
-                        <li class="nav-item d-lg-block d-none">
-                            <a class="btn btn-outline-blue me-2" href="../login.php">Log in</a>
-                        </li>
-                        <li class="nav-item d-lg-block d-none">
-                            <a class="btn btn-primary-blue" href="../register.php">Sign up</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<?php include 'includes/header.php'; ?>
 
     <!-- Hero Section with Background Image -->
     <section class="hero-section">
@@ -601,16 +625,26 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <a href="property.php?id=<?php echo $row['id']; ?>" class="text-decoration-none text-dark d-block h-100">
                             <div class="position-relative h-100 d-flex flex-column">
                                 <div class="property-image-container">
-                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.jpg'; ?>" 
+                                    <img src="<?php echo $row['main_image'] ? '../uploads/' . $row['main_image'] : 'assets/images/hero-bg.png'; ?>" 
                                          class="property-image" alt="<?php echo htmlspecialchars($row['house_no']); ?>">
                                 </div>
                                 <div class="property-card-actions">
                                     <div class="available-badge">
                                         <i class="fas fa-home me-1"></i> <?php echo ($row['available_units'] ?? 0) . '/' . ($row['total_units'] ?? 1); ?> units
                                     </div>
-                                    <div class="wishlist-icon" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(this, <?php echo $row['id']; ?>);">
-                                        <i class="far fa-heart"></i>
+                                    <?php if (is_logged_in()): ?>
+                                    <?php
+                                    // Check if this property is in user's favorites
+                                    $is_favorite = false;
+                                    $fav_check = $conn->prepare("SELECT id FROM favorites WHERE user_id = ? AND house_id = ?");
+                                    $fav_check->bind_param('ii', $_SESSION['user_id'], $row['id']);
+                                    $fav_check->execute();
+                                    $is_favorite = $fav_check->get_result()->num_rows > 0;
+                                    ?>
+                                    <div class="favorite-icon" data-property-id="<?php echo $row['id']; ?>" onclick="event.preventDefault(); event.stopPropagation(); toggleFavorite(this, <?php echo $row['id']; ?>);">
+                                        <i class="<?php echo $is_favorite ? 'fas' : 'far'; ?> fa-heart text-danger"></i>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="property-info mt-auto">
                                     <div class="d-flex justify-content-between">
@@ -665,51 +699,87 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         <?php endif; ?>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-3 footer-section">
-                    <h5 class="footer-title">Support</h5>
-                    <a href="#" class="footer-link">Help Center</a>
-                    <a href="#" class="footer-link">Safety information</a>
-                    <a href="#" class="footer-link">Cancellation options</a>
-                    <a href="#" class="footer-link">Our COVID-19 Response</a>
+    <!-- Toast Notification -->
+    <div class="position-fixed top-0 start-50 translate-middle-x mt-5" style="z-index: 1100;">
+        <div id="favoriteToast" class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    <!-- Message will be inserted here -->
                 </div>
-                <div class="col-md-3 footer-section">
-                    <h5 class="footer-title">Community</h5>
-                    <a href="#" class="footer-link">Disaster relief housing</a>
-                    <a href="#" class="footer-link">Support refugees</a>
-                    <a href="#" class="footer-link">Combating discrimination</a>
-                </div>
-                <div class="col-md-3 footer-section">
-                    <h5 class="footer-title">Hosting</h5>
-                    <a href="#" class="footer-link">Try hosting</a>
-                    <a href="#" class="footer-link">AirCover for Hosts</a>
-                    <a href="#" class="footer-link">Explore hosting resources</a>
-                    <a href="#" class="footer-link">Visit our community forum</a>
-                </div>
-                <div class="col-md-3 footer-section">
-                    <h5 class="footer-title">About</h5>
-                    <a href="#" class="footer-link">Newsroom</a>
-                    <a href="#" class="footer-link">Learn about new features</a>
-                    <a href="#" class="footer-link">Careers</a>
-                    <a href="#" class="footer-link">Investors</a>
-                </div>
-            </div>
-            <hr class="my-4">
-            <div class="row">
-                <div class="col-md-6">
-                    <p>© 2025 SmartRental, Inc. All rights reserved</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <a href="#" class="text-decoration-none me-3"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="text-decoration-none me-3"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="text-decoration-none"><i class="fab fa-instagram"></i></a>
-                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
-    </footer>
+    </div>
+
+    <!-- Footer -->
+    <?php include 'includes/footer.php'; ?>
+
+    <script>
+    // Initialize toast
+    const toastEl = document.getElementById('favoriteToast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+
+    async function toggleFavorite(element, propertyId) {
+        if (!<?php echo is_logged_in() ? 'true' : 'false'; ?>) {
+            window.location.href = 'login.php?redirect=' + encodeURIComponent(window.location.pathname);
+            return;
+        }
+
+        const icon = element.querySelector('i');
+        const isFavorite = icon.classList.contains('fas');
+        
+        try {
+            const response = await fetch('api/toggle_favorite.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ house_id: propertyId })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Toggle heart icon
+                if (data.is_favorite) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                    showToast('Property added to favorites!');
+                } else {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    showToast('Property removed from favorites');
+                }
+            } else {
+                showToast(data.message || 'Error updating favorites', true);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', true);
+        }
+    }
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('favoriteToast');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        // Remove previous classes
+        toast.classList.remove('success', 'error');
+        
+        // Add appropriate class based on message type
+        if (isError) {
+            toast.classList.add('error');
+        } else {
+            toast.classList.add('success');
+        }
+        
+        // Set message and show
+        toastMessage.textContent = message;
+        const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+        bsToast.show();
+    }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
