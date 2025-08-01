@@ -67,7 +67,7 @@ include 'includes/header.php';
                                     </p>
                                     <p class="mb-1">
                                         <i class="fas fa-map-marker-alt me-2 text-primary"></i>
-                                        <?php echo htmlspecialchars($booking['location']); ?>
+                                        <?php echo htmlspecialchars($booking['property_location']); ?>
                                     </p>
                                 </div>
                                 <div class="col-md-6">

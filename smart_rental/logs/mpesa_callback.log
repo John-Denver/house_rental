@@ -1,0 +1,64 @@
+2025-08-01 11:18:52 - Callback received:
+{
+    "ResultCode": "0",
+    "ResultDesc": "Success",
+    "MpesaReceiptNumber": "TEST123456",
+    "Amount": "100",
+    "PhoneNumber": "254700000000",
+    "MerchantRequestID": "TEST-1754039932",
+    "CheckoutRequestID": "TEST-1754039932"
+}
+----------------------------------------
+2025-08-01 11:18:52 - Payment SUCCESS:
+Receipt: TEST123456
+Amount: 100
+Phone: 254700000000
+----------------------------------------
+2025-08-01 11:23:20 - Callback received:
+{
+    "ResultCode": "0",
+    "ResultDesc": "Success",
+    "MpesaReceiptNumber": "TEST123456",
+    "Amount": "100",
+    "PhoneNumber": "254700000000",
+    "MerchantRequestID": "TEST-1754040200",
+    "CheckoutRequestID": "TEST-1754040200"
+}
+----------------------------------------
+2025-08-01 11:23:20 - Payment SUCCESS:
+Receipt: TEST123456
+Amount: 100
+Phone: 254700000000
+----------------------------------------
+2025-08-01 11:24:52 - Callback received:
+{
+    "ResultCode": "0",
+    "ResultDesc": "Success",
+    "MpesaReceiptNumber": "TEST1754040291",
+    "Amount": "100",
+    "PhoneNumber": "254700000000",
+    "MerchantRequestID": "TEST-1754040291",
+    "CheckoutRequestID": "TEST-1754040291"
+}
+----------------------------------------
+2025-08-01 11:24:52 - Payment SUCCESS:
+Receipt: TEST1754040291
+Amount: 100
+Phone: 254700000000
+----------------------------------------
+2025-08-01 11:28:10 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "c7e4-42c0-b476-32053384902b46177",
+            "CheckoutRequestID": "ws_CO_010820251227571712512358",
+            "ResultCode": 1032,
+            "ResultDesc": "Request Cancelled by user"
+        }
+    }
+}
+----------------------------------------
+2025-08-01 11:28:11 - Payment FAILED:
+Error Code: Unknown
+Error Message: Unknown error
+----------------------------------------

@@ -502,6 +502,109 @@ class BookingController {
         $result = $stmt->get_result()->fetch_assoc();
         return $result['count'] > 0;
     }
+    
+    /**
+     * Process payment for a booking
+     */
+    public function processPayment($paymentData) {
+        try {
+            // Validate payment data
+            if (empty($paymentData['booking_id']) || empty($paymentData['amount'])) {
+                throw new Exception("Missing required payment information");
+            }
+            
+            $bookingId = $paymentData['booking_id'];
+            $amount = $paymentData['amount'];
+            $paymentMethod = $paymentData['payment_method'] ?? 'manual';
+            $transactionId = $paymentData['transaction_id'] ?? null;
+            $notes = $paymentData['notes'] ?? '';
+            
+            // Get booking details
+            $booking = $this->getBookingDetails($bookingId);
+            
+            // Validate booking status
+            if ($booking['status'] !== 'pending' && $booking['status'] !== 'confirmed') {
+                throw new Exception("Booking is not in a valid state for payment");
+            }
+            
+            // Record the payment
+            $stmt = $this->conn->prepare("
+                INSERT INTO booking_payments (
+                    booking_id, amount, payment_method, transaction_id, 
+                    status, payment_date, notes
+                ) VALUES (?, ?, ?, ?, 'completed', NOW(), ?)
+            ");
+            
+            $stmt->bind_param('idsss', 
+                $bookingId, 
+                $amount, 
+                $paymentMethod, 
+                $transactionId, 
+                $notes
+            );
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to record payment: " . $stmt->error);
+            }
+            
+            // Update booking status to 'paid'
+            $updateStmt = $this->conn->prepare("
+                UPDATE rental_bookings 
+                SET status = 'paid', updated_at = NOW() 
+                WHERE id = ?
+            ");
+            
+            $updateStmt->bind_param('i', $bookingId);
+            
+            if (!$updateStmt->execute()) {
+                throw new Exception("Failed to update booking status: " . $updateStmt->error);
+            }
+            
+            // Send payment confirmation
+            $this->sendPaymentConfirmation($bookingId, $amount, $paymentMethod);
+            
+            return [
+                'success' => true,
+                'message' => 'Payment processed successfully!',
+                'payment_id' => $this->conn->insert_id
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Send payment confirmation
+     */
+    private function sendPaymentConfirmation($bookingId, $amount, $paymentMethod) {
+        $booking = $this->getBookingDetails($bookingId);
+        
+        // Send email to tenant
+        $to = $booking['tenant_email'];
+        $subject = "Payment Confirmation - Booking #" . $bookingId;
+        $message = "Your payment of KSh " . number_format($amount, 2) . " has been received.\n\n";
+        $message .= "Payment Details:\n";
+        $message .= "- Booking ID: #" . $bookingId . "\n";
+        $message .= "- Property: " . $booking['house_no'] . "\n";
+        $message .= "- Payment Method: " . ucfirst($paymentMethod) . "\n";
+        $message .= "- Amount: KSh " . number_format($amount, 2) . "\n\n";
+        $message .= "Your booking is now confirmed. You can access your booking details in your account.\n";
+        
+        // In production, use a proper email library
+        // mail($to, $subject, $message);
+        
+        // Send notification to landlord
+        $landlordSubject = "Payment Received - Booking #" . $bookingId;
+        $landlordMessage = "Payment of KSh " . number_format($amount, 2) . " has been received for booking #" . $bookingId . ".\n";
+        $landlordMessage .= "Property: " . $booking['house_no'] . "\n";
+        $landlordMessage .= "Tenant: " . $booking['tenant_name'] . "\n";
+        
+        // mail($booking['landlord_email'], $landlordSubject, $landlordMessage);
+    }
 }
 
 // Helper function for currency formatting
