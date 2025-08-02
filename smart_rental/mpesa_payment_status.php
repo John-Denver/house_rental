@@ -162,6 +162,30 @@ try {
                     $notes
                 );
                 $stmt->execute();
+                
+                // Record monthly payment
+                $currentMonth = date('Y-m-01');
+                $stmt = $conn->prepare("
+                    INSERT INTO monthly_rent_payments 
+                    (booking_id, month, amount, status, payment_date, payment_method, transaction_id, notes)
+                    VALUES (?, ?, ?, 'paid', NOW(), 'M-Pesa', ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                    status = 'paid',
+                    payment_date = NOW(),
+                    payment_method = 'M-Pesa',
+                    transaction_id = VALUES(transaction_id),
+                    notes = VALUES(notes),
+                    updated_at = CURRENT_TIMESTAMP
+                ");
+                $monthlyNotes = 'M-Pesa Payment - Checkout Request: ' . $checkout_request_id;
+                $stmt->bind_param('isds', 
+                    $payment_request['booking_id'], 
+                    $currentMonth, 
+                    $payment_request['amount'], 
+                    $transaction_id, 
+                    $monthlyNotes
+                );
+                $stmt->execute();
 
                 echo json_encode([
                     'success' => true,

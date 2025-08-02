@@ -80,10 +80,12 @@ $query = "SELECT rb.*, h.house_no, h.description, h.price, h.location,
           u.name as tenant_name, u.username as tenant_email, u.phone_number as tenant_phone,
           TIMESTAMPDIFF(MONTH, rb.start_date, rb.end_date) as rental_months,
           (SELECT COUNT(*) FROM booking_payments bp WHERE bp.booking_id = rb.id) as payment_count,
-          (SELECT SUM(amount) FROM booking_payments bp WHERE bp.booking_id = rb.id) as total_paid
+          (SELECT SUM(amount) FROM booking_payments bp WHERE bp.booking_id = rb.id) as total_paid,
+          mpr.mpesa_receipt_number, mpr.transaction_date, mpr.result_desc, mpr.status as payment_request_status
           FROM rental_bookings rb 
           LEFT JOIN houses h ON rb.house_id = h.id 
           LEFT JOIN users u ON rb.user_id = u.id 
+          LEFT JOIN mpesa_payment_requests mpr ON rb.id = mpr.booking_id
           WHERE $where_clause
           ORDER BY rb.created_at DESC";
 
@@ -199,6 +201,11 @@ $stats = $stmt->get_result()->fetch_assoc();
                         <li class="nav-item">
                             <a class="nav-link active" href="bookings.php">
                                 <i class="fas fa-book me-2"></i> Bookings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="payments.php">
+                                <i class="fas fa-credit-card me-2"></i> Payments
                             </a>
                         </li>
                         <li class="nav-item">
@@ -420,6 +427,18 @@ $stats = $stmt->get_result()->fetch_assoc();
                                                         Paid: KSh <?php echo number_format($booking['total_paid'], 2); ?>
                                                     </div>
                                                 <?php endif; ?>
+                                                <?php if ($booking['mpesa_receipt_number']): ?>
+                                                    <div class="small text-success">
+                                                        <i class="fas fa-receipt me-1"></i>
+                                                        Receipt: <?php echo htmlspecialchars($booking['mpesa_receipt_number']); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if ($booking['transaction_date']): ?>
+                                                    <div class="small text-muted">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        <?php echo date('M d, Y H:i', strtotime($booking['transaction_date'])); ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <?php 
@@ -539,6 +558,37 @@ $stats = $stmt->get_result()->fetch_assoc();
                                                                 <?php endif; ?>
                                                             </div>
                                                         </div>
+                                                        
+                                                        <?php if ($booking['mpesa_receipt_number'] || $booking['transaction_date']): ?>
+                                                        <hr>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <h6><i class="fas fa-credit-card me-2"></i>M-Pesa Payment Details</h6>
+                                                                <?php if ($booking['mpesa_receipt_number']): ?>
+                                                                    <p><strong>M-Pesa Receipt Number:</strong> 
+                                                                        <span class="text-success fw-bold"><?php echo htmlspecialchars($booking['mpesa_receipt_number']); ?></span>
+                                                                    </p>
+                                                                <?php endif; ?>
+                                                                <?php if ($booking['transaction_date']): ?>
+                                                                    <p><strong>Transaction Date:</strong> 
+                                                                        <?php echo date('F d, Y \a\t g:i A', strtotime($booking['transaction_date'])); ?>
+                                                                    </p>
+                                                                <?php endif; ?>
+                                                                <?php if ($booking['result_desc']): ?>
+                                                                    <p><strong>Transaction Description:</strong> 
+                                                                        <?php echo htmlspecialchars($booking['result_desc']); ?>
+                                                                    </p>
+                                                                <?php endif; ?>
+                                                                <?php if ($booking['payment_request_status']): ?>
+                                                                    <p><strong>Payment Request Status:</strong> 
+                                                                        <span class="badge bg-<?php echo $booking['payment_request_status'] === 'completed' ? 'success' : ($booking['payment_request_status'] === 'failed' ? 'danger' : 'warning'); ?>">
+                                                                            <?php echo ucfirst($booking['payment_request_status']); ?>
+                                                                        </span>
+                                                                    </p>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                        <?php endif; ?>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

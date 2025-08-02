@@ -42,31 +42,38 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Custom JS -->
 <script>
-    // Wait for the DOM to be fully loaded
+    // Initialize dropdowns when DOM is fully loaded
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize all dropdowns
-        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
-        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
-            // Create dropdown instance
-            var dropdown = new bootstrap.Dropdown(dropdownToggleEl);
-            
-            // Optional: Add click event to prevent default anchor behavior
-            dropdownToggleEl.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropdown.toggle();
+        // Function to initialize dropdowns
+        function initializeDropdowns() {
+            var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+            dropdownElementList.forEach(function(dropdownToggleEl) {
+                // Only initialize if not already initialized
+                if (!bootstrap.Dropdown.getInstance(dropdownToggleEl)) {
+                    new bootstrap.Dropdown(dropdownToggleEl, {
+                        autoClose: true
+                    });
+                }
             });
-            
-            return dropdown;
-        });
+        }
+
+        // Initialize dropdowns on page load
+        initializeDropdowns();
+        
+        // Re-initialize dropdowns after AJAX content loads (if any)
+        document.body.addEventListener('ajaxComplete', initializeDropdowns);
         
         // Close dropdowns when clicking outside
         document.addEventListener('click', function(e) {
-            if (!e.target.matches('.dropdown-toggle') && !e.target.closest('.dropdown-menu')) {
-                var openDropdowns = document.querySelectorAll('.dropdown-menu.show');
-                openDropdowns.forEach(function(openDropdown) {
-                    var dropdown = bootstrap.Dropdown.getInstance(openDropdown.previousElementSibling);
-                    if (dropdown) {
+            var isDropdownToggle = e.target.matches('.dropdown-toggle') || 
+                                 e.target.closest('.dropdown-toggle');
+            var isInDropdown = e.target.closest('.dropdown-menu');
+            
+            if (!isDropdownToggle && !isInDropdown) {
+                var dropdowns = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+                dropdowns.forEach(function(dropdownToggle) {
+                    var dropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
+                    if (dropdown && dropdown._menu.classList.contains('show')) {
                         dropdown.hide();
                     }
                 });
