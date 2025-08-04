@@ -44,7 +44,7 @@ file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 
 // Database connection
 try {
-    $pdo = new PDO('mysql:host=localhost;dbname=rental_system;charset=utf8mb4', 'root', '');
+    $pdo = new PDO('mysql:host=localhost;dbname=house_rental;charset=utf8mb4', 'root', '');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     $logEntry = date('Y-m-d H:i:s') . " - Database connection failed: " . $e->getMessage() . "\n";
@@ -121,22 +121,46 @@ if (isset($callbackData['ResultCode']) && $callbackData['ResultCode'] === '0') {
                 $stmt = $pdo->prepare($updateBookingQuery);
                 $stmt->execute([$bookingId]);
                 
-                // Record monthly payment
-                $currentMonth = date('Y-m-01');
-                $recordMonthlyPaymentQuery = "INSERT INTO monthly_rent_payments 
-                    (booking_id, month, amount, status, payment_date, payment_method, mpesa_receipt_number, notes)
-                    VALUES (?, ?, ?, 'paid', NOW(), 'M-Pesa', ?, ?)
-                    ON DUPLICATE KEY UPDATE
-                    status = 'paid',
-                    payment_date = NOW(),
-                    payment_method = 'M-Pesa',
-                    mpesa_receipt_number = VALUES(mpesa_receipt_number),
-                    notes = VALUES(notes),
-                    updated_at = CURRENT_TIMESTAMP";
+                // Include payment tracking helper
+                require_once 'includes/payment_tracking_helper.php';
                 
-                $notes = 'M-Pesa Payment - Checkout Request: ' . $checkoutRequestId;
-                $stmt = $pdo->prepare($recordMonthlyPaymentQuery);
-                $stmt->execute([$bookingId, $currentMonth, $amount, $mpesaReceiptNumber, $notes]);
+                // Check if this is the first payment for this booking
+                $hasFirstPayment = hasFirstPaymentBeenMade($pdo, $bookingId);
+                
+                if (!$hasFirstPayment) {
+                    // This is the initial payment (security deposit + first month rent)
+                    $breakdown = getInitialPaymentBreakdown($pdo, $bookingId);
+                    $securityDepositAmount = $breakdown['security_deposit'];
+                    $monthlyRentAmount = $breakdown['monthly_rent'];
+                    
+                    // Record initial payment
+                    recordInitialPayment(
+                        $pdo, 
+                        $bookingId, 
+                        $amount, 
+                        $securityDepositAmount, 
+                        $monthlyRentAmount, 
+                        'M-Pesa', 
+                        $checkoutRequestId, 
+                        $mpesaReceiptNumber, 
+                        'M-Pesa Initial Payment - Checkout Request: ' . $checkoutRequestId
+                    );
+                } else {
+                    // This is a monthly rent payment
+                    $nextMonth = getNextUnpaidMonth($pdo, $bookingId);
+                    
+                    // Record monthly payment
+                    recordMonthlyPayment(
+                        $pdo, 
+                        $bookingId, 
+                        $nextMonth, 
+                        $amount, 
+                        'M-Pesa', 
+                        $checkoutRequestId, 
+                        $mpesaReceiptNumber, 
+                        'M-Pesa Monthly Payment - Checkout Request: ' . $checkoutRequestId
+                    );
+                }
                 
                 $logEntry = date('Y-m-d H:i:s') . " - Booking $bookingId updated to confirmed and monthly payment recorded\n";
                 file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);

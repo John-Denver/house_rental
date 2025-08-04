@@ -46,11 +46,28 @@ try {
     exit();
 }
 
-// Calculate total amount
+// Include payment tracking helper
+require_once 'includes/payment_tracking_helper.php';
+
+// Check if first payment has been made
+$hasFirstPayment = hasFirstPaymentBeenMade($conn, $bookingId);
+
+// Calculate payment amount based on payment history
 $additionalFees = $booking['additional_fees'] ?? 0;
 $monthlyRent = floatval($booking['property_price']);
 $securityDeposit = floatval($booking['security_deposit'] ?? 0);
-$totalAmount = $monthlyRent + $securityDeposit + $additionalFees;
+
+if (!$hasFirstPayment) {
+    // First payment: Security deposit + first month rent + additional fees
+    $totalAmount = $monthlyRent + $securityDeposit + $additionalFees;
+    $paymentType = 'initial_payment';
+    $paymentDescription = 'Initial Payment (Security Deposit + First Month Rent)';
+} else {
+    // Subsequent payments: Monthly rent only
+    $totalAmount = $monthlyRent + $additionalFees;
+    $paymentType = 'monthly_rent';
+    $paymentDescription = 'Monthly Rent Payment';
+}
 
 // Process payment form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -139,14 +156,24 @@ include 'includes/header.php';
                                 
                                 <h6 class="text-primary mb-3">Payment Breakdown</h6>
                                 
+                                <!-- Payment Type Badge -->
+                                <div class="mb-3">
+                                    <span class="badge bg-<?php echo $paymentType === 'initial_payment' ? 'warning' : 'success'; ?> fs-6">
+                                        <?php echo $paymentDescription; ?>
+                                    </span>
+                                </div>
+                                
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-muted">Monthly Rent:</span>
                                     <span>KSh <?php echo number_format($monthlyRent, 2); ?></span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted">Security Deposit:</span>
-                                    <span>KSh <?php echo number_format($securityDeposit, 2); ?></span>
-                                </div>
+                                
+                                <?php if (!$hasFirstPayment): ?>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Security Deposit:</span>
+                                        <span>KSh <?php echo number_format($securityDeposit, 2); ?></span>
+                                    </div>
+                                <?php endif; ?>
                                 
                                 <?php if ($additionalFees > 0): ?>
                                     <div class="d-flex justify-content-between mb-2">
@@ -159,6 +186,13 @@ include 'includes/header.php';
                                     <span class="text-primary">Total Amount:</span>
                                     <span class="text-primary fs-5">KSh <?php echo number_format($totalAmount, 2); ?></span>
                                 </div>
+                                
+                                <?php if ($hasFirstPayment): ?>
+                                    <div class="alert alert-info mt-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Note:</strong> Security deposit was paid with your initial payment. This is a monthly rent payment only.
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             
                             <div class="mt-4">
@@ -211,6 +245,10 @@ include 'includes/header.php';
                                                            value="<?php echo number_format($totalAmount, 2); ?>" 
                                                            readonly>
                                                 </div>
+                                                <div class="form-text">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    <?php echo $paymentDescription; ?>
+                                                </div>
                                             </div>
                                             
                                             <button type="submit" class="btn btn-primary btn-lg w-100" id="payButton">
@@ -235,6 +273,7 @@ include 'includes/header.php';
                                         <form method="POST" action="">
                                             <input type="hidden" name="amount" value="<?php echo $totalAmount; ?>">
                                             <input type="hidden" name="payment_method" value="manual">
+                                            <input type="hidden" name="payment_type" value="<?php echo $paymentType; ?>">
                                             
                                             <div class="mb-3">
                                                 <label for="transaction_id" class="form-label">Transaction ID/Reference</label>
@@ -281,9 +320,13 @@ include 'includes/header.php';
                 </div>
                 
                 <div id="successStatus" style="display: none;">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h6 class="text-success">Payment Initiated Successfully!</h6>
+                    <i class="fas fa-mobile-alt fa-3x text-primary mb-3"></i>
+                    <h6 class="text-primary">Payment Request Sent!</h6>
                     <p class="text-muted">Check your phone for the M-Pesa STK Push notification.</p>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Important:</strong> Please complete the payment on your phone. The system will automatically detect when your payment is successful.
+                    </div>
                 </div>
                 
                 <div id="errorStatus" style="display: none;">
@@ -296,6 +339,9 @@ include 'includes/header.php';
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeModal">Close</button>
                 <button type="button" class="btn btn-primary" id="checkStatusBtn" style="display: none;">
                     Check Payment Status
+                </button>
+                <button type="button" class="btn btn-warning" id="tryAgainBtn" style="display: none;">
+                    <i class="fas fa-redo me-2"></i>Try Again
                 </button>
             </div>
         </div>
@@ -314,6 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessage = document.getElementById('errorMessage');
     const closeModal = document.getElementById('closeModal');
     const checkStatusBtn = document.getElementById('checkStatusBtn');
+    const tryAgainBtn = document.getElementById('tryAgainBtn');
     
     let checkoutRequestId = null;
     
@@ -371,13 +418,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success status
                 processingStatus.style.display = 'none';
                 successStatus.style.display = 'block';
-                checkStatusBtn.style.display = 'block';
+                checkStatusBtn.style.display = 'none'; // Hide initially
                 
                 // Update modal title
-                document.getElementById('modalTitle').textContent = 'Payment Initiated';
+                document.getElementById('modalTitle').textContent = 'Payment Request Sent';
                 
                 // Start polling for payment status
                 pollPaymentStatus();
+                
+                // Show check status button after 30 seconds if still pending
+                setTimeout(() => {
+                    if (successStatus.style.display !== 'none') {
+                        checkStatusBtn.style.display = 'inline-block';
+                        checkStatusBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Check Payment Status';
+                    }
+                }, 30000);
+                
+                // Show force check button after 2 minutes if still pending
+                setTimeout(() => {
+                    if (successStatus.style.display !== 'none') {
+                        // Add a more prominent message
+                        const infoAlert = document.createElement('div');
+                        infoAlert.className = 'alert alert-warning mt-3';
+                        infoAlert.innerHTML = `
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Payment Status Check</strong><br>
+                            <small>If you've completed the payment on your phone but don't see confirmation here, click "Check Payment Status" above.</small>
+                        `;
+                        successStatus.appendChild(infoAlert);
+                    }
+                }, 120000);
                 
             } else {
                 throw new Error(result.message || 'Payment initiation failed');
@@ -416,7 +486,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                 });
                 
-                const result = await response.json();
+                let result;
+                try {
+                    const responseText = await response.text();
+                    console.log('Raw response:', responseText);
+                    
+                    result = JSON.parse(responseText);
+                    console.log('Payment status check result:', result);
+                } catch (parseError) {
+                    console.error('Failed to parse JSON response:', parseError);
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid response from server');
+                }
                 
                 if (result.success && result.data.status === 'completed') {
                     clearInterval(pollInterval);
@@ -437,26 +518,61 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
                     }, 3000);
                     
-                } else if (result.success && result.data.status === 'failed') {
+                } else if (result.success && (result.data.status === 'failed' || result.data.status === 'cancelled')) {
                     clearInterval(pollInterval);
                     
-                    // Show failure
+                    // Show failure or cancellation
                     errorStatus.style.display = 'block';
                     successStatus.style.display = 'none';
-                    errorMessage.textContent = result.data.message || 'Payment was not completed.';
                     
-                    checkStatusBtn.style.display = 'none';
+                    if (result.data.status === 'cancelled') {
+                        errorMessage.innerHTML = `
+                            <i class="fas fa-times-circle text-warning me-2"></i>
+                            <strong>Payment Cancelled</strong><br>
+                            <small class="text-muted">You cancelled the M-Pesa payment prompt. You can try again anytime.</small>
+                        `;
+                        document.getElementById('modalTitle').textContent = 'Payment Cancelled';
+                        tryAgainBtn.style.display = 'inline-block';
+                        checkStatusBtn.style.display = 'none';
+                    } else {
+                        if (result.data.is_expired) {
+                            errorMessage.innerHTML = `
+                                <i class="fas fa-clock text-warning me-2"></i>
+                                <strong>Payment Request Expired</strong><br>
+                                <small class="text-muted">The M-Pesa prompt expired. Please try again.</small>
+                            `;
+                            document.getElementById('modalTitle').textContent = 'Payment Expired';
+                            tryAgainBtn.style.display = 'inline-block';
+                        } else {
+                            errorMessage.textContent = result.data.message || 'Payment was not completed.';
+                            document.getElementById('modalTitle').textContent = 'Payment Failed';
+                            tryAgainBtn.style.display = 'none';
+                        }
+                        checkStatusBtn.style.display = 'none';
+                    }
                 }
                 
             } catch (error) {
                 console.error('Status check error:', error);
             }
-        }, 5000); // Check every 5 seconds
+        }, 3000); // Check every 3 seconds for faster response
         
-        // Stop polling after 2 minutes
+        // Stop polling after 3 minutes and 30 seconds (give extra time)
         setTimeout(() => {
             clearInterval(pollInterval);
-        }, 120000);
+            // If still pending after timeout, show manual check option
+            if (successStatus.style.display !== 'none') {
+                errorStatus.style.display = 'block';
+                successStatus.style.display = 'none';
+                errorMessage.innerHTML = `
+                    <i class="fas fa-clock text-warning me-2"></i>
+                    <strong>Payment Timeout</strong><br>
+                    <small class="text-muted">The payment request has timed out. Please check your payment status or try again.</small>
+                `;
+                document.getElementById('modalTitle').textContent = 'Payment Timeout';
+                checkStatusBtn.style.display = 'inline-block';
+            }
+        }, 210000); // 3.5 minutes
     }
     
     // Handle modal close
@@ -464,6 +580,91 @@ document.addEventListener('DOMContentLoaded', function() {
         if (checkoutRequestId) {
             window.location.href = 'booking_details.php?id=<?php echo $bookingId; ?>';
         }
+    });
+    
+    // Handle try again button for cancelled payments
+    tryAgainBtn.addEventListener('click', function() {
+        // Hide the modal and trigger the payment form again
+        paymentStatusModal.hide();
+        
+        // Reset form and trigger payment
+        setTimeout(() => {
+            mpesaForm.dispatchEvent(new Event('submit'));
+        }, 500);
+    });
+    
+    // Handle check status button
+    checkStatusBtn.addEventListener('click', async function() {
+        if (!checkoutRequestId) return;
+        
+        // Show loading state
+        checkStatusBtn.disabled = true;
+        checkStatusBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+        
+        try {
+            const response = await fetch('mpesa_payment_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    checkout_request_id: checkoutRequestId
+                })
+            });
+            
+            let result;
+            try {
+                const responseText = await response.text();
+                console.log('Manual check - Raw response:', responseText);
+                
+                result = JSON.parse(responseText);
+                console.log('Manual check - Parsed result:', result);
+            } catch (parseError) {
+                console.error('Manual check - Failed to parse JSON:', parseError);
+                console.error('Manual check - Response text:', responseText);
+                alert('Error: Invalid response from server. Please try again.');
+                return;
+            }
+            
+            if (result.success && result.data.status === 'completed') {
+                // Payment was successful
+                successStatus.innerHTML = `
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h6 class="text-success">Payment Successful!</h6>
+                    <p class="text-muted">Your payment has been processed successfully.</p>
+                    <p class="text-muted small">Receipt: ${result.data.receipt_number}</p>
+                `;
+                
+                checkStatusBtn.style.display = 'none';
+                closeModal.textContent = 'Continue';
+                
+                // Redirect after 3 seconds
+                setTimeout(() => {
+                    window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
+                }, 3000);
+                
+            } else if (result.success && result.data.status === 'pending') {
+                // Still pending
+                alert('Payment is still being processed. Please complete the payment on your phone and try checking again.');
+            } else if (result.success && result.data.status === 'failed') {
+                // Failed
+                alert('Payment was not completed: ' + (result.data.message || 'Unknown error') + '. Please try again.');
+            } else if (result.success && result.data.status === 'cancelled') {
+                // Cancelled
+                alert('Payment was cancelled. You can try again anytime.');
+            } else {
+                // Unknown status
+                alert('Unable to determine payment status. Please try again or contact support.');
+            }
+            
+        } catch (error) {
+            console.error('Manual status check error:', error);
+            alert('Error checking payment status. Please try again.');
+        }
+        
+        // Reset button
+        checkStatusBtn.disabled = false;
+        checkStatusBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Check Payment Status';
     });
 });
 </script>
