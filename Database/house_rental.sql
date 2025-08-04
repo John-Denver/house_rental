@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 31, 2025 at 12:05 PM
+-- Generation Time: Aug 04, 2025 at 10:23 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,66 @@ SET time_zone = "+00:00";
 --
 -- Database: `house_rental`
 --
+
+DELIMITER $$
+--
+-- Functions
+--
+CREATE DEFINER=`root`@`localhost` FUNCTION `get_first_unpaid_month` (`booking_id_param` INT) RETURNS DATE DETERMINISTIC READS SQL DATA BEGIN
+        DECLARE first_unpaid_month DATE;
+        
+        -- Get the first unpaid month
+        SELECT month
+        INTO first_unpaid_month
+        FROM monthly_rent_payments 
+        WHERE booking_id = booking_id_param 
+        AND status = 'unpaid'
+        ORDER BY month ASC 
+        LIMIT 1;
+        
+        RETURN first_unpaid_month;
+    END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `get_next_unpaid_month` (`booking_id_param` INT) RETURNS DATE DETERMINISTIC READS SQL DATA BEGIN
+        DECLARE next_month DATE;
+        
+        -- Get the next unpaid month after the last paid month
+        SELECT DATE_ADD(month, INTERVAL 1 MONTH)
+        INTO next_month
+        FROM monthly_rent_payments 
+        WHERE booking_id = booking_id_param 
+        AND status = 'paid'
+        ORDER BY month DESC 
+        LIMIT 1;
+        
+        -- If no paid months found, get the first month of the booking
+        IF next_month IS NULL THEN
+            SELECT start_date
+            INTO next_month
+            FROM rental_bookings 
+            WHERE id = booking_id_param;
+            
+            -- Set to first day of the month
+            SET next_month = DATE_FORMAT(next_month, '%Y-%m-01');
+        END IF;
+        
+        RETURN next_month;
+    END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `has_first_payment_been_made` (`booking_id_param` INT) RETURNS TINYINT(1) DETERMINISTIC READS SQL DATA BEGIN
+        DECLARE first_payment_exists INT DEFAULT 0;
+        
+        SELECT COUNT(*)
+        INTO first_payment_exists
+        FROM monthly_rent_payments 
+        WHERE booking_id = booking_id_param 
+        AND is_first_payment = 1 
+        AND status = 'paid';
+        
+        RETURN first_payment_exists > 0;
+    END$$
+
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -57,6 +117,14 @@ CREATE TABLE `booking_payments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `booking_payments`
+--
+
+INSERT INTO `booking_payments` (`id`, `booking_id`, `amount`, `payment_date`, `payment_method`, `payment_gateway`, `transaction_id`, `receipt_url`, `status`, `notes`, `created_at`, `updated_at`) VALUES
+(6, 6, 1.00, '2025-08-01 14:42:14', 'deposit', NULL, NULL, NULL, 'completed', NULL, '2025-08-01 11:42:14', '2025-08-01 11:42:14'),
+(7, 6, 2.00, '2025-08-02 23:14:23', 'M-Pesa', NULL, 'MANUAL_1754165663', NULL, 'completed', 'Manual Payment Success - Checkout Request: ws_CO_020820252308114712512358', '2025-08-02 20:14:23', '2025-08-02 20:14:23');
 
 -- --------------------------------------------------------
 
@@ -118,8 +186,8 @@ CREATE TABLE `favorites` (
 --
 
 INSERT INTO `favorites` (`id`, `user_id`, `house_id`, `created_at`) VALUES
-(6, 3, 39, '2025-07-28 20:24:52'),
-(7, 3, 38, '2025-07-28 20:24:54');
+(7, 3, 38, '2025-07-28 20:24:54'),
+(8, 3, 42, '2025-07-31 21:40:16');
 
 -- --------------------------------------------------------
 
@@ -165,10 +233,9 @@ CREATE TABLE `houses` (
 --
 
 INSERT INTO `houses` (`id`, `landlord_id`, `house_no`, `category_id`, `description`, `location`, `city`, `state`, `country`, `latitude`, `longitude`, `price`, `security_deposit`, `min_rental_period`, `max_rental_period`, `advance_rent_months`, `payment_cycle`, `late_fee_percentage`, `bedrooms`, `bathrooms`, `area`, `image`, `main_image`, `featured`, `status`, `created_at`, `updated_at`, `address`, `total_units`, `available_units`) VALUES
-(37, 4, 'Majesty', 21, 'vjvjh', 'Kejen and Sons M pesa, Gatundu-Juja Road, Juja, Kenya', NULL, NULL, NULL, -1.11067200, 37.01836600, 500000, 1000000.00, 1, 12, 1, 'monthly', 5.00, 2, 1, 500.00, NULL, '1753188761_main_Screenshot 5_Aquila Laundry.png', 0, 1, '2025-07-22 12:52:41', '2025-07-25 04:46:35', '', 10, 1),
-(38, 7, 'Zetech', 21, 'A new place to live your life', 'RXW7+W5G, Ruiru, Kenya', NULL, NULL, NULL, -1.15324800, 36.96296000, 25000, NULL, 1, 12, 1, 'monthly', 5.00, 1, 1, 500.00, NULL, '1753309042_main_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', 0, 1, '2025-07-23 22:17:22', '2025-07-23 22:17:22', '', 1, 1),
-(39, 4, 'Luxury Villa', 25, '<p>A lot of amenities are present here</p>', 'New Admin Block, PAUS Science St, Juja, Kenya', NULL, NULL, NULL, -1.09793100, 37.01464400, 150000, NULL, 1, 12, 1, 'monthly', 5.00, 5, 3, 498.00, NULL, '1753423510_main_phone splash.png', 0, 1, '2025-07-25 06:05:10', '2025-07-25 06:05:10', '', 1, 1),
-(41, 7, 'Posta Makongo', 18, '<p>A single room apartment</p>', 'W225+468, Juja, Kenya', NULL, NULL, NULL, -1.09913200, 37.00781300, 4500, NULL, 1, 12, 1, 'monthly', 5.00, 0, 1, 100.00, NULL, '1753425619_main_EV125_1 (2).png', 0, 1, '2025-07-25 06:40:19', '2025-07-25 06:40:19', 'W225+468, Juja, Kenya', 7, 5);
+(38, 7, 'Zetech', 21, 'A new place to live your life', 'RXW7+W5G, Ruiru, Kenya', NULL, NULL, NULL, -1.15324800, 36.96296000, 25000, 25000.00, 1, 12, 1, 'monthly', 5.00, 1, 1, 500.00, NULL, '1753309042_main_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', 0, 1, '2025-07-23 22:17:22', '2025-07-31 21:02:27', '', 1, 1),
+(41, 7, 'Posta Makongo', 18, '<p>A single room apartment</p>', 'W225+468, Juja, Kenya', NULL, NULL, NULL, -1.09913200, 37.00781300, 4500, 4500.00, 1, 12, 1, 'monthly', 5.00, 0, 1, 100.00, NULL, '1753425619_main_EV125_1 (2).png', 0, 1, '2025-07-25 06:40:19', '2025-07-31 21:02:50', 'W225+468, Juja, Kenya', 7, 5),
+(42, 4, 'Zetech Building', 22, '<p>Property in detail</p>', 'V2X5+VC6, Juja, Kenya', NULL, NULL, NULL, -1.10011600, 37.00848400, 1, 1.00, 1, 12, 1, 'monthly', 5.00, 1, 1, 500.00, NULL, '1753997591_main_Washing Machine with Colourful Laundry.png', 0, 1, '2025-07-31 21:33:11', '2025-08-01 10:27:14', 'V2X5+VC6, Juja, Kenya', 17, 7);
 
 -- --------------------------------------------------------
 
@@ -191,14 +258,92 @@ CREATE TABLE `house_media` (
 --
 
 INSERT INTO `house_media` (`id`, `house_id`, `media_type`, `media_path`, `file_path`, `created_at`, `updated_at`) VALUES
-(28, 37, 'image', '', '1753188761_boda-mama mboga.png', '2025-07-22 12:52:41', '2025-07-22 12:52:41'),
 (29, 38, 'image', '', '1753309042_Washing Machine with Colourful Laundry.png', '2025-07-23 22:17:22', '2025-07-23 22:17:22'),
 (30, 38, 'image', '', '1753309042_ChatGPT Image Jul 21, 2025, 11_14_07 AM.png', '2025-07-23 22:17:22', '2025-07-23 22:17:22'),
-(31, 39, 'image', '', '1753423510_Washing Machine with Colourful Laundry.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
-(32, 39, 'image', '', '1753423510_ChatGPT Image Jul 21, 2025, 12_57_31 PM.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
-(33, 39, 'image', '', '1753423510_ChatGPT Image Jul 20, 2025, 07_19_21 PM.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
-(34, 39, 'image', '', '1753423510_Rectangle.png', '2025-07-25 06:05:10', '2025-07-25 06:05:10'),
-(38, 41, 'image', '', '1753425619_logo23.bmp', '2025-07-25 06:40:19', '2025-07-25 06:40:19');
+(38, 41, 'image', '', '1753425619_logo23.bmp', '2025-07-25 06:40:19', '2025-07-25 06:40:19'),
+(39, 42, 'image', '', '1753997591_tenant_schedule.png', '2025-07-31 21:33:11', '2025-07-31 21:33:11'),
+(40, 42, 'image', '', '1753997591_shceduled.png', '2025-07-31 21:33:11', '2025-07-31 21:33:11');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `monthly_rent_payments`
+--
+
+CREATE TABLE `monthly_rent_payments` (
+  `id` int(11) NOT NULL,
+  `booking_id` int(11) NOT NULL,
+  `month` date NOT NULL COMMENT 'First day of the month (YYYY-MM-01)',
+  `amount` decimal(15,2) NOT NULL,
+  `status` enum('paid','unpaid','overdue') NOT NULL DEFAULT 'unpaid',
+  `payment_type` varchar(50) DEFAULT 'monthly_rent',
+  `is_first_payment` tinyint(1) DEFAULT 0,
+  `security_deposit_amount` decimal(15,2) DEFAULT 0.00,
+  `monthly_rent_amount` decimal(15,2) DEFAULT 0.00,
+  `payment_date` datetime DEFAULT NULL,
+  `payment_method` varchar(50) DEFAULT NULL,
+  `transaction_id` varchar(255) DEFAULT NULL,
+  `mpesa_receipt_number` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `monthly_rent_payments`
+--
+
+INSERT INTO `monthly_rent_payments` (`id`, `booking_id`, `month`, `amount`, `status`, `payment_type`, `is_first_payment`, `security_deposit_amount`, `monthly_rent_amount`, `payment_date`, `payment_method`, `transaction_id`, `mpesa_receipt_number`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 6, '2025-08-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(2, 6, '2025-09-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(3, 6, '2025-10-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(4, 6, '2025-11-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(5, 6, '2025-12-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(6, 6, '2026-01-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(7, 6, '2026-02-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(8, 6, '2026-03-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(9, 6, '2026-04-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(10, 6, '2026-05-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(11, 6, '2026-06-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(12, 6, '2026-07-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
+(13, 6, '2026-08-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `mpesa_payment_requests`
+--
+
+CREATE TABLE `mpesa_payment_requests` (
+  `id` int(11) NOT NULL,
+  `booking_id` int(11) NOT NULL,
+  `checkout_request_id` varchar(255) NOT NULL,
+  `merchant_request_id` varchar(255) DEFAULT NULL,
+  `phone_number` varchar(20) NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `reference` varchar(255) NOT NULL,
+  `status` enum('pending','completed','failed','cancelled') DEFAULT 'pending',
+  `result_code` varchar(10) DEFAULT NULL,
+  `result_desc` text DEFAULT NULL,
+  `mpesa_receipt_number` varchar(50) DEFAULT NULL,
+  `transaction_date` varchar(50) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `mpesa_payment_requests`
+--
+
+INSERT INTO `mpesa_payment_requests` (`id`, `booking_id`, `checkout_request_id`, `merchant_request_id`, `phone_number`, `amount`, `reference`, `status`, `result_code`, `result_desc`, `mpesa_receipt_number`, `transaction_date`, `created_at`, `updated_at`) VALUES
+(2, 6, 'ws_CO_010820251445412712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754048740', 'failed', '4999', 'The transaction is still under processing', NULL, NULL, '2025-08-01 11:45:41', '2025-08-01 11:45:47'),
+(3, 6, 'ws_CO_010820251446088712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754048768', 'pending', NULL, NULL, NULL, NULL, '2025-08-01 11:46:09', '2025-08-01 11:46:09'),
+(4, 6, 'ws_CO_020820252238472712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754163526', 'failed', '4999', 'The transaction is still under processing', NULL, NULL, '2025-08-02 19:38:47', '2025-08-02 19:38:53'),
+(5, 6, 'ws_CO_020820252248342712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754164113', 'pending', NULL, NULL, NULL, NULL, '2025-08-02 19:48:34', '2025-08-02 19:48:34'),
+(6, 6, 'ws_CO_020820252254295712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754164468', 'failed', '4999', 'The transaction is still under processing', NULL, NULL, '2025-08-02 19:54:29', '2025-08-02 19:54:33'),
+(7, 6, 'ws_CO_020820252255127712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754164512', 'failed', '0', 'The service request is processed successfully', NULL, NULL, '2025-08-02 19:55:12', '2025-08-02 19:58:17'),
+(8, 6, 'ws_CO_020820252307550712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754165274', 'failed', '1032', 'Request Cancelled by user', NULL, NULL, '2025-08-02 20:07:54', '2025-08-02 20:07:59'),
+(9, 6, 'ws_CO_020820252308114712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754165290', 'completed', '0', 'Payment completed successfully (manual)', 'MANUAL_1754165663', NULL, '2025-08-02 20:08:11', '2025-08-02 20:14:23');
 
 -- --------------------------------------------------------
 
@@ -226,6 +371,57 @@ INSERT INTO `payments` (`id`, `tenant_id`, `amount`, `invoice`, `date_created`) 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `payment_tracking`
+--
+
+CREATE TABLE `payment_tracking` (
+  `id` int(11) NOT NULL,
+  `booking_id` int(11) NOT NULL,
+  `payment_type` varchar(50) NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `security_deposit_amount` decimal(15,2) DEFAULT 0.00,
+  `monthly_rent_amount` decimal(15,2) DEFAULT 0.00,
+  `month` date DEFAULT NULL COMMENT 'For monthly payments, the month this payment covers',
+  `is_first_payment` tinyint(1) DEFAULT 0,
+  `status` enum('pending','completed','failed','refunded') NOT NULL DEFAULT 'pending',
+  `payment_date` datetime DEFAULT NULL,
+  `payment_method` varchar(50) DEFAULT NULL,
+  `transaction_id` varchar(255) DEFAULT NULL,
+  `mpesa_receipt_number` varchar(50) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_types`
+--
+
+CREATE TABLE `payment_types` (
+  `id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `payment_types`
+--
+
+INSERT INTO `payment_types` (`id`, `name`, `description`, `is_active`, `created_at`) VALUES
+(1, 'initial_payment', 'Security deposit + first month rent', 1, '2025-08-02 19:25:25'),
+(2, 'monthly_rent', 'Monthly rent payment', 1, '2025-08-02 19:25:25'),
+(3, 'security_deposit', 'Security deposit only', 1, '2025-08-02 19:25:25'),
+(4, 'additional_fees', 'Additional fees or charges', 1, '2025-08-02 19:25:25'),
+(5, 'penalty', 'Late payment penalty', 1, '2025-08-02 19:25:25'),
+(6, 'refund', 'Refund of security deposit or overpayment', 1, '2025-08-02 19:25:25');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `property_viewings`
 --
 
@@ -248,9 +444,7 @@ CREATE TABLE `property_viewings` (
 --
 
 INSERT INTO `property_viewings` (`id`, `property_id`, `user_id`, `viewer_name`, `contact_number`, `viewing_date`, `viewing_time`, `status`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 39, 3, 'Thiira Elizabeth', '0712512358', '2025-07-29', '15:00:00', 'confirmed', '', '2025-07-28 21:04:57', '2025-07-28 22:34:05'),
 (2, 38, 4, 'Maureen Tallam ', '0712512358', '2025-08-09', '14:00:00', 'pending', '', '2025-07-28 21:24:05', '2025-07-28 21:24:05'),
-(3, 37, 7, 'New Landlord', '0712512358', '2025-08-10', '16:00:00', 'cancelled', '\n[CANCELLED: i dont want it]', '2025-07-28 21:58:10', '2025-07-28 22:28:04'),
 (4, 38, NULL, 'Guest', '0712512358', '2025-08-08', '12:00:00', 'pending', '', '2025-07-30 07:40:51', '2025-07-30 07:40:51');
 
 -- --------------------------------------------------------
@@ -284,6 +478,13 @@ CREATE TABLE `rental_bookings` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `rental_bookings`
+--
+
+INSERT INTO `rental_bookings` (`id`, `house_id`, `monthly_rent`, `landlord_id`, `user_id`, `start_date`, `check_in_time`, `end_date`, `check_out_time`, `special_requests`, `last_payment_date`, `next_payment_due`, `security_deposit`, `payment_status`, `payment_method`, `payment_reference`, `status`, `cancellation_reason`, `cancelled_by`, `documents`, `created_at`, `updated_at`) VALUES
+(6, 42, 0.00, 4, 3, '2025-08-02', NULL, '2026-08-02', NULL, NULL, NULL, NULL, 1.00, 'pending', NULL, NULL, '', NULL, NULL, NULL, '2025-08-01 11:42:14', '2025-08-02 20:14:23');
+
 -- --------------------------------------------------------
 
 --
@@ -304,6 +505,16 @@ CREATE TABLE `rent_payments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `rent_payments`
+--
+
+INSERT INTO `rent_payments` (`id`, `booking_id`, `month`, `amount_due`, `amount_paid`, `previous_balance`, `late_fee`, `status`, `due_date`, `paid_date`, `created_at`, `updated_at`) VALUES
+(1, 3, '2025-07-01', 25000.00, 0.00, 0.00, 0.00, 'pending', '2025-07-05', NULL, '2025-07-31 19:02:06', '2025-07-31 19:02:06'),
+(2, 4, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-07-31 22:33:10', '2025-07-31 22:33:10'),
+(3, 5, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-01 09:26:14', '2025-08-01 09:26:14'),
+(4, 6, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-01 11:42:14', '2025-08-01 11:42:14');
 
 -- --------------------------------------------------------
 
@@ -447,10 +658,51 @@ ALTER TABLE `house_media`
   ADD KEY `idx_house_media_updated` (`updated_at`);
 
 --
+-- Indexes for table `monthly_rent_payments`
+--
+ALTER TABLE `monthly_rent_payments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_booking_month` (`booking_id`,`month`),
+  ADD KEY `idx_booking_id` (`booking_id`),
+  ADD KEY `idx_month` (`month`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_payment_date` (`payment_date`),
+  ADD KEY `idx_payment_type` (`payment_type`),
+  ADD KEY `idx_is_first_payment` (`is_first_payment`);
+
+--
+-- Indexes for table `mpesa_payment_requests`
+--
+ALTER TABLE `mpesa_payment_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `checkout_request_id` (`checkout_request_id`),
+  ADD KEY `booking_id` (`booking_id`),
+  ADD KEY `status` (`status`),
+  ADD KEY `created_at` (`created_at`);
+
+--
 -- Indexes for table `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `payment_tracking`
+--
+ALTER TABLE `payment_tracking`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_booking_id` (`booking_id`),
+  ADD KEY `idx_payment_type` (`payment_type`),
+  ADD KEY `idx_month` (`month`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_is_first_payment` (`is_first_payment`);
+
+--
+-- Indexes for table `payment_types`
+--
+ALTER TABLE `payment_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_name` (`name`);
 
 --
 -- Indexes for table `property_viewings`
@@ -514,7 +766,7 @@ ALTER TABLE `booking_documents`
 -- AUTO_INCREMENT for table `booking_payments`
 --
 ALTER TABLE `booking_payments`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `booking_reviews`
@@ -532,25 +784,49 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `houses`
 --
 ALTER TABLE `houses`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `house_media`
 --
 ALTER TABLE `house_media`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+
+--
+-- AUTO_INCREMENT for table `monthly_rent_payments`
+--
+ALTER TABLE `monthly_rent_payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `mpesa_payment_requests`
+--
+ALTER TABLE `mpesa_payment_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
   MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `payment_tracking`
+--
+ALTER TABLE `payment_tracking`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `payment_types`
+--
+ALTER TABLE `payment_types`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `property_viewings`
@@ -562,13 +838,13 @@ ALTER TABLE `property_viewings`
 -- AUTO_INCREMENT for table `rental_bookings`
 --
 ALTER TABLE `rental_bookings`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `rent_payments`
 --
 ALTER TABLE `rent_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `system_settings`
@@ -622,6 +898,18 @@ ALTER TABLE `favorites`
 --
 ALTER TABLE `house_media`
   ADD CONSTRAINT `house_media_ibfk_1` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `monthly_rent_payments`
+--
+ALTER TABLE `monthly_rent_payments`
+  ADD CONSTRAINT `fk_monthly_rent_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `mpesa_payment_requests`
+--
+ALTER TABLE `mpesa_payment_requests`
+  ADD CONSTRAINT `fk_mpesa_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `property_viewings`
