@@ -3,6 +3,13 @@ require_once '../config/db.php';
 require_once '../config/auth.php';
 require_login('./login.php');
 
+// Get user's bookings with property information
+$sql = "SELECT rb.*, h.house_no, h.location, h.price, h.main_image as image
+        FROM rental_bookings rb
+        LEFT JOIN houses h ON rb.house_id = h.id
+        WHERE rb.user_id = ?
+        ORDER BY rb.created_at DESC";
+
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
@@ -98,14 +105,14 @@ $bookings = $stmt->get_result();
                                                     <?php echo htmlspecialchars($booking['location']); ?>
                                                 </p>
                                                 <p class="price">
-                                                    <i class="fas fa-dollar-sign"></i>
-                                                    <?php echo number_format($booking['price']); ?>
+                                                    <i class="fas fa-money-bill"></i>
+                                                    KSh <?php echo number_format($booking['price']); ?>
                                                 </p>
                                                 <div class="booking-details">
                                                     <p><strong>Move-in Date:</strong> 
-                                                        <?php echo date('M d, Y', strtotime($booking['move_in_date'])); ?></p>
-                                                    <p><strong>Duration:</strong> 
-                                                        <?php echo $booking['lease_duration']; ?> months</p>
+                                                        <?php echo date('M d, Y', strtotime($booking['start_date'])); ?></p>
+                                                    <p><strong>Monthly Rent:</strong> 
+                                                        KSh <?php echo number_format($booking['monthly_rent'] ?? $booking['price']); ?></p>
                                                     <p><strong>Status:</strong> 
                                                         <span class="badge bg-<?php echo $booking['status'] == 'pending' ? 'warning' : 'success'; ?>">
                                                             <?php echo ucfirst($booking['status']); ?>
@@ -113,7 +120,7 @@ $bookings = $stmt->get_result();
                                                     </p>
                                                 </div>
                                                 <div class="booking-actions">
-                                                    <a href="property.php?id=<?php echo $booking['property_id']; ?>" 
+                                                    <a href="property.php?id=<?php echo $booking['house_id']; ?>" 
                                                        class="btn btn-outline-primary">View Property</a>
                                                     <a href="booking-details.php?id=<?php echo $booking['id']; ?>" 
                                                        class="btn btn-outline-secondary">View Details</a>

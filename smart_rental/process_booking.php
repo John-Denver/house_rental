@@ -35,8 +35,8 @@ try {
         throw new Exception('Invalid property ID');
     }
     
-    // Get property details to get monthly rent
-    $stmt = $conn->prepare("SELECT id, monthly_rent, price FROM houses WHERE id = ?");
+    // Get property details to get price
+    $stmt = $conn->prepare("SELECT id, price, landlord_id FROM houses WHERE id = ?");
     $stmt->bind_param('i', $houseId);
     if (!$stmt->execute()) {
         throw new Exception('Database error: ' . $stmt->error);
@@ -48,7 +48,7 @@ try {
     }
     
     // Get and validate start date
-    $startDate = filter_input(INPUT_POST, 'start_date', FILTER_SANITIZE_STRING);
+    $startDate = filter_input(INPUT_POST, 'start_date', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     if (empty($startDate)) {
         throw new Exception('Please select a move-in date');
     }
@@ -57,8 +57,7 @@ try {
     $bookingData = [
         'house_id' => $houseId,
         'start_date' => $startDate,
-        'special_requests' => filter_input(INPUT_POST, 'special_requests', FILTER_SANITIZE_STRING),
-        'monthly_rent' => $house['monthly_rent'] ?? $house['price']
+        'special_requests' => filter_input(INPUT_POST, 'special_requests', FILTER_SANITIZE_FULL_SPECIAL_CHARS) ?: null
     ];
     
     error_log('Processed booking data: ' . print_r($bookingData, true));
@@ -71,12 +70,12 @@ try {
     if ($result['success']) {
         try {
             // If booking is successful, create initial rent payment record
-            require_once 'controllers/RentPaymentController.php';
-            $rentPaymentController = new RentPaymentController($conn);
+            require_once 'controllers/RentCalculationController.php';
+            $rentCalculationController = new RentCalculationController($conn);
             
             // Create first month's invoice
             error_log('Generating first month\'s invoice for booking ID: ' . $result['booking_id']);
-            $invoiceResult = $rentPaymentController->generateMonthlyInvoice($result['booking_id']);
+            $invoiceResult = $rentCalculationController->generateMonthlyInvoice($result['booking_id']);
             error_log('Invoice generation result: ' . ($invoiceResult ? 'Success' : 'Failed'));
             
             if (!$invoiceResult) {

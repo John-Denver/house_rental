@@ -28,7 +28,7 @@ try {
     
     // First, verify that the viewing belongs to a property owned by this landlord
     $check_sql = "SELECT pv.id, pv.viewer_name, pv.viewing_date, pv.viewing_time, 
-                         h.house_no, h.location, u.email as user_email, u.name as user_name
+                         h.house_no, h.location, u.username as user_email, u.name as user_name
                   FROM property_viewings pv
                   JOIN houses h ON pv.property_id = h.id
                   LEFT JOIN users u ON pv.user_id = u.id

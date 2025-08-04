@@ -1,10 +1,4 @@
 <?php
-// Database connection
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
 // Define helper functions that would be in helpers.php
 if (!function_exists('sanitize_input')) {
     function sanitize_input($data) {
@@ -45,14 +39,14 @@ class BookingController {
             // Get property details and set up monthly rent
             $property = $this->getProperty($data['house_id']);
             $monthlyRent = $property['price'];
-            $securityDeposit = $property['security_deposit'] ?? ($property['price'] * 2); // 2 months rent as deposit
+            $securityDeposit = $property['security_deposit'] ?? $property['price']; // Property value as default deposit
             
             // Insert booking with monthly rent and landlord_id
             $stmt = $this->conn->prepare("
                 INSERT INTO rental_bookings (
-                    house_id, landlord_id, user_id, start_date, 
-                    monthly_rent, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, 'approved', NOW())
+                    house_id, landlord_id, user_id, start_date, end_date,
+                    special_requests, status, security_deposit, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, NOW())
             ");
             
             // Get user details
@@ -66,15 +60,23 @@ class BookingController {
             }
             
             // Get landlord_id from the property
-            $landlordId = $property['landlord_id'];
+            $landlordId = $property['landlord_id'] ?? 1; // Default to 1 if not set
+            
+            // Calculate end date (1 year from start date)
+            $endDate = date('Y-m-d', strtotime($data['start_date'] . ' +1 year'));
+            
+            // Prepare special_requests variable
+            $specialRequests = $data['special_requests'] ?? null;
             
             $stmt->bind_param(
-                'iiisd',
+                'iiisssd',
                 $data['house_id'],
                 $landlordId,
                 $_SESSION['user_id'],
                 $data['start_date'],
-                $monthlyRent
+                $endDate,
+                $specialRequests,
+                $securityDeposit
             );
             
             if (!$stmt->execute()) {
@@ -112,7 +114,7 @@ class BookingController {
     }
     
     private function validateBookingData($data) {
-        $required = ['house_id', 'start_date', 'rental_period'];
+        $required = ['house_id', 'start_date'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 throw new Exception("$field is required");
@@ -120,37 +122,25 @@ class BookingController {
         }
         
         // Check property availability
-        if (!$this->isPropertyAvailable($data['house_id'], $data['start_date'], $data['end_date'] ?? null)) {
-            throw new Exception("The property is not available for the selected dates");
+        if (!$this->isPropertyAvailable($data['house_id'], $data['start_date'])) {
+            throw new Exception("The property is not available for the selected date");
         }
     }
     
-    private function isPropertyAvailable($propertyId, $startDate, $endDate = null) {
-        $endDate = $endDate ?: date('Y-m-d', strtotime($startDate . ' + 1 year'));
-        
+    private function isPropertyAvailable($propertyId, $startDate) {
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as count 
-            FROM bookings 
-            WHERE property_id = ? 
-            AND status NOT IN ('cancelled', 'rejected', 'completed')
-            AND (
-                (move_in_date BETWEEN ? AND ?) 
-                OR (move_out_date BETWEEN ? AND ?)
-                OR (? BETWEEN move_in_date AND move_out_date)
-            )
+            FROM rental_bookings 
+            WHERE house_id = ? 
+            AND status NOT IN ('cancelled', 'completed')
+            AND start_date = ?
         ");
         
-        $stmt->bind_param('isssss', $propertyId, $startDate, $endDate, $startDate, $endDate, $startDate);
+        $stmt->bind_param('is', $propertyId, $startDate);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         
         return $result['count'] == 0;
-    }
-    
-    private function calculateTotalAmount($property, $data) {
-        $basePrice = $property['price'] * $data['rental_period'];
-        // Add any additional fees here (cleaning, service, etc.)
-        return $basePrice;
     }
     
     private function handleDocumentUploads($bookingId, $files) {
@@ -193,9 +183,9 @@ class BookingController {
     
     private function recordPayment($bookingId, $amount, $type = 'rent') {
         $stmt = $this->conn->prepare("
-            INSERT INTO payment_history (
-                booking_id, amount, payment_method, status
-            ) VALUES (?, ?, ?, 'completed')
+            INSERT INTO booking_payments (
+                booking_id, amount, payment_method, status, payment_date
+            ) VALUES (?, ?, ?, 'completed', NOW())
         ");
         
         $stmt->bind_param('ids', $bookingId, $amount, $type);
@@ -212,33 +202,40 @@ class BookingController {
         $message = "Your booking for " . $booking['property_name'] . " has been received.\n\n";
         $message .= "Check-in: " . $booking['start_date'] . "\n";
         $message .= "Check-out: " . $booking['end_date'] . "\n";
-        $message .= "Total Amount: " . format_currency($booking['total_amount']) . "\n\n";
+        $message .= "Monthly Rent: KSh " . number_format($booking['property_price']) . "\n\n";
         $message .= "Please login to your account to complete the payment and upload any required documents.\n";
         
         // In production, use a proper email library
-        mail($to, $subject, $message);
+        // mail($to, $subject, $message);
         
-        // Send notification to landlord
-        $landlordSubject = "New Booking for " . $booking['property_name'];
-        $landlordMessage = "You have a new booking request. Please review it in your dashboard.";
-        mail($booking['landlord_email'], $landlordSubject, $landlordMessage);
+        // Note: Landlord email functionality commented out as we don't have landlord email in the current schema
+        // $landlordSubject = "New Booking for " . $booking['property_name'];
+        // $landlordMessage = "You have a new booking request. Please review it in your dashboard.";
+        // mail($booking['landlord_email'], $landlordSubject, $landlordMessage);
     }
     
     public function getBookingDetails($bookingId) {
         $stmt = $this->conn->prepare("
             SELECT 
                 b.*, 
+                h.house_no,
                 h.house_no as property_name,
                 h.price as property_price,
-                t.name as tenant_name,
-                t.email as tenant_email,
+                h.location as property_location,
+                h.main_image,
+                h.bedrooms,
+                h.bathrooms,
+                h.description,
+                u.name as tenant_name,
+                u.username as tenant_email,
+                u.phone_number as tenant_phone,
                 l.name as landlord_name,
-                l.email as landlord_phone,
-                l.email as landlord_email
+                l.username as landlord_email,
+                l.phone_number as landlord_phone
             FROM rental_bookings b
             JOIN houses h ON b.house_id = h.id
-            JOIN users t ON b.user_id = t.id
-            JOIN users l ON b.landlord_id = l.id
+            JOIN users u ON b.user_id = u.id
+            LEFT JOIN users l ON h.landlord_id = l.id
             WHERE b.id = ?
         ");
         
@@ -248,6 +245,17 @@ class BookingController {
         
         if (!$result) {
             throw new Exception("Booking not found");
+        }
+        
+        // Add fallback values for missing fields
+        $result['rental_period'] = 12; // Use numeric value for calculations
+        $result['landlord_name'] = $result['landlord_name'] ?? 'Property Owner';
+        $result['landlord_email'] = $result['landlord_email'] ?? 'contact@property.com';
+        $result['landlord_phone'] = $result['landlord_phone'] ?? 'N/A';
+        
+        // Handle security deposit fallback for existing bookings
+        if (empty($result['security_deposit']) || $result['security_deposit'] == 0) {
+            $result['security_deposit'] = $result['property_price']; // Use property price as default
         }
         
         return $result;
@@ -451,6 +459,151 @@ class BookingController {
         $message .= "This link will expire in 30 days.\n";
         
         mail($to, $subject, $message);
+    }
+
+    /**
+     * Get booking documents
+     */
+    public function getBookingDocuments($bookingId) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM booking_documents 
+            WHERE booking_id = ? 
+            ORDER BY uploaded_at DESC
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+    
+    /**
+     * Get booking payments
+     */
+    public function getBookingPayments($bookingId) {
+        $stmt = $this->conn->prepare("
+            SELECT * FROM booking_payments 
+            WHERE booking_id = ? 
+            ORDER BY payment_date DESC
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+    
+    /**
+     * Check if booking has review
+     */
+    public function hasBookingReview($bookingId) {
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) as count FROM booking_reviews 
+            WHERE booking_id = ?
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        return $result['count'] > 0;
+    }
+    
+    /**
+     * Process payment for a booking
+     */
+    public function processPayment($paymentData) {
+        try {
+            // Validate payment data
+            if (empty($paymentData['booking_id']) || empty($paymentData['amount'])) {
+                throw new Exception("Missing required payment information");
+            }
+            
+            $bookingId = $paymentData['booking_id'];
+            $amount = $paymentData['amount'];
+            $paymentMethod = $paymentData['payment_method'] ?? 'manual';
+            $transactionId = $paymentData['transaction_id'] ?? null;
+            $notes = $paymentData['notes'] ?? '';
+            
+            // Get booking details
+            $booking = $this->getBookingDetails($bookingId);
+            
+            // Validate booking status
+            if ($booking['status'] !== 'pending' && $booking['status'] !== 'confirmed') {
+                throw new Exception("Booking is not in a valid state for payment");
+            }
+            
+            // Record the payment
+            $stmt = $this->conn->prepare("
+                INSERT INTO booking_payments (
+                    booking_id, amount, payment_method, transaction_id, 
+                    status, payment_date, notes
+                ) VALUES (?, ?, ?, ?, 'completed', NOW(), ?)
+            ");
+            
+            $stmt->bind_param('idsss', 
+                $bookingId, 
+                $amount, 
+                $paymentMethod, 
+                $transactionId, 
+                $notes
+            );
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to record payment: " . $stmt->error);
+            }
+            
+            // Update booking status to 'paid'
+            $updateStmt = $this->conn->prepare("
+                UPDATE rental_bookings 
+                SET status = 'paid', updated_at = NOW() 
+                WHERE id = ?
+            ");
+            
+            $updateStmt->bind_param('i', $bookingId);
+            
+            if (!$updateStmt->execute()) {
+                throw new Exception("Failed to update booking status: " . $updateStmt->error);
+            }
+            
+            // Send payment confirmation
+            $this->sendPaymentConfirmation($bookingId, $amount, $paymentMethod);
+            
+            return [
+                'success' => true,
+                'message' => 'Payment processed successfully!',
+                'payment_id' => $this->conn->insert_id
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Send payment confirmation
+     */
+    private function sendPaymentConfirmation($bookingId, $amount, $paymentMethod) {
+        $booking = $this->getBookingDetails($bookingId);
+        
+        // Send email to tenant
+        $to = $booking['tenant_email'];
+        $subject = "Payment Confirmation - Booking #" . $bookingId;
+        $message = "Your payment of KSh " . number_format($amount, 2) . " has been received.\n\n";
+        $message .= "Payment Details:\n";
+        $message .= "- Booking ID: #" . $bookingId . "\n";
+        $message .= "- Property: " . $booking['house_no'] . "\n";
+        $message .= "- Payment Method: " . ucfirst($paymentMethod) . "\n";
+        $message .= "- Amount: KSh " . number_format($amount, 2) . "\n\n";
+        $message .= "Your booking is now confirmed. You can access your booking details in your account.\n";
+        
+        // In production, use a proper email library
+        // mail($to, $subject, $message);
+        
+        // Send notification to landlord
+        $landlordSubject = "Payment Received - Booking #" . $bookingId;
+        $landlordMessage = "Payment of KSh " . number_format($amount, 2) . " has been received for booking #" . $bookingId . ".\n";
+        $landlordMessage .= "Property: " . $booking['house_no'] . "\n";
+        $landlordMessage .= "Tenant: " . $booking['tenant_name'] . "\n";
+        
+        // mail($booking['landlord_email'], $landlordSubject, $landlordMessage);
     }
 }
 

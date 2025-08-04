@@ -52,7 +52,7 @@ try {
 }
 
 // Validate required fields
-$required_fields = ['move_in_date', 'lease_duration', 'full_name', 'email', 'phone', 'property_id'];
+$required_fields = ['move_in_date', 'full_name', 'email', 'phone', 'property_id'];
 $missing_fields = array_diff($required_fields, array_keys($data));
 
 if (!empty($missing_fields)) {
@@ -70,17 +70,6 @@ if (strtotime($data['move_in_date']) < strtotime('+1 month')) {
     echo json_encode([
         'success' => false,
         'message' => 'Move-in date must be at least 1 month from now'
-    ]);
-    exit;
-}
-
-// Validate lease duration
-$valid_durations = [6, 12, 24];
-if (!in_array($data['lease_duration'], $valid_durations)) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Invalid lease duration. Valid options are: ' . implode(', ', $valid_durations)
     ]);
     exit;
 }
@@ -120,21 +109,37 @@ try {
         exit;
     }
 
-    // Insert booking
-    $stmt = $conn->prepare("INSERT INTO bookings (user_id, property_id, move_in_date, lease_duration, full_name, email, phone, status, created_at) 
-                            VALUES (:user_id, :property_id, :move_in_date, :lease_duration, :full_name, :email, :phone, 'pending', NOW())");
+    // Insert booking into rental_bookings table
+    $stmt = $conn->prepare("INSERT INTO rental_bookings (
+        house_id, user_id, landlord_id, start_date, end_date, 
+        special_requests, status, created_at
+    ) VALUES (:house_id, :user_id, :landlord_id, :start_date, :end_date, :special_requests, 'pending', NOW())");
+    
+    // Get landlord_id from the property
+    $landlordStmt = $conn->prepare("SELECT landlord_id FROM houses WHERE id = :id");
+    $landlordStmt->execute(['id' => $data['property_id']]);
+    $property = $landlordStmt->fetch();
+    $landlordId = $property['landlord_id'] ?? 1; // Default to 1 if not set
+    
+    // Calculate end date (1 year from start date for now)
+    $endDate = date('Y-m-d', strtotime($data['move_in_date'] . ' +1 year'));
+    
     $params = [
+        'house_id' => $data['property_id'],
         'user_id' => $_SESSION['user_id'],
-        'property_id' => $data['property_id'],
-        'move_in_date' => $data['move_in_date'],
-        'lease_duration' => $data['lease_duration'],
-        'full_name' => $data['full_name'],
-        'email' => $data['email'],
-        'phone' => $data['phone']
+        'landlord_id' => $landlordId,
+        'start_date' => $data['move_in_date'],
+        'end_date' => $endDate,
+        'special_requests' => $data['special_requests'] ?? null
     ];
 
     if ($stmt->execute($params)) {
         $booking_id = $conn->lastInsertId();
+        
+        // Update property status to booked
+        $updateStmt = $conn->prepare("UPDATE houses SET status = 2 WHERE id = :id");
+        $updateStmt->execute(['id' => $data['property_id']]);
+        
         echo json_encode([
             'success' => true,
             'message' => 'Booking request submitted successfully. Please wait for landlord approval.',
@@ -149,95 +154,5 @@ try {
         'success' => false,
         'message' => 'Failed to create booking. Please try again.'
     ]);
-}
-require_once '../config/db.php';
-require_once '../config/auth.php';
-require_login();
-
-header('Content-Type: application/json');
-
-    echo json_encode(['error' => 'Please login to book a property']);
-    exit;
-}
-
-// Get POST data
-$data = json_decode(file_get_contents('php://input'), true);
-
-// Required fields
-$required_fields = ['property_id', 'move_in_date', 'lease_duration', 'full_name', 'email', 'phone'];
-foreach ($required_fields as $field) {
-    if (!isset($data[$field])) {
-        http_response_code(400);
-        echo json_encode(['error' => "Missing required field: $field"]);
-        exit;
-    }
-}
-
-// Validate move-in date
-$move_in_date = date('Y-m-d', strtotime($data['move_in_date']));
-if ($move_in_date < date('Y-m-d')) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Move-in date cannot be in the past']);
-    exit;
-}
-
-// Check if property exists and is available
-$sql = "SELECT * FROM houses WHERE id = ? AND status = 1";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param('i', $data['property_id']);
-$stmt->execute();
-$property = $stmt->get_result()->fetch_assoc();
-
-if (!$property) {
-    http_response_code(404);
-    echo json_encode(['error' => 'Property not found or not available']);
-    exit;
-}
-
-// Calculate total rent
-$total_rent = $property['price'] * $data['lease_duration'];
-
-// Insert booking
-$sql = "INSERT INTO bookings (
-    property_id,
-    user_id,
-    move_in_date,
-    lease_duration,
-    total_rent,
-    full_name,
-    email,
-    phone,
-    status,
-    created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())";
-
-$stmt = $conn->prepare($sql);
-$stmt->bind_param('iisddssss', 
-    $data['property_id'],
-    $_SESSION['user_id'],
-    $move_in_date,
-    $data['lease_duration'],
-    $total_rent,
-    $data['full_name'],
-    $data['email'],
-    $data['phone']
-);
-
-if ($stmt->execute()) {
-    // Update property status to booked
-    $sql = "UPDATE houses SET status = 2 WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $data['property_id']);
-    $stmt->execute();
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Booking request submitted successfully',
-        'booking_id' => $conn->insert_id,
-        'total_rent' => $total_rent
-    ]);
-} else {
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to create booking']);
 }
 ?>

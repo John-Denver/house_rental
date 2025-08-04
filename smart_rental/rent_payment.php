@@ -42,7 +42,7 @@ if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
 
 // Get user's active booking
 $stmt = $conn->prepare("
-    SELECT b.*, h.house_no as property_name
+    SELECT b.*, h.house_no as property_name, h.price
     FROM rental_bookings b
     JOIN houses h ON b.house_id = h.id
     WHERE b.user_id = ? AND b.status = 'approved'
@@ -56,6 +56,9 @@ $booking = $stmt->get_result()->fetch_assoc();
 if (!$booking) {
     $error = 'No active booking found.';
 } else {
+    // Set monthly_rent from property price if not set
+    $booking['monthly_rent'] = $booking['price'];
+    
     // Get payment history
     $paymentHistory = $rentPaymentController->getPaymentHistory($booking['id']);
     

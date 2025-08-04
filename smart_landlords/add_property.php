@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = $_POST['description'] ?? '';
     $category_id = $_POST['category_id'] ?? '';
     $price = $_POST['price'] ?? '';
+    $security_deposit = $_POST['security_deposit'] ?? '';
     $status = isset($_POST['status']) ? 1 : 0;
     $location = $_POST['location'] ?? '';
     $bedrooms = $_POST['bedrooms'] ?? '';
@@ -47,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Insert house record
-    $sql = "INSERT INTO houses (house_no, description, price, location, category_id, status, main_image, landlord_id, bedrooms, bathrooms, area, total_units, available_units, latitude, longitude, address) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO houses (house_no, description, price, security_deposit, location, category_id, status, main_image, landlord_id, bedrooms, bathrooms, area, total_units, available_units, latitude, longitude, address) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         error_log('Database error: ' . $conn->error);
@@ -80,10 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ], true));
 
     // Bind parameters in the correct order matching the table structure
-    $stmt->bind_param("ssdsiisiiiiiddds", 
+    $stmt->bind_param("ssddsiisiiiiiddds", 
         $house_no,
         $description,
         $price,
+        $security_deposit,
         $location,
         $category_id,
         $status,
@@ -465,15 +467,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                                 
                                 <div class="col-md-4 mb-3">
+                                    <label for="property_security_deposit" class="form-label">Security Deposit (Ksh)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Ksh</span>
+                                        <input type="number" class="form-control" id="property_security_deposit" name="security_deposit" placeholder="e.g., 50000" onchange="updateSecurityDeposit()">
+                                    </div>
+                                    <small class="form-text text-muted">Leave empty to use monthly price as default</small>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
                                     <label for="property_bedrooms" class="form-label">Bedrooms</label>
                                     <input type="number" class="form-control" id="property_bedrooms" name="bedrooms" required placeholder="e.g., 3">
                                 </div>
-                                
+                            </div>
+                            
+                            <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label for="property_bathrooms" class="form-label">Bathrooms</label>
                                     <input type="number" class="form-control" id="property_bathrooms" name="bathrooms" required placeholder="e.g., 2">
                                 </div>
-                            </div>
                             
                             <div class="row">
                                 <div class="col-md-4 mb-3">
@@ -1056,6 +1068,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 };
                 
                 reader.readAsDataURL(file);
+            }
+        });
+
+        // Auto-update security deposit when price changes
+        function updateSecurityDeposit() {
+            const priceField = document.getElementById('property_price');
+            const securityDepositField = document.getElementById('property_security_deposit');
+            
+            if (priceField && securityDepositField) {
+                // If security deposit is empty, auto-fill with price value
+                if (!securityDepositField.value && priceField.value) {
+                    securityDepositField.value = priceField.value;
+                }
+            }
+        }
+
+        // Add event listener to price field
+        document.addEventListener('DOMContentLoaded', function() {
+            const priceField = document.getElementById('property_price');
+            if (priceField) {
+                priceField.addEventListener('input', updateSecurityDeposit);
             }
         });
 

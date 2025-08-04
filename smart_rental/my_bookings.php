@@ -9,7 +9,7 @@ if (!is_logged_in()) {
     exit();
 }
 
-$pageTitle = 'My Scheduled Viewings';
+$pageTitle = 'My Bookings & Viewings';
 
 // Get user's scheduled viewings with house information
 $stmt = $conn->prepare("
@@ -26,8 +26,49 @@ $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $viewings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Set page title
-$pageTitle = 'My Scheduled Viewings';
+// Get user's rental bookings with house information
+$stmt = $conn->prepare("
+    SELECT rb.*, 
+           h.house_no as property_title,
+           h.location as location,
+           h.main_image as main_image,
+           h.price as monthly_rent
+    FROM rental_bookings rb
+    LEFT JOIN houses h ON rb.house_id = h.id
+    WHERE rb.user_id = ?
+    ORDER BY rb.created_at DESC
+");
+$stmt->bind_param('i', $_SESSION['user_id']);
+$stmt->execute();
+$bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Get current month payment status for each booking
+foreach ($bookings as &$booking) {
+    $currentMonth = date('Y-m-01'); // First day of current month
+    
+    $stmt = $conn->prepare("
+        SELECT status, payment_date, amount 
+        FROM monthly_rent_payments 
+        WHERE booking_id = ? AND month = ?
+    ");
+    $stmt->bind_param('is', $booking['id'], $currentMonth);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if ($result) {
+        $booking['current_month_status'] = $result;
+    } else {
+        // If no record exists, check if it's overdue
+        $today = date('Y-m-d');
+        $status = ($today > date('Y-m-15')) ? 'overdue' : 'unpaid'; // Consider overdue after 15th
+        
+        $booking['current_month_status'] = [
+            'status' => $status,
+            'payment_date' => null,
+            'amount' => null
+        ];
+    }
+}
 
 // Include header after all processing is done
 include 'includes/header.php';
@@ -35,7 +76,7 @@ include 'includes/header.php';
 
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">My Scheduled Viewings</h1>
+        <h1 class="h3 mb-0">My Bookings & Viewings</h1>
         <a href="index.php" class="btn btn-outline-primary">
             <i class="fas fa-home me-1"></i> Back to Properties
         </a>
@@ -50,52 +91,193 @@ include 'includes/header.php';
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
-    
-    <?php if (empty($viewings)): ?>
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i class="fas fa-calendar-check fa-4x text-muted opacity-25"></i>
-            </div>
-            <h3 class="h5 mb-3">No Scheduled Viewings</h3>
-            <p class="text-muted mb-4">You don't have any scheduled viewings. Browse our properties to schedule one.</p>
-            <a href="index.php" class="btn btn-primary">
-                <i class="fas fa-search me-1"></i> Browse Properties
-            </a>
+
+    <!-- Rental Bookings Section -->
+    <div class="card mb-5">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-key me-2"></i>My Rental Bookings
+            </h5>
         </div>
-    <?php else: ?>
-        <?php 
-        // Filter viewings if status filter is applied
-        $filteredViewings = $viewings;
-        if (isset($_GET['status']) && $_GET['status'] !== 'all') {
-            $filteredViewings = array_filter($viewings, function($v) {
-                return $v['status'] === $_GET['status'];
-            });
-        }
-        
-        if (empty($filteredViewings)): 
-        ?>
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <i class="far fa-calendar-alt fa-4x text-muted opacity-25"></i>
-            </div>
-            <h3 class="h5 mb-3">No Viewings Found</h3>
-            <p class="text-muted mb-4">No viewings match the selected filter.</p>
-            <a href="?status=all" class="btn btn-primary">
-                <i class="fas fa-undo me-1"></i> Reset Filter
-            </a>
-        </div>
-        <?php else: ?>
-            <div class="card mb-4">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">My Scheduled Viewings</h5>
-                    <div class="btn-group" role="group">
-                        <a href="?status=all" class="btn btn-sm btn-outline-primary <?php echo (!isset($_GET['status']) || $_GET['status'] === 'all') ? 'active' : ''; ?>">All</a>
-                        <a href="?status=pending" class="btn btn-sm btn-outline-warning <?php echo (isset($_GET['status']) && $_GET['status'] === 'pending') ? 'active' : ''; ?>">Pending</a>
-                        <a href="?status=confirmed" class="btn btn-sm btn-outline-success <?php echo (isset($_GET['status']) && $_GET['status'] === 'confirmed') ? 'active' : ''; ?>">Confirmed</a>
-                        <a href="?status=cancelled" class="btn btn-sm btn-outline-danger <?php echo (isset($_GET['status']) && $_GET['status'] === 'cancelled') ? 'active' : ''; ?>">Cancelled</a>
+        <div class="card-body">
+            <?php if (empty($bookings)): ?>
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-home fa-3x text-muted opacity-25"></i>
                     </div>
+                    <h6 class="mb-2">No Rental Bookings</h6>
+                    <p class="text-muted mb-3">You don't have any active rental bookings. Browse our properties to make a booking.</p>
+                    <a href="index.php" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search me-1"></i> Browse Properties
+                    </a>
                 </div>
-                <div class="card-body p-0">
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Property</th>
+                                <th>Move-in Date</th>
+                                <th>Monthly Rent</th>
+                                <th>Status</th>
+                                <th>Current Month</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bookings as $booking): 
+                                $statusClass = [
+                                    'pending' => 'warning',
+                                    'confirmed' => 'success',
+                                    'cancelled' => 'danger',
+                                    'completed' => 'secondary',
+                                    'active' => 'info'
+                                ][$booking['status']] ?? 'secondary';
+                            ?>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <?php if (!empty($booking['main_image'])): 
+                                            $imagePath = '../uploads/' . $booking['main_image'];
+                                            if (file_exists($imagePath)): ?>
+                                            <img src="<?php echo htmlspecialchars($imagePath); ?>" 
+                                                 alt="<?php echo htmlspecialchars($booking['property_title']); ?>" 
+                                                 class="rounded me-3" style="width: 60px; height: 45px; object-fit: cover;">
+                                            <?php else: ?>
+                                            <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                                <i class="fas fa-home text-muted"></i>
+                                            </div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                                <i class="fas fa-home text-muted"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div>
+                                            <h6 class="mb-0"><?php echo htmlspecialchars($booking['property_title']); ?></h6>
+                                            <small class="text-muted"><?php echo htmlspecialchars($booking['location']); ?></small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div><?php echo date('M j, Y', strtotime($booking['start_date'])); ?></div>
+                                        <small class="text-muted">Booking #<?php echo $booking['id']; ?></small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">KSh <?php echo number_format($booking['monthly_rent'] ?? $booking['price'], 2); ?></div>
+                                    <small class="text-muted">per month</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-<?php echo $statusClass; ?>">
+                                        <?php echo ucfirst($booking['status']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-primary payment-status-btn" 
+                                            data-booking-id="<?php echo $booking['id']; ?>"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#monthlyPaymentsModal"
+                                            title="View Monthly Payments">
+                                        <?php 
+                                        $statusClass = [
+                                            'paid' => 'success',
+                                            'unpaid' => 'warning',
+                                            'overdue' => 'danger'
+                                        ][$booking['current_month_status']['status']] ?? 'secondary';
+                                        
+                                        $statusText = [
+                                            'paid' => 'Paid',
+                                            'unpaid' => 'Unpaid',
+                                            'overdue' => 'Overdue'
+                                        ][$booking['current_month_status']['status']] ?? ucfirst($booking['current_month_status']['status']);
+                                        
+                                        echo '<span class="badge bg-' . $statusClass . '">' . $statusText . '</span>';
+                                        ?>
+                                    </button>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="property.php?id=<?php echo $booking['house_id']; ?>" 
+                                           class="btn btn-outline-primary"
+                                           title="View Property">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="booking_details.php?id=<?php echo $booking['id']; ?>" 
+                                           class="btn btn-outline-info"
+                                           title="View Details">
+                                            <i class="fas fa-info-circle"></i>
+                                        </a>
+                                        <?php if ($booking['status'] === 'pending'): ?>
+                                        <a href="booking_payment.php?booking_id=<?php echo $booking['id']; ?>" 
+                                           class="btn btn-outline-success"
+                                           title="Make Payment">
+                                            <i class="fas fa-credit-card"></i>
+                                        </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Property Viewings Section -->
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-calendar-check me-2"></i>My Scheduled Viewings
+            </h5>
+        </div>
+        <div class="card-body">
+            <?php if (empty($viewings)): ?>
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-calendar-check fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="mb-2">No Scheduled Viewings</h6>
+                    <p class="text-muted mb-3">You don't have any scheduled viewings. Browse our properties to schedule one.</p>
+                    <a href="index.php" class="btn btn-info btn-sm">
+                        <i class="fas fa-search me-1"></i> Browse Properties
+                    </a>
+                </div>
+            <?php else: ?>
+                <?php 
+                // Filter viewings if status filter is applied
+                $filteredViewings = $viewings;
+                if (isset($_GET['status']) && $_GET['status'] !== 'all') {
+                    $filteredViewings = array_filter($viewings, function($v) {
+                        return $v['status'] === $_GET['status'];
+                    });
+                }
+                
+                if (empty($filteredViewings)): 
+                ?>
+                <div class="text-center py-4">
+                    <div class="mb-3">
+                        <i class="far fa-calendar-alt fa-3x text-muted opacity-25"></i>
+                    </div>
+                    <h6 class="mb-2">No Viewings Found</h6>
+                    <p class="text-muted mb-3">No viewings match the selected filter.</p>
+                    <a href="?status=all" class="btn btn-info btn-sm">
+                        <i class="fas fa-undo me-1"></i> Reset Filter
+                    </a>
+                </div>
+                <?php else: ?>
+                    <div class="mb-3">
+                        <div class="btn-group" role="group">
+                            <a href="?status=all" class="btn btn-sm btn-outline-info <?php echo (!isset($_GET['status']) || $_GET['status'] === 'all') ? 'active' : ''; ?>">All</a>
+                            <a href="?status=pending" class="btn btn-sm btn-outline-warning <?php echo (isset($_GET['status']) && $_GET['status'] === 'pending') ? 'active' : ''; ?>">Pending</a>
+                            <a href="?status=confirmed" class="btn btn-sm btn-outline-success <?php echo (isset($_GET['status']) && $_GET['status'] === 'confirmed') ? 'active' : ''; ?>">Confirmed</a>
+                            <a href="?status=cancelled" class="btn btn-sm btn-outline-danger <?php echo (isset($_GET['status']) && $_GET['status'] === 'cancelled') ? 'active' : ''; ?>">Cancelled</a>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
@@ -180,10 +362,35 @@ include 'includes/header.php';
                             </tbody>
                         </table>
                     </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Payments Modal -->
+<div class="modal fade" id="monthlyPaymentsModal" tabindex="-1" aria-labelledby="monthlyPaymentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="monthlyPaymentsModalLabel">Monthly Payment History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="monthlyPaymentsContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading payment history...</p>
+                    </div>
                 </div>
             </div>
-        <?php endif; ?>
-    <?php endif; ?>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Cancel Viewing Modal -->
@@ -342,6 +549,301 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.show();
         });
     });
+    
+    // Handle monthly payments modal
+    var monthlyPaymentsModal = document.getElementById('monthlyPaymentsModal');
+    if (monthlyPaymentsModal) {
+        monthlyPaymentsModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var bookingId = button.getAttribute('data-booking-id');
+            
+            // Load monthly payments data
+            loadMonthlyPayments(bookingId);
+        });
+    }
+    
+    // Function to load monthly payments
+    function loadMonthlyPayments(bookingId) {
+        $('#monthlyPaymentsContent').html(`
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading payment history...</p>
+            </div>
+        `);
+        
+        $.ajax({
+            url: 'get_monthly_payments.php',
+            type: 'POST',
+            data: { booking_id: bookingId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    displayMonthlyPayments(response.data);
+                } else {
+                    $('#monthlyPaymentsContent').html(`
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${response.message || 'Failed to load payment history'}
+                        </div>
+                    `);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                console.error('Response:', xhr.responseText);
+                $('#monthlyPaymentsContent').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        An error occurred while loading payment history.<br>
+                        <small class="text-muted">Error: ${error}</small>
+                    </div>
+                `);
+            }
+        });
+    }
+    
+    // Function to display monthly payments
+    function displayMonthlyPayments(payments) {
+        console.log('Displaying payments:', payments);
+        
+        if (payments.length === 0) {
+            $('#monthlyPaymentsContent').html(`
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <h6>No Payment History</h6>
+                    <p class="text-muted">No monthly payments have been recorded for this booking.</p>
+                </div>
+            `);
+            return;
+        }
+        
+        // Sort payments: current month first, then chronological order (oldest to newest)
+        const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
+        payments.sort(function(a, b) {
+            // If a is current month, it comes first
+            if (a.month === currentMonth) return -1;
+            // If b is current month, it comes first
+            if (b.month === currentMonth) return 1;
+            // Otherwise, sort by date (oldest first - chronological order)
+            return new Date(a.month) - new Date(b.month);
+        });
+        
+        // Show current month and one previous month initially
+        const currentMonthIndex = payments.findIndex(p => p.month === currentMonth);
+        
+        // Get current month and one previous month
+        let recentMonths = [];
+        let olderMonths = [];
+        
+        if (currentMonthIndex !== -1) {
+            // Current month is found
+            recentMonths.push(payments[currentMonthIndex]);
+            
+            // Add one previous month if available
+            if (currentMonthIndex + 1 < payments.length) {
+                recentMonths.push(payments[currentMonthIndex + 1]);
+                olderMonths = payments.filter((_, index) => index !== currentMonthIndex && index !== currentMonthIndex + 1);
+            } else {
+                // No previous month available
+                olderMonths = payments.filter((_, index) => index !== currentMonthIndex);
+            }
+        } else {
+            // Current month not found, show first 2 months
+            recentMonths = payments.slice(0, 2);
+            olderMonths = payments.slice(2);
+        }
+        
+        console.log('Recent months (current + 1 previous):', recentMonths.length, 'Older months:', olderMonths.length);
+        
+        // Calculate payment statistics
+        const totalMonths = payments.length;
+        const paidMonths = payments.filter(p => p.status === 'paid').length;
+        const unpaidMonths = payments.filter(p => p.status === 'unpaid').length;
+        const overdueMonths = payments.filter(p => p.status === 'overdue').length;
+        const totalAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        
+        let html = `
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body py-2">
+                            <div class="row text-center">
+                                <div class="col-md-2">
+                                    <small class="text-muted">Total Months</small>
+                                    <div class="fw-bold">${totalMonths}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Paid</small>
+                                    <div class="fw-bold text-success">${paidMonths}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Unpaid</small>
+                                    <div class="fw-bold text-warning">${unpaidMonths}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Overdue</small>
+                                    <div class="fw-bold text-danger">${overdueMonths}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Total Amount</small>
+                                    <div class="fw-bold">KSh ${totalAmount.toLocaleString()}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Paid Amount</small>
+                                    <div class="fw-bold text-success">KSh ${paidAmount.toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Payment Date</th>
+                                    <th>Method</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentsTableBody">
+        `;
+        
+        recentMonths.forEach(function(payment) {
+            const monthFormatted = new Date(payment.month).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long' 
+            });
+            const statusBadge = getPaymentStatusBadge(payment.status);
+            const paymentDate = payment.payment_date ? 
+                new Date(payment.payment_date).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '-';
+            const paymentMethod = payment.payment_method || '-';
+            
+            // Add special styling for current month
+            const isCurrentMonth = payment.month === currentMonth;
+            const rowClass = isCurrentMonth ? 'table-primary' : '';
+            const currentMonthIndicator = isCurrentMonth ? ' <span class="badge bg-primary">Current</span>' : '';
+            
+            html += `
+                <tr class="${rowClass}">
+                    <td><strong>${monthFormatted}${currentMonthIndicator}</strong></td>
+                    <td>KSh ${parseFloat(payment.amount).toLocaleString()}</td>
+                    <td>${statusBadge}</td>
+                    <td>${paymentDate}</td>
+                    <td>${paymentMethod}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add "View Previous Months" button if there are older months
+        if (olderMonths.length > 0) {
+            console.log('Adding View Previous Months button with', olderMonths.length, 'months');
+            console.log('Older months data:', olderMonths);
+            
+            // Store the data in a global variable instead of data attribute
+            window.olderMonthsData = olderMonths;
+            
+                           html += `
+                   <div class="row mt-3">
+                       <div class="col-12 text-center">
+                           <button type="button" class="btn btn-outline-secondary" id="viewPreviousMonths">
+                               <i class="fas fa-history me-2"></i>
+                               View All Previous Months (${olderMonths.length} more)
+                           </button>
+                       </div>
+                   </div>
+               `;
+        } else {
+            console.log('No older months to show');
+        }
+        
+        $('#monthlyPaymentsContent').html(html);
+        
+        // Debug: Check if button exists
+        setTimeout(function() {
+            if ($('#viewPreviousMonths').length > 0) {
+                console.log('✓ View Previous Months button found');
+            } else {
+                console.log('✗ View Previous Months button not found');
+            }
+        }, 100);
+        
+        // Add click handler for "View Previous Months" button using event delegation
+        $(document).off('click', '#viewPreviousMonths').on('click', '#viewPreviousMonths', function() {
+            console.log('View Previous Months clicked');
+            const olderMonths = window.olderMonthsData;
+            console.log('Older months:', olderMonths);
+            
+            let additionalRows = '';
+            olderMonths.forEach(function(payment) {
+                const monthFormatted = new Date(payment.month).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                });
+                const statusBadge = getPaymentStatusBadge(payment.status);
+                const paymentDate = payment.payment_date ? 
+                    new Date(payment.payment_date).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : '-';
+                const paymentMethod = payment.payment_method || '-';
+                
+                additionalRows += `
+                    <tr class="table-light">
+                        <td><strong>${monthFormatted}</strong></td>
+                        <td>KSh ${parseFloat(payment.amount).toLocaleString()}</td>
+                        <td>${statusBadge}</td>
+                        <td>${paymentDate}</td>
+                        <td>${paymentMethod}</td>
+                    </tr>
+                `;
+            });
+            
+            $('#paymentsTableBody').append(additionalRows);
+            $(this).remove();
+        });
+    }
+    
+    // Helper function to get payment status badge HTML
+    function getPaymentStatusBadge(status) {
+        const statusClass = {
+            'paid': 'success',
+            'unpaid': 'warning',
+            'overdue': 'danger'
+        }[status] || 'secondary';
+        
+        const statusText = {
+            'paid': 'Paid',
+            'unpaid': 'Unpaid',
+            'overdue': 'Overdue'
+        }[status] || status.charAt(0).toUpperCase() + status.slice(1);
+        
+        return `<span class="badge bg-${statusClass}">${statusText}</span>`;
+    }
 });
 </script>
 

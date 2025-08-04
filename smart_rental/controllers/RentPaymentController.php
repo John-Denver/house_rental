@@ -186,15 +186,16 @@ class RentPaymentController {
     }
     
     /**
-     * Record payment in payment history
+     * Record payment in booking_payments
      */
     private function recordPayment($bookingId, $amount, $method, $invoiceId = null) {
         $stmt = $this->conn->prepare("
-            INSERT INTO payment_history 
-            (booking_id, invoice_id, amount, payment_method, status, created_at)
-            VALUES (?, ?, ?, ?, 'completed', NOW())
+            INSERT INTO booking_payments 
+            (booking_id, amount, payment_method, status, payment_date, notes)
+            VALUES (?, ?, ?, 'completed', NOW(), ?)
         ");
-        $stmt->bind_param('iids', $bookingId, $invoiceId, $amount, $method);
+        $invoiceNote = $invoiceId ? "Invoice ID: $invoiceId" : null;
+        $stmt->bind_param('idss', $bookingId, $amount, $method, $invoiceNote);
         return $stmt->execute();
     }
     
@@ -203,7 +204,7 @@ class RentPaymentController {
      */
     private function updateLastPaymentDate($bookingId) {
         $stmt = $this->conn->prepare("
-            UPDATE bookings 
+            UPDATE rental_bookings 
             SET last_payment_date = CURDATE() 
             WHERE id = ?
         ");
@@ -216,11 +217,21 @@ class RentPaymentController {
      */
     private function getBookingDetails($bookingId) {
         $stmt = $this->conn->prepare("
-            SELECT * FROM bookings WHERE id = ?
+            SELECT b.*, h.price as property_price
+            FROM rental_bookings b
+            JOIN houses h ON b.house_id = h.id
+            WHERE b.id = ?
         ");
         $stmt->bind_param('i', $bookingId);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        // Use property price as monthly rent if monthly_rent doesn't exist
+        if ($result) {
+            $result['monthly_rent'] = $result['property_price'];
+        }
+        
+        return $result;
     }
     
     /**
@@ -258,7 +269,7 @@ class RentPaymentController {
     public function generateMonthlyInvoices() {
         // Get all active bookings
         $stmt = $this->conn->query("
-            SELECT id FROM bookings 
+            SELECT id FROM rental_bookings 
             WHERE status = 'approved' 
             AND (last_payment_date IS NULL OR last_payment_date >= DATE_SUB(CURDATE(), INTERVAL 2 MONTH))
         ");

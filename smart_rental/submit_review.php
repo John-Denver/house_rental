@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'config/db.php';
+require_once '../config/db.php';
 require_once 'controllers/BookingController.php';
 
 // Check if user is logged in
