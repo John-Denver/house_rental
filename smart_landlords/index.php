@@ -167,7 +167,6 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                                     <th>Type</th>
                                     <th>Location</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -180,11 +179,6 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                                         <span class="badge bg-<?php echo $property['status'] ? 'success' : 'danger'; ?>">
                                             <?php echo $property['status'] ? 'Active' : 'Inactive'; ?>
                                         </span>
-                                    </td>
-                                    <td>
-                                        <a href="edit-property.php?id=<?php echo $property['id']; ?>" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
