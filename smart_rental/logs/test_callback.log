@@ -1,0 +1,7 @@
+2025-08-04 22:44:03 - Test callback accessed:
+Method: POST
+URL: /rental_system_bse/smart_rental/test_callback.php
+User Agent: Mozilla/5.0 (Windows NT; Windows NT 10.0; en-GB) WindowsPowerShell/5.1.26100.4652
+Content Type: application/x-www-form-urlencoded
+Raw Input: 
+----------------------------------------

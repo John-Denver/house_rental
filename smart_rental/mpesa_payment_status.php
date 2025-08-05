@@ -76,6 +76,8 @@ try {
     
     // Log the current payment request status for debugging
     error_log("Payment request status for checkout_request_id: $checkout_request_id - Status: " . ($payment_request['status'] ?? 'not found'));
+    error_log("Session user_id: " . ($_SESSION['user_id'] ?? 'NOT SET'));
+    error_log("Payment request user_id: " . ($payment_request['user_id'] ?? 'NOT FOUND'));
 
     if (!$payment_request) {
         http_response_code(404);
@@ -89,6 +91,34 @@ try {
     if ($payment_request['status'] === 'completed') {
         // Log the completed payment for debugging
         error_log("Payment already completed for checkout_request_id: $checkout_request_id - Receipt: " . $payment_request['mpesa_receipt_number']);
+        
+        // Get booking status to ensure consistency
+        $bookingStmt = $conn->prepare("
+            SELECT status, payment_status 
+            FROM rental_bookings 
+            WHERE id = ?
+        ");
+        $bookingStmt->bind_param('i', $payment_request['booking_id']);
+        $bookingStmt->execute();
+        $booking = $bookingStmt->get_result()->fetch_assoc();
+        
+        // Check for status inconsistency
+        if ($booking && $booking['payment_status'] !== 'paid') {
+            error_log("Status inconsistency detected for booking {$payment_request['booking_id']}: payment completed but booking not marked as paid");
+            
+            // Attempt to fix the inconsistency
+            $fixStmt = $conn->prepare("
+                UPDATE rental_bookings 
+                SET payment_status = 'paid', status = 'confirmed', updated_at = NOW()
+                WHERE id = ? AND payment_status != 'paid'
+            ");
+            $fixStmt->bind_param('i', $payment_request['booking_id']);
+            $fixStmt->execute();
+            
+            if ($fixStmt->affected_rows > 0) {
+                error_log("Status inconsistency fixed for booking {$payment_request['booking_id']}");
+            }
+        }
         
         ob_clean();
         header('Content-Type: application/json');
@@ -117,9 +147,35 @@ try {
         exit;
     }
 
+    if ($payment_request['status'] === 'processing') {
+        // Payment is in processing state - check with M-Pesa API to see if it's completed
+        error_log("Payment is in processing state for checkout_request_id: $checkout_request_id - checking with M-Pesa API");
+        
+        // For processing payments, we need to be more aggressive in checking
+        // Check if it's been more than 30 seconds since the payment was created
+        $requestTime = strtotime($payment_request['created_at']);
+        $currentTime = time();
+        $timeDiff = $currentTime - $requestTime;
+        
+        if ($timeDiff < 30) {
+            // Still very early in processing, return processing status
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'status' => 'processing',
+                    'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt.'
+                ]
+            ]);
+            exit;
+        }
+    }
+
     // If still pending, check with M-Pesa API
     $access_token = getMpesaAccessToken();
     if (!$access_token) {
+        error_log("Failed to get M-Pesa access token for checkout_request_id: $checkout_request_id");
         http_response_code(500);
         ob_clean();
         header('Content-Type: application/json');
@@ -168,8 +224,22 @@ try {
             $result_code = $result['ResultCode'];
             $result_desc = $result['ResultDesc'];
             
-            // Update payment request status based on result
-            $status = ($result_code === 0) ? 'completed' : 'failed';
+            // Update payment request status based on result code
+            // Convert to string for consistent comparison
+            $result_code_str = (string)$result_code;
+            
+            if ($result_code_str === '0') {
+                $status = 'completed';
+            } elseif ($result_code_str === '4999') {
+                $status = 'processing';
+            } elseif (in_array($result_code_str, ['1032', '1037', '1039'])) {
+                $status = 'failed';
+            } else {
+                $status = 'failed';
+            }
+            
+            // Log the status determination for debugging
+            error_log("ResultCode: $result_code_str, Determined Status: $status");
             
             $stmt = $conn->prepare("
                 UPDATE mpesa_payment_requests 
@@ -184,76 +254,93 @@ try {
             $stmt->execute();
 
             // If payment was successful, update booking status
-            if ($result_code === 0) {
+            if ($status === 'completed') {
                 // Log successful payment detection
                 error_log("Payment successful detected via API for checkout_request_id: $checkout_request_id");
                 
-                // Update booking status to paid
+                // Update booking status to confirmed and payment_status to paid
                 $stmt = $conn->prepare("
                     UPDATE rental_bookings 
-                    SET status = 'paid', updated_at = NOW() 
+                    SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() 
                     WHERE id = ?
                 ");
                 $stmt->bind_param('i', $payment_request['booking_id']);
                 $stmt->execute();
 
-                // Record payment in booking_payments table
-                $stmt = $conn->prepare("
-                    INSERT INTO booking_payments (
-                        booking_id, amount, payment_method, transaction_id, 
-                        payment_date, status, notes, created_at
-                    ) VALUES (?, ?, 'M-Pesa', ?, NOW(), 'completed', ?, NOW())
-                ");
-                $transaction_id = 'MPESA_' . time();
-                $notes = 'M-Pesa Payment - Checkout Request: ' . $checkout_request_id;
-                $stmt->bind_param('idss', 
-                    $payment_request['booking_id'], 
-                    $payment_request['amount'], 
-                    $transaction_id, 
-                    $notes
-                );
-                $stmt->execute();
-                
-                        // Include payment tracking helper
-        require_once 'includes/payment_tracking_helper.php';
-        
-        // Check if this is the first payment for this booking
-        $hasFirstPayment = hasFirstPaymentBeenMade($conn, $payment_request['booking_id']);
-        
-        if (!$hasFirstPayment) {
-            // This is the initial payment (security deposit + first month rent)
-            $breakdown = getInitialPaymentBreakdown($conn, $payment_request['booking_id']);
-            $securityDepositAmount = $breakdown['security_deposit'];
-            $monthlyRentAmount = $breakdown['monthly_rent'];
-            
-            // Record initial payment
-            recordInitialPayment(
-                $conn, 
-                $payment_request['booking_id'], 
-                $payment_request['amount'], 
-                $securityDepositAmount, 
-                $monthlyRentAmount, 
-                'M-Pesa', 
-                $transaction_id, 
-                null, 
-                'M-Pesa Initial Payment - Checkout Request: ' . $checkout_request_id
-            );
-        } else {
-            // This is a monthly rent payment
-            $nextMonth = getNextUnpaidMonth($conn, $payment_request['booking_id']);
-            
-            // Record monthly payment
-            recordMonthlyPayment(
-                $conn, 
-                $payment_request['booking_id'], 
-                $nextMonth, 
-                $payment_request['amount'], 
-                'M-Pesa', 
-                $transaction_id, 
-                null, 
-                'M-Pesa Monthly Payment - Checkout Request: ' . $checkout_request_id
-            );
-        }
+                                 // Record payment in booking_payments table
+                 try {
+                     $stmt = $conn->prepare("
+                         INSERT INTO booking_payments (
+                             booking_id, amount, payment_method, transaction_id, 
+                             payment_date, status, notes, created_at
+                         ) VALUES (?, ?, 'M-Pesa', ?, NOW(), 'completed', ?, NOW())
+                     ");
+                     $transaction_id = 'MPESA_' . time();
+                     $notes = 'M-Pesa Payment - Checkout Request: ' . $checkout_request_id;
+                     $stmt->bind_param('idss', 
+                         $payment_request['booking_id'], 
+                         $payment_request['amount'], 
+                         $transaction_id, 
+                         $notes
+                     );
+                     $stmt->execute();
+                     error_log("Payment recorded in booking_payments table successfully");
+                 } catch (Exception $e) {
+                     error_log("Failed to record payment in booking_payments table: " . $e->getMessage());
+                     // Continue without recording in booking_payments - the main payment is still successful
+                 }
+                 
+                 // Try to include payment tracking helper if tables exist
+                 try {
+                     // Check if payment_tracking table exists
+                     $tableCheck = $conn->query("SHOW TABLES LIKE 'payment_tracking'");
+                     if ($tableCheck && $tableCheck->num_rows > 0) {
+                         require_once 'includes/payment_tracking_helper.php';
+                         
+                         // Check if this is the first payment for this booking
+                         $hasFirstPayment = hasFirstPaymentBeenMade($conn, $payment_request['booking_id']);
+                         
+                         if (!$hasFirstPayment) {
+                             // This is the initial payment (security deposit + first month rent)
+                             $breakdown = getInitialPaymentBreakdown($conn, $payment_request['booking_id']);
+                             $securityDepositAmount = $breakdown['security_deposit'];
+                             $monthlyRentAmount = $breakdown['monthly_rent'];
+                             
+                             // Record initial payment
+                             recordInitialPayment(
+                                 $conn, 
+                                 $payment_request['booking_id'], 
+                                 $payment_request['amount'], 
+                                 $securityDepositAmount, 
+                                 $monthlyRentAmount, 
+                                 'M-Pesa', 
+                                 $transaction_id, 
+                                 null, 
+                                 'M-Pesa Initial Payment - Checkout Request: ' . $checkout_request_id
+                             );
+                         } else {
+                             // This is a monthly rent payment
+                             $nextMonth = getNextUnpaidMonth($conn, $payment_request['booking_id']);
+                             
+                             // Record monthly payment
+                             recordMonthlyPayment(
+                                 $conn, 
+                                 $payment_request['booking_id'], 
+                                 $nextMonth, 
+                                 $payment_request['amount'], 
+                                 'M-Pesa', 
+                                 $transaction_id, 
+                                 null, 
+                                 'M-Pesa Monthly Payment - Checkout Request: ' . $checkout_request_id
+                             );
+                         }
+                     } else {
+                         error_log("Payment tracking tables not found - skipping advanced payment tracking");
+                     }
+                 } catch (Exception $e) {
+                     error_log("Payment tracking helper error: " . $e->getMessage());
+                     // Continue without payment tracking - basic payment recording is already done
+                 }
 
                 ob_clean();
                 header('Content-Type: application/json');
@@ -264,6 +351,17 @@ try {
                         'receipt_number' => $transaction_id,
                         'amount' => $payment_request['amount'],
                         'message' => 'Payment completed successfully'
+                    ]
+                ]);
+            } elseif ($status === 'processing') {
+                // Payment is still being processed
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'status' => 'processing',
+                        'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt.'
                     ]
                 ]);
             } else {
@@ -287,62 +385,108 @@ try {
         } else {
             // No ResultCode in response - this usually means the payment is still pending
             error_log("No ResultCode in M-Pesa response - payment still pending for checkout_request_id: $checkout_request_id");
+            error_log("Full M-Pesa response: " . json_encode($result));
             
-            // Still pending - check if it's been too long (STK push expires after 3 minutes)
-            $requestTime = strtotime($payment_request['created_at']);
-            $currentTime = time();
-            $timeDiff = $currentTime - $requestTime;
-            
-            if ($timeDiff > 180) { // 3 minutes - give more time for user to complete payment
-                // STK push has likely expired
-                $stmt = $conn->prepare("
-                    UPDATE mpesa_payment_requests 
-                    SET 
-                        result_code = '1037',
-                        result_desc = 'STK Push expired - no response received after 3 minutes',
-                        status = 'failed',
-                        updated_at = NOW()
-                    WHERE checkout_request_id = ?
-                ");
-                $stmt->bind_param('s', $checkout_request_id);
-                $stmt->execute();
+            // Check if the response indicates the service is processed successfully (this is normal for pending payments)
+            if (isset($result['ResultDesc']) && strpos(strtolower($result['ResultDesc']), 'processed successfully') !== false) {
+                // This is a normal response for pending payments - not an error
+                error_log("M-Pesa indicates service processed successfully - payment still pending");
                 
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'data' => [
-                        'status' => 'failed',
-                        'message' => 'Payment request expired. Please try again.',
-                        'error_code' => '1037',
-                        'is_expired' => true
-                    ]
-                ]);
+                // Still pending - check if it's been too long (STK push expires after 5 minutes)
+                $requestTime = strtotime($payment_request['created_at']);
+                $currentTime = time();
+                $timeDiff = $currentTime - $requestTime;
+                
+                if ($timeDiff > 300) { // 5 minutes - give more time for user to complete payment
+                    // STK push has likely expired
+                    $stmt = $conn->prepare("
+                        UPDATE mpesa_payment_requests 
+                        SET 
+                            result_code = '1037',
+                            result_desc = 'STK Push expired - no response received after 5 minutes',
+                            status = 'failed',
+                            updated_at = NOW()
+                        WHERE checkout_request_id = ?
+                    ");
+                    $stmt->bind_param('s', $checkout_request_id);
+                    $stmt->execute();
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'data' => [
+                            'status' => 'failed',
+                            'message' => 'Payment request expired. Please try again.',
+                            'error_code' => '1037',
+                            'is_expired' => true
+                        ]
+                    ]);
+                } else {
+                    // Still pending - provide encouraging message
+                    $timeRemaining = 300 - $timeDiff;
+                    $minutes = floor($timeRemaining / 60);
+                    $seconds = $timeRemaining % 60;
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'data' => [
+                            'status' => 'processing',
+                            'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt and complete the payment.',
+                            'time_remaining' => $timeRemaining,
+                            'time_formatted' => sprintf('%02d:%02d', $minutes, $seconds)
+                        ]
+                    ]);
+                }
             } else {
-                // Still pending - provide encouraging message
-                $timeRemaining = 180 - $timeDiff;
-                $minutes = floor($timeRemaining / 60);
-                $seconds = $timeRemaining % 60;
-                
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'data' => [
-                        'status' => 'pending',
-                        'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt and complete the payment.',
-                        'time_remaining' => $timeRemaining,
-                        'time_formatted' => sprintf('%02d:%02d', $minutes, $seconds)
-                    ]
-                ]);
+                // Check if there's an actual error in the response
+                if (isset($result['errorCode']) || isset($result['errorMessage'])) {
+                    error_log("M-Pesa API Error - ErrorCode: " . ($result['errorCode'] ?? 'none') . ", ErrorMessage: " . ($result['errorMessage'] ?? 'none'));
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'M-Pesa API Error: ' . ($result['errorMessage'] ?? 'Unknown error'),
+                        'error_code' => $result['errorCode'] ?? 'unknown'
+                    ]);
+                } else {
+                    // Unknown response format - this might be a successful payment that hasn't been processed yet
+                    error_log("Unknown M-Pesa response format: " . json_encode($result));
+                    
+                    // For processing payments, if we get an unknown response, it might mean the payment is still being processed
+                    if ($payment_request['status'] === 'processing') {
+                        ob_clean();
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => true,
+                            'data' => [
+                                'status' => 'processing',
+                                'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt.',
+                                'unknown_response' => true
+                            ]
+                        ]);
+                    } else {
+                        ob_clean();
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'Unable to determine payment status. Please try again or contact support.',
+                            'response' => $result
+                        ]);
+                    }
+                }
             }
         }
     } else {
+        error_log("M-Pesa STK Query failed - HTTP Code: $httpCode, Response: $response");
         ob_clean();
         header('Content-Type: application/json');
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to check payment status',
+            'message' => 'Unable to determine payment status. Please try again or contact support.',
             'http_code' => $httpCode,
             'response' => $response
         ]);

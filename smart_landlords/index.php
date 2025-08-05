@@ -130,12 +130,14 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                             </div>
                         </div>
                         <div class="col-12 col-sm-6 col-xl mb-3 mb-xl-0">
-                            <div class="card bg-warning text-dark h-100">
-                                <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
-                                    <h5 class="card-title mb-2">Pending Rentals</h5>
-                                    <p class="card-text display-6 mb-0"><?php echo $rental_stats['pending_rentals']; ?></p>
+                            <a href="bookings.php" class="text-decoration-none">
+                                <div class="card bg-warning text-dark h-100 hover-shadow">
+                                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
+                                        <h5 class="card-title mb-2">Pending Rentals</h5>
+                                        <p class="card-text display-6 mb-0"><?php echo $rental_stats['pending_rentals']; ?></p>
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                         <div class="col-12 col-sm-6 col-xl mb-3 mb-xl-0">
                             <div class="card bg-danger text-white h-100">
@@ -167,7 +169,6 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                                     <th>Type</th>
                                     <th>Location</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -180,11 +181,6 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                                         <span class="badge bg-<?php echo $property['status'] ? 'success' : 'danger'; ?>">
                                             <?php echo $property['status'] ? 'Active' : 'Inactive'; ?>
                                         </span>
-                                    </td>
-                                    <td>
-                                        <a href="edit-property.php?id=<?php echo $property['id']; ?>" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

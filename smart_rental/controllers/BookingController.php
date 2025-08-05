@@ -39,7 +39,12 @@ class BookingController {
             // Get property details and set up monthly rent
             $property = $this->getProperty($data['house_id']);
             $monthlyRent = $property['price'];
-            $securityDeposit = $property['security_deposit'] ?? $property['price']; // Property value as default deposit
+            
+            // Validate security deposit is properly configured
+            if (empty($property['security_deposit'])) {
+                throw new Exception("Security deposit not configured for this property. Please contact the landlord.");
+            }
+            $securityDeposit = $property['security_deposit'];
             
             // Insert booking with monthly rent and landlord_id
             $stmt = $this->conn->prepare("
@@ -62,8 +67,9 @@ class BookingController {
             // Get landlord_id from the property
             $landlordId = $property['landlord_id'] ?? 1; // Default to 1 if not set
             
-            // Calculate end date (1 year from start date)
-            $endDate = date('Y-m-d', strtotime($data['start_date'] . ' +1 year'));
+            // Calculate end date based on property settings
+            $rentalPeriod = $property['max_rental_period'] ?? 12; // Default to 12 months
+            $endDate = date('Y-m-d', strtotime($data['start_date'] . ' +' . $rentalPeriod . ' months'));
             
             // Prepare special_requests variable
             $specialRequests = $data['special_requests'] ?? null;
@@ -90,8 +96,11 @@ class BookingController {
                 $this->handleDocumentUploads($bookingId, $files['documents']);
             }
             
-            // Create initial payment record for security deposit
+            // Create initial payment record for security deposit (status: pending)
             $this->recordPayment($bookingId, $securityDeposit, 'deposit');
+            
+            // Note: Units are NOT decremented here because booking is still 'pending'
+            // Units will only be decremented when booking status changes to 'confirmed'
             
             $this->conn->commit();
             
@@ -101,7 +110,7 @@ class BookingController {
             return [
                 'success' => true,
                 'booking_id' => $bookingId,
-                'message' => 'Booking created successfully!'
+                'message' => 'Booking created successfully! Please complete your payment to secure your booking.'
             ];
             
         } catch (Exception $e) {
@@ -121,13 +130,31 @@ class BookingController {
             }
         }
         
-        // Check property availability
+        // Validate start date
+        $startDate = strtotime($data['start_date']);
+        $today = strtotime('today');
+        
+        if ($startDate < $today) {
+            throw new Exception("Start date cannot be in the past");
+        }
+        
+        if ($startDate > strtotime('+6 months')) {
+            throw new Exception("Bookings cannot be made more than 6 months in advance");
+        }
+        
+        // Check property availability (includes unit availability)
         if (!$this->isPropertyAvailable($data['house_id'], $data['start_date'])) {
             throw new Exception("The property is not available for the selected date");
         }
     }
     
     private function isPropertyAvailable($propertyId, $startDate) {
+        // First check if property has available units
+        if (!$this->hasAvailableUnits($propertyId)) {
+            return false;
+        }
+        
+        // Then check for existing bookings on the same date
         $stmt = $this->conn->prepare("
             SELECT COUNT(*) as count 
             FROM rental_bookings 
@@ -185,7 +212,7 @@ class BookingController {
         $stmt = $this->conn->prepare("
             INSERT INTO booking_payments (
                 booking_id, amount, payment_method, status, payment_date
-            ) VALUES (?, ?, ?, 'completed', NOW())
+            ) VALUES (?, ?, ?, 'pending', NOW())
         ");
         
         $stmt->bind_param('ids', $bookingId, $amount, $type);
@@ -362,10 +389,14 @@ class BookingController {
     private function handleStatusChange($bookingId, $newStatus, $booking) {
         switch ($newStatus) {
             case 'confirmed':
+                // Decrement available units when booking is confirmed
+                $this->decrementPropertyUnits($booking['house_id']);
                 $this->sendBookingConfirmation($bookingId);
                 break;
                 
             case 'cancelled':
+                // Increment available units when booking is cancelled
+                $this->incrementPropertyUnits($booking['house_id']);
                 $this->processCancellation($booking);
                 break;
                 
@@ -507,6 +538,9 @@ class BookingController {
      * Process payment for a booking
      */
     public function processPayment($paymentData) {
+        // Start database transaction
+        $this->conn->begin_transaction();
+        
         try {
             // Validate payment data
             if (empty($paymentData['booking_id']) || empty($paymentData['amount'])) {
@@ -519,12 +553,38 @@ class BookingController {
             $transactionId = $paymentData['transaction_id'] ?? null;
             $notes = $paymentData['notes'] ?? '';
             
-            // Get booking details
-            $booking = $this->getBookingDetails($bookingId);
+            // Get booking details with lock to prevent race conditions
+            $bookingStmt = $this->conn->prepare("
+                SELECT * FROM rental_bookings 
+                WHERE id = ? AND (status = 'pending' OR status = 'confirmed')
+                FOR UPDATE
+            ");
+            $bookingStmt->bind_param('i', $bookingId);
+            $bookingStmt->execute();
+            $booking = $bookingStmt->get_result()->fetch_assoc();
             
-            // Validate booking status
-            if ($booking['status'] !== 'pending' && $booking['status'] !== 'confirmed') {
-                throw new Exception("Booking is not in a valid state for payment");
+            if (!$booking) {
+                throw new Exception("Booking not found or not in valid state for payment");
+            }
+            
+            // Check for duplicate payments
+            $duplicateStmt = $this->conn->prepare("
+                SELECT COUNT(*) as payment_count 
+                FROM booking_payments 
+                WHERE booking_id = ? AND status = 'completed'
+            ");
+            $duplicateStmt->bind_param('i', $bookingId);
+            $duplicateStmt->execute();
+            $duplicateResult = $duplicateStmt->get_result()->fetch_assoc();
+            
+            if ($duplicateResult['payment_count'] > 0) {
+                throw new Exception("Payment already completed for this booking");
+            }
+            
+            // Validate payment amount against booking requirements
+            $expectedAmount = $this->calculateExpectedPaymentAmount($bookingId);
+            if (abs($amount - $expectedAmount) > 0.01) { // Allow for small rounding differences
+                throw new Exception("Payment amount does not match expected amount. Expected: KSh " . number_format($expectedAmount, 2));
             }
             
             // Record the payment
@@ -547,29 +607,38 @@ class BookingController {
                 throw new Exception("Failed to record payment: " . $stmt->error);
             }
             
-            // Update booking status to 'paid'
+            $paymentId = $this->conn->insert_id;
+            
+            // Update booking status to 'paid' with optimistic locking
             $updateStmt = $this->conn->prepare("
                 UPDATE rental_bookings 
-                SET status = 'paid', updated_at = NOW() 
-                WHERE id = ?
+                SET status = 'paid', payment_status = 'paid', updated_at = NOW() 
+                WHERE id = ? AND (status = 'pending' OR status = 'confirmed')
             ");
             
             $updateStmt->bind_param('i', $bookingId);
+            $updateStmt->execute();
             
-            if (!$updateStmt->execute()) {
-                throw new Exception("Failed to update booking status: " . $updateStmt->error);
+            if ($updateStmt->affected_rows === 0) {
+                throw new Exception("Failed to update booking status - booking may have been modified");
             }
             
-            // Send payment confirmation
+            // Commit transaction
+            $this->conn->commit();
+            
+            // Send payment confirmation (outside transaction to avoid email delays)
             $this->sendPaymentConfirmation($bookingId, $amount, $paymentMethod);
             
             return [
                 'success' => true,
                 'message' => 'Payment processed successfully!',
-                'payment_id' => $this->conn->insert_id
+                'payment_id' => $paymentId
             ];
             
         } catch (Exception $e) {
+            // Rollback transaction on error
+            $this->conn->rollback();
+            
             return [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -604,6 +673,181 @@ class BookingController {
         $landlordMessage .= "Tenant: " . $booking['tenant_name'] . "\n";
         
         // mail($booking['landlord_email'], $landlordSubject, $landlordMessage);
+    }
+    
+    /**
+     * Decrement available units for a property
+     */
+    private function decrementPropertyUnits($propertyId) {
+        $stmt = $this->conn->prepare("
+            UPDATE houses 
+            SET available_units = GREATEST(available_units - 1, 0) 
+            WHERE id = ? AND available_units > 0
+        ");
+        $stmt->bind_param('i', $propertyId);
+        
+        if (!$stmt->execute()) {
+            error_log("Failed to decrement units for property ID: $propertyId");
+            throw new Exception("Failed to update property availability");
+        }
+        
+        // Log the unit change
+        $affectedRows = $stmt->affected_rows;
+        if ($affectedRows > 0) {
+            error_log("Successfully decremented units for property ID: $propertyId");
+        } else {
+            error_log("No units available to decrement for property ID: $propertyId");
+        }
+    }
+    
+    /**
+     * Increment available units for a property
+     */
+    private function incrementPropertyUnits($propertyId) {
+        $stmt = $this->conn->prepare("
+            UPDATE houses 
+            SET available_units = LEAST(available_units + 1, total_units) 
+            WHERE id = ? AND available_units < total_units
+        ");
+        $stmt->bind_param('i', $propertyId);
+        
+        if (!$stmt->execute()) {
+            error_log("Failed to increment units for property ID: $propertyId");
+            throw new Exception("Failed to update property availability");
+        }
+        
+        // Log the unit change
+        $affectedRows = $stmt->affected_rows;
+        if ($affectedRows > 0) {
+            error_log("Successfully incremented units for property ID: $propertyId");
+        } else {
+            error_log("No units can be incremented for property ID: $propertyId (may be at max capacity)");
+        }
+    }
+    
+    /**
+     * Check if property has available units
+     */
+    private function hasAvailableUnits($propertyId) {
+        $stmt = $this->conn->prepare("
+            SELECT available_units, total_units 
+            FROM houses 
+            WHERE id = ?
+        ");
+        $stmt->bind_param('i', $propertyId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        return $result && $result['available_units'] > 0;
+    }
+    
+    /**
+     * Calculate expected payment amount for a booking
+     */
+    private function calculateExpectedPaymentAmount($bookingId) {
+        // Get booking details
+        $stmt = $this->conn->prepare("
+            SELECT rb.*, h.price as property_price, h.security_deposit
+            FROM rental_bookings rb
+            JOIN houses h ON rb.house_id = h.id
+            WHERE rb.id = ?
+        ");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        $booking = $stmt->get_result()->fetch_assoc();
+        
+        if (!$booking) {
+            throw new Exception("Booking not found");
+        }
+        
+        // Check if this is the first payment
+        $paymentStmt = $this->conn->prepare("
+            SELECT COUNT(*) as payment_count 
+            FROM booking_payments 
+            WHERE booking_id = ? AND status = 'completed'
+        ");
+        $paymentStmt->bind_param('i', $bookingId);
+        $paymentStmt->execute();
+        $paymentResult = $paymentStmt->get_result()->fetch_assoc();
+        
+        if ($paymentResult['payment_count'] == 0) {
+            // First payment: Security deposit + first month rent
+            return floatval($booking['security_deposit']) + floatval($booking['property_price']);
+        } else {
+            // Subsequent payment: Monthly rent only
+            return floatval($booking['property_price']);
+        }
+    }
+    
+    /**
+     * Synchronize payment status to prevent inconsistencies
+     */
+    public function synchronizePaymentStatus($bookingId) {
+        $this->conn->begin_transaction();
+        
+        try {
+            // Get booking and payment status
+            $bookingStmt = $this->conn->prepare("
+                SELECT rb.*, 
+                       COUNT(bp.id) as payment_count,
+                       SUM(CASE WHEN bp.status = 'completed' THEN 1 ELSE 0 END) as completed_payments
+                FROM rental_bookings rb
+                LEFT JOIN booking_payments bp ON rb.id = bp.booking_id
+                WHERE rb.id = ?
+                GROUP BY rb.id
+            ");
+            $bookingStmt->bind_param('i', $bookingId);
+            $bookingStmt->execute();
+            $booking = $bookingStmt->get_result()->fetch_assoc();
+            
+            if (!$booking) {
+                throw new Exception("Booking not found");
+            }
+            
+            $hasCompletedPayments = $booking['completed_payments'] > 0;
+            $currentStatus = $booking['status'];
+            $currentPaymentStatus = $booking['payment_status'] ?? 'pending';
+            
+            // Determine correct status
+            $correctStatus = 'pending';
+            $correctPaymentStatus = 'pending';
+            
+            if ($hasCompletedPayments) {
+                $correctStatus = 'confirmed';
+                $correctPaymentStatus = 'paid';
+            }
+            
+            // Update if status is inconsistent
+            if ($currentStatus !== $correctStatus || $currentPaymentStatus !== $correctPaymentStatus) {
+                $updateStmt = $this->conn->prepare("
+                    UPDATE rental_bookings 
+                    SET status = ?, payment_status = ?, updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $updateStmt->bind_param('ssi', $correctStatus, $correctPaymentStatus, $bookingId);
+                $updateStmt->execute();
+                
+                error_log("Payment status synchronized for booking $bookingId: status=$correctStatus, payment_status=$correctPaymentStatus");
+            }
+            
+            $this->conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => 'Payment status synchronized',
+                'old_status' => $currentStatus,
+                'new_status' => $correctStatus,
+                'old_payment_status' => $currentPaymentStatus,
+                'new_payment_status' => $correctPaymentStatus
+            ];
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
     }
 }
 

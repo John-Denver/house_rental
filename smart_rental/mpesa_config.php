@@ -5,8 +5,12 @@
  */
 
 // M-Pesa API Configuration
+// These are test credentials - replace with your actual credentials
 define('MPESA_CONSUMER_KEY', 'F2VHzOVLYbdDBYXGXlfPkFbjAhbvJlPXzHXwkzUveUAm4ofQ');
 define('MPESA_CONSUMER_SECRET', 'qET5Kmd6sD9Q8AGRk5KhLt6A1aD9UILcnvbQFukTSZZFiYFeNXckodggDezYA6wz');
+
+// Note: If you're getting 403 errors, these credentials might be expired or incorrect
+// You need to get fresh credentials from Safaricom Developer Portal
 
 // M-Pesa API URLs (Test Environment)
 define('MPESA_BASE_URL', 'https://sandbox.safaricom.co.ke');
@@ -21,8 +25,16 @@ define('MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline');
 define('MPESA_PARTYB', '174379'); // Same as shortcode for till payments
 
 // Callback URL - Using ngrok for local development
-// ngrok URL: https://b49f2da54ab7.ngrok-free.app
-define('MPESA_CALLBACK_URL', 'https://b49f2da54ab7.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
+// Update this URL when ngrok tunnel changes
+// To get current ngrok URL, run: ngrok http 80
+// Example: https://abc123.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php
+
+// Callback URL Configuration
+// Always use ngrok URL for testing since M-Pesa needs to reach your callback
+define('MPESA_CALLBACK_URL', 'https://71697fa889e3.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
+
+// For production, change this to your domain
+// define('MPESA_CALLBACK_URL', 'https://yourdomain.com/smart_rental/mpesa_callback.php');
 
 // Environment
 define('MPESA_ENVIRONMENT', 'sandbox'); // Change to 'live' for production
@@ -41,6 +53,10 @@ define('MPESA_ERROR_MESSAGES', [
     '1037' => 'Timeout - unable to process request',
     '1038' => 'Transaction failed',
     '1039' => 'Request cancelled by user',
+    '2001' => 'The transaction is still under processing',
+    '2002' => 'Transaction is being processed',
+    '2003' => 'Transaction is pending',
+    '2004' => 'Transaction is in progress',
     '1001' => 'Invalid request',
     '1002' => 'Invalid credentials',
     '1003' => 'Invalid amount',
@@ -153,14 +169,42 @@ function getMpesaAccessToken() {
     ]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
+    
+    // Log the request details
+    error_log("M-Pesa Auth Request - URL: " . MPESA_AUTH_URL . ", HTTP Code: $httpCode");
+    error_log("M-Pesa Auth Request - Credentials: " . substr($credentials, 0, 20) . "...");
+    error_log("M-Pesa Auth Response: " . substr($response, 0, 500) . "...");
+    
+    if ($curlError) {
+        error_log("M-Pesa Auth cURL Error: $curlError");
+        return null;
+    }
     
     if ($httpCode === 200) {
         $result = json_decode($response, true);
-        return $result['access_token'] ?? null;
+        if (isset($result['access_token'])) {
+            error_log("M-Pesa Auth Success - Token obtained");
+            return $result['access_token'];
+        } else {
+            error_log("M-Pesa Auth Error - No access_token in response: " . json_encode($result));
+        }
+    } elseif ($httpCode === 403) {
+        error_log("M-Pesa Auth Error - 403 Forbidden. This usually means:");
+        error_log("1. Invalid or expired credentials");
+        error_log("2. IP not whitelisted");
+        error_log("3. Account suspended");
+        error_log("4. Incorrect API endpoint");
+    } else {
+        error_log("M-Pesa Auth Error - HTTP Code: $httpCode, Response: $response");
     }
     
     return null;

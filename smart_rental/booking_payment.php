@@ -1,5 +1,26 @@
 <?php
+// Ensure session is started with proper configuration
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
 session_start();
+
+// Debug: Log that the page is being accessed
+error_log("booking_payment.php accessed - GET params: " . json_encode($_GET));
+error_log("booking_payment.php accessed - Session user_id: " . ($_SESSION['user_id'] ?? 'not set'));
+error_log("booking_payment.php accessed - Session ID: " . session_id());
+error_log("booking_payment.php accessed - All session data: " . json_encode($_SESSION));
+
+// Add immediate output for debugging
+if (isset($_GET['debug'])) {
+    echo "<h1>Booking Payment Debug</h1>";
+    echo "<p>Page accessed successfully!</p>";
+    echo "<p>GET params: " . json_encode($_GET) . "</p>";
+    echo "<p>Session user_id: " . ($_SESSION['user_id'] ?? 'not set') . "</p>";
+    echo "<p>Session ID: " . session_id() . "</p>";
+    echo "<p>All session data: " . json_encode($_SESSION) . "</p>";
+    exit();
+}
+
 require_once '../config/db.php';
 require_once 'controllers/BookingController.php';
 require_once 'mpesa_config.php';
@@ -23,24 +44,28 @@ try {
     // Get booking details
     $booking = $bookingController->getBookingDetails($bookingId);
     
+    // Debug: Log booking details
+    error_log("Booking details for ID $bookingId: " . json_encode($booking));
+    
     // Verify that the current user is the one who made the booking
     if ($booking['user_id'] != $_SESSION['user_id'] && !isset($_SESSION['is_admin'])) {
         throw new Exception('Unauthorized access to this booking');
     }
     
     // Check if booking is already paid
-    if ($booking['payment_status'] === 'paid') {
+    if ($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'partial') {
         $_SESSION['success'] = 'This booking has already been paid.';
         header('Location: booking_details.php?id=' . $bookingId);
         exit();
     }
     
-    // Check if booking is confirmed
-    if ($booking['status'] !== 'confirmed') {
-        throw new Exception('This booking is not confirmed for payment.');
+    // Check if booking is in a valid state for payment
+    if ($booking['status'] !== 'pending' && $booking['status'] !== 'confirmed') {
+        throw new Exception('This booking is not in a valid state for payment. Current status: ' . $booking['status']);
     }
     
 } catch (Exception $e) {
+    error_log("Error in booking_payment.php: " . $e->getMessage());
     $_SESSION['error'] = $e->getMessage();
     header('Location: my_bookings.php');
     exit();
@@ -333,6 +358,17 @@ include 'includes/header.php';
                     <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
                     <h6 class="text-danger">Payment Failed</h6>
                     <p class="text-muted" id="errorMessage">An error occurred while processing your payment.</p>
+                    
+                    <!-- Add helpful message for users who still get M-Pesa prompt -->
+                    <div class="alert alert-info mt-3" id="mpesaPromptAlert" style="display: none;">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        <strong>Did you receive an M-Pesa prompt?</strong><br>
+                        <small>If you received an M-Pesa payment prompt on your phone, you can still complete the payment. The system will automatically detect when your payment is successful.</small>
+                        <br><br>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="checkPaymentStatus()">
+                            <i class="fas fa-sync-alt me-1"></i>Check Payment Status
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -410,7 +446,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
             });
             
-            const result = await response.json();
+            // Log the raw response for debugging
+            const responseText = await response.text();
+            console.log('Raw response from mpesa_stk_push.php:', responseText);
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse JSON response:', parseError);
+                console.error('Response text:', responseText);
+                throw new Error('Invalid response from server. Please try again.');
+            }
             
             if (result.success) {
                 checkoutRequestId = result.data.checkout_request_id;
@@ -418,10 +465,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success status
                 processingStatus.style.display = 'none';
                 successStatus.style.display = 'block';
+                errorStatus.style.display = 'none'; // Ensure error status is hidden
                 checkStatusBtn.style.display = 'none'; // Hide initially
                 
                 // Update modal title
                 document.getElementById('modalTitle').textContent = 'Payment Request Sent';
+                
+                // Show success message
+                successStatus.innerHTML = `
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h6 class="text-success">Payment Request Sent</h6>
+                    <p class="text-muted">Your payment request has been sent to M-Pesa successfully.</p>
+                    <p class="text-muted small">Please check your phone for the M-Pesa prompt and complete the payment.</p>
+                `;
                 
                 // Start polling for payment status
                 pollPaymentStatus();
@@ -449,20 +505,144 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 120000);
                 
+            } else if (
+                (result.error && (result.error.ResultCode == 4999 || result.error.ResultCode == '4999')) ||
+                (result.message && result.message.toLowerCase().includes('still under processing')) ||
+                (result.data && result.data.status === 'processing')
+            ) {
+                // Show "processing" UI, not "failed"
+                processingStatus.style.display = 'none';
+                successStatus.style.display = 'block';
+                checkStatusBtn.style.display = 'inline-block';
+                document.getElementById('modalTitle').textContent = 'Payment Processing';
+                successStatus.innerHTML = `
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                    <h6 class="text-warning">Payment Processing</h6>
+                    <p class="text-muted">Your payment is still being processed by M-Pesa. Please check your phone and wait for the prompt. You can check payment status after a few seconds.</p>
+                `;
+                // Start polling for payment status
+                pollPaymentStatus();
+                return;
+            } else if (result.message && result.message.includes('Invalid JSON data')) {
+                // This is a server-side parsing error, not a payment failure
+                console.log('Server parsing error, retrying...');
+                
+                // Show a different message for server errors
+                processingStatus.style.display = 'none';
+                errorStatus.style.display = 'block';
+                errorMessage.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Server Error</strong><br>
+                    <small>There was a temporary server issue. Please try again in a moment.</small>
+                `;
+                document.getElementById('modalTitle').textContent = 'Server Error';
+                
+                // Show retry button
+                tryAgainBtn.style.display = 'inline-block';
+                
+            } else if (result.processing || (result.message && result.message.includes('still under processing'))) {
+                // This is actually a success case - STK push was sent but still processing
+                console.log('STK Push sent successfully, but still processing...');
+                
+                // Store checkout request ID if available
+                if (result.data && result.data.checkout_request_id) {
+                    checkoutRequestId = result.data.checkout_request_id;
+                }
+                
+                // Show success status with processing message
+                processingStatus.style.display = 'none';
+                successStatus.style.display = 'block';
+                checkStatusBtn.style.display = 'inline-block';
+                
+                // Update modal title
+                document.getElementById('modalTitle').textContent = 'Payment Request Sent';
+                
+                // Show helpful message
+                successStatus.innerHTML = `
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                    <h6 class="text-warning">Payment Request Sent</h6>
+                    <p class="text-muted">Your payment request has been sent to M-Pesa and is being processed.</p>
+                    <p class="text-muted small">Please check your phone for the M-Pesa prompt. If you don't receive it within 30 seconds, try again.</p>
+                `;
+                
+                // Start polling for payment status
+                pollPaymentStatus();
+                
+                // Show check status button immediately
+                checkStatusBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Check Payment Status';
+                
             } else {
-                throw new Error(result.message || 'Payment initiation failed');
+                // Handle specific M-Pesa errors
+                let errorMsg = result.message || 'Payment initiation failed';
+                
+                console.log('M-Pesa Response Details:', result);
+                
+                if (result.error) {
+                    console.log('M-Pesa Error Details:', result.error);
+                    
+                    // Check for specific error codes
+                    if (result.error.errorCode) {
+                        switch(result.error.errorCode) {
+                            case '1001':
+                                errorMsg = 'Invalid request - please check your phone number and amount';
+                                break;
+                            case '1002':
+                                errorMsg = 'Authentication failed - please try again later';
+                                break;
+                            case '1003':
+                                errorMsg = 'Invalid amount - please check the payment amount';
+                                break;
+                            case '1004':
+                                errorMsg = 'Invalid phone number - please check your M-Pesa number';
+                                break;
+                            case '1005':
+                                errorMsg = 'Invalid shortcode - please contact support';
+                                break;
+                            default:
+                                errorMsg = result.error.errorMessage || errorMsg;
+                        }
+                    }
+                }
+                
+                // Log the full result for debugging
+                console.log('Full M-Pesa response:', result);
+                throw new Error(errorMsg);
             }
             
         } catch (error) {
             console.error('Payment error:', error);
             
-            // Show error status
-            processingStatus.style.display = 'none';
-            errorStatus.style.display = 'block';
-            errorMessage.textContent = error.message || 'An error occurred while processing your payment.';
+            // Check if this is a network or parsing error (not a real payment failure)
+            const isNetworkError = error.message.includes('fetch') || error.message.includes('network');
+            const isParsingError = error.message.includes('Invalid response') || error.message.includes('JSON');
+            const isServerError = error.message.includes('Server Error') || error.message.includes('temporary');
             
-            // Update modal title
-            document.getElementById('modalTitle').textContent = 'Payment Failed';
+            if (isNetworkError || isParsingError || isServerError) {
+                // Show a more helpful message for technical issues
+                processingStatus.style.display = 'none';
+                errorStatus.style.display = 'block';
+                errorMessage.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Temporary Issue</strong><br>
+                    <small>There was a temporary connection issue. The payment might still be processing. Please check your phone for the M-Pesa prompt.</small>
+                `;
+                document.getElementById('modalTitle').textContent = 'Connection Issue';
+                
+                // Show retry button
+                tryAgainBtn.style.display = 'inline-block';
+                
+                // Show M-Pesa prompt alert
+                document.getElementById('mpesaPromptAlert').style.display = 'block';
+            } else {
+                // Show error status for real payment failures
+                processingStatus.style.display = 'none';
+                errorStatus.style.display = 'block';
+                errorMessage.textContent = error.message || 'An error occurred while processing your payment.';
+                document.getElementById('modalTitle').textContent = 'Payment Failed';
+                
+                // Show M-Pesa prompt alert for any error (in case user still gets prompt)
+                document.getElementById('mpesaPromptAlert').style.display = 'block';
+            }
         }
         
         // Re-enable pay button
@@ -493,14 +673,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     result = JSON.parse(responseText);
                     console.log('Payment status check result:', result);
+                    console.log('Status:', result.data?.status);
+                    console.log('Success:', result.success);
                 } catch (parseError) {
                     console.error('Failed to parse JSON response:', parseError);
                     console.error('Response text:', responseText);
-                    throw new Error('Invalid response from server');
+                    throw new Error('Invalid response from server: ' + responseText);
                 }
                 
                 if (result.success && result.data.status === 'completed') {
                     clearInterval(pollInterval);
+                    console.log('🎉 Payment completed! Redirecting...');
                     
                     // Show success and redirect
                     successStatus.innerHTML = `
@@ -518,12 +701,36 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
                     }, 3000);
                     
+                } else if (result.success && result.data.status === 'processing') {
+                    // Payment is still being processed - continue polling
+                    console.log('⏳ Payment still processing - continuing to poll');
+                    console.log('Processing message:', result.data.message);
+                    
+                    // Show processing status
+                    processingStatus.style.display = 'block';
+                    successStatus.style.display = 'none';
+                    errorStatus.style.display = 'none';
+                    
+                    // Update the message to show it's still processing
+                    processingStatus.innerHTML = `
+                        <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                        <h6 class="text-warning">Payment Processing</h6>
+                        <p class="text-muted">Your payment is still being processed by M-Pesa.</p>
+                        <p class="text-muted small">${result.data.message || 'Please check your phone for the M-Pesa prompt.'}</p>
+                        ${result.data.time_formatted ? `<p class="text-muted small">Time remaining: ${result.data.time_formatted}</p>` : ''}
+                        <p class="text-muted small">This may take a few moments. Please complete the payment on your phone.</p>
+                    `;
+                    
+                    // Show check status button for manual checking
+                    checkStatusBtn.style.display = 'block';
+                    
                 } else if (result.success && (result.data.status === 'failed' || result.data.status === 'cancelled')) {
                     clearInterval(pollInterval);
                     
-                    // Show failure or cancellation
-                    errorStatus.style.display = 'block';
-                    successStatus.style.display = 'none';
+                                    // Show failure or cancellation
+                errorStatus.style.display = 'block';
+                successStatus.style.display = 'none';
+                processingStatus.style.display = 'none'; // Ensure processing status is hidden
                     
                     if (result.data.status === 'cancelled') {
                         errorMessage.innerHTML = `
@@ -555,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Status check error:', error);
             }
-        }, 3000); // Check every 3 seconds for faster response
+        }, 2000); // Check every 2 seconds for faster response when processing
         
         // Stop polling after 3 minutes and 30 seconds (give extra time)
         setTimeout(() => {
@@ -595,11 +802,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle check status button
     checkStatusBtn.addEventListener('click', async function() {
-        if (!checkoutRequestId) return;
+        await checkPaymentStatus();
+    });
+    
+    // Global function to check payment status
+    window.checkPaymentStatus = async function() {
+        if (!checkoutRequestId) {
+            alert('No payment request found. Please try the payment again.');
+            return;
+        }
         
         // Show loading state
-        checkStatusBtn.disabled = true;
-        checkStatusBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+        const statusBtn = document.querySelector('#checkStatusBtn, button[onclick="checkPaymentStatus()"]');
+        if (statusBtn) {
+            statusBtn.disabled = true;
+            statusBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+        }
         
         try {
             const response = await fetch('mpesa_payment_status.php', {
@@ -622,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (parseError) {
                 console.error('Manual check - Failed to parse JSON:', parseError);
                 console.error('Manual check - Response text:', responseText);
-                alert('Error: Invalid response from server. Please try again.');
+                alert('Error: Invalid response from server. Please try again. Response: ' + responseText);
                 return;
             }
             
@@ -663,9 +881,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Reset button
-        checkStatusBtn.disabled = false;
-        checkStatusBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Check Payment Status';
-    });
+        if (statusBtn) {
+            statusBtn.disabled = false;
+            statusBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Check Payment Status';
+        }
+    };
 });
 </script>
 

@@ -1,5 +1,18 @@
 <?php
+// Ensure session is started with proper configuration
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
 session_start();
+
+// Debug session if needed
+if (isset($_GET['debug_session'])) {
+    echo "<h1>Session Debug</h1>";
+    echo "<p>Session ID: " . session_id() . "</p>";
+    echo "<p>User ID: " . ($_SESSION['user_id'] ?? 'not set') . "</p>";
+    echo "<p>All session data: " . json_encode($_SESSION) . "</p>";
+    exit();
+}
+
 require_once '../config/db.php';
 require_once 'controllers/BookingController.php';
 
@@ -33,15 +46,47 @@ try {
     $hasReview = $bookingController->hasBookingReview($bookingId);
     $canReview = $booking['status'] === 'completed' && !$hasReview;
     
+    // Get payment information
+    $paymentStatus = 'pending';
+    $paymentDate = null;
+    if (!empty($payments)) {
+        $latestPayment = $payments[0]; // First payment is the latest due to DESC ordering
+        $paymentStatus = $latestPayment['status'] ?? 'pending';
+        $paymentDate = $latestPayment['payment_date'] ?? null;
+    }
+    
+    // Add payment information to booking array with fallbacks
+    $booking['payment_status'] = $paymentStatus;
+    $booking['payment_date'] = $paymentDate;
+    
+    // Ensure all required fields have fallback values
+    $booking['property_price'] = $booking['property_price'] ?? 0;
+    $booking['security_deposit'] = $booking['security_deposit'] ?? 0;
+    $booking['start_date'] = $booking['start_date'] ?? date('Y-m-d');
+    $booking['end_date'] = $booking['end_date'] ?? date('Y-m-d', strtotime('+1 year'));
+    
 } catch (Exception $e) {
     $_SESSION['error'] = $e->getMessage();
     header('Location: my_bookings.php');
     exit();
 }
 
-// Include header
-$pageTitle = 'Booking #' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT);
-include 'includes/header.php';
+    // Include header
+    $pageTitle = 'Booking #' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT);
+    include 'includes/header.php';
+    
+    // Debug information (remove in production)
+    if (isset($_GET['debug']) && $_SESSION['is_admin']) {
+        echo '<div class="alert alert-info">';
+        echo '<strong>Debug Info:</strong><br>';
+        echo 'Payment Status: ' . ($booking['payment_status'] ?? 'undefined') . '<br>';
+        echo 'Payment Date: ' . ($booking['payment_date'] ?? 'null') . '<br>';
+        echo 'Number of Payments: ' . count($payments) . '<br>';
+        if (!empty($payments)) {
+            echo 'Latest Payment: ' . json_encode($payments[0]) . '<br>';
+        }
+        echo '</div>';
+    }
 ?>
 
 <div class="container py-5">
@@ -72,7 +117,15 @@ include 'includes/header.php';
         <div class="alert alert-info">
             <i class="fas fa-credit-card me-2"></i>
             Your booking is confirmed! Please complete your payment.
-            <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="alert-link ms-2">
+            <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="alert-link ms-2" onclick="console.log('Pay Now clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
+                Pay Now <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+    <?php elseif ($booking['status'] === 'pending' && $booking['payment_status'] === 'pending'): ?>
+        <div class="alert alert-warning">
+            <i class="fas fa-clock me-2"></i>
+            Your booking is pending. Please complete your payment to secure your booking.
+            <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="alert-link ms-2" onclick="console.log('Pay Now clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
                 Pay Now <i class="fas fa-arrow-right ms-1"></i>
             </a>
         </div>
@@ -175,9 +228,9 @@ include 'includes/header.php';
                             ],
                             [
                                 'icon' => 'money-bill-wave',
-                                'date' => $booking['payment_status'] === 'paid' ? $booking['payment_date'] : null,
-                                'title' => $booking['payment_status'] === 'paid' ? 'Payment Completed' : 'Payment Pending',
-                                'description' => $booking['payment_status'] === 'paid' 
+                                'date' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') && !empty($booking['payment_date']) ? $booking['payment_date'] : null,
+                                'title' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') ? 'Payment Completed' : 'Payment Pending',
+                                'description' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') 
                                     ? 'Payment of KSh ' . number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2) . ' received.'
                                     : 'Complete your payment to secure your booking.'
                             ]
@@ -185,6 +238,11 @@ include 'includes/header.php';
                         
                         foreach ($timeline as $event): 
                             if (!$event['date'] && $event['title'] !== 'Booking Requested') continue;
+                            // Skip payment event if no payment date and status is not completed/paid
+                            if ($event['icon'] === 'money-bill-wave' && !$event['date'] && 
+                                ($booking['payment_status'] !== 'completed' && $booking['payment_status'] !== 'paid')) {
+                                continue;
+                            }
                         ?>
                             <div class="timeline-item">
                                 <div class="timeline-icon">
@@ -242,8 +300,8 @@ include 'includes/header.php';
                         <span>KSh <?php echo number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
                     </div>
                     
-                    <?php if ($booking['payment_status'] !== 'paid' && $booking['status'] === 'confirmed'): ?>
-                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-success w-100 mt-3">
+                    <?php if ($booking['payment_status'] === 'pending' && ($booking['status'] === 'pending' || $booking['status'] === 'confirmed')): ?>
+                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-success w-100 mt-3" onclick="console.log('Make Payment clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
                             <i class="fas fa-credit-card me-1"></i> Make Payment
                         </a>
                     <?php endif; ?>
@@ -330,6 +388,44 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<script>
+// Debug: Log when page loads
+console.log('Booking details page loaded');
+
+// Prevent any form submissions from interfering with navigation
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - checking for forms');
+    
+    // Log all forms on the page
+    const forms = document.querySelectorAll('form');
+    console.log('Found ' + forms.length + ' forms on the page');
+    
+    forms.forEach((form, index) => {
+        console.log('Form ' + index + ':', form.action, form.method);
+        
+        // Prevent form submission if it might interfere
+        form.addEventListener('submit', function(e) {
+            console.log('Form submission prevented:', form.action);
+            e.preventDefault();
+        });
+    });
+    
+    // Log all payment links
+    const paymentLinks = document.querySelectorAll('a[href*="booking_payment.php"]');
+    console.log('Found ' + paymentLinks.length + ' payment links');
+    
+    paymentLinks.forEach((link, index) => {
+        console.log('Payment link ' + index + ':', link.href);
+        
+        // Add click handler to ensure navigation works
+        link.addEventListener('click', function(e) {
+            console.log('Payment link clicked:', this.href);
+            // Don't prevent default - let it navigate
+        });
+    });
+});
+</script>
 
 <style>
 .timeline {
