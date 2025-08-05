@@ -356,9 +356,9 @@ try {
                         if ($nextUnpaidMonth): 
                             $monthName = date('F Y', strtotime($nextUnpaidMonth));
                     ?>
-                        <button type="button" class="btn btn-primary w-100 mt-3" onclick="window.location.href='booking_payment.php?id=<?php echo $booking['id']; ?>&type=prepayment'; console.log('Pre-Pay button clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>&type=prepayment');">
+                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>&type=prepayment" class="btn btn-primary w-100 mt-3" onclick="console.log('Pre-Pay button clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>&type=prepayment');">
                             <i class="fas fa-calendar-plus me-1"></i> Pre-Pay <?php echo $monthName; ?>
-                        </button>
+                        </a>
                     <?php 
                         endif;
                     endif; 

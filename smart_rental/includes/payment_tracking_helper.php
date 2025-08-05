@@ -348,4 +348,6 @@ function getMonthlyRentAmount($conn, $bookingId) {
     
     return $result['monthly_rent'] ?? 0;
 }
+
+
 ?> 

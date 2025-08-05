@@ -53,8 +53,8 @@ try {
         throw new Exception('Unauthorized access to this booking');
     }
     
-    // Check if booking is already paid
-    if ($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'partial') {
+    // Check if booking is already paid (only for initial payments)
+    if (($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'partial') && $paymentType !== 'prepayment') {
         $_SESSION['success'] = 'This booking has already been paid.';
         header('Location: booking_details.php?id=' . $bookingId);
         exit();
