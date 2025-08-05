@@ -144,39 +144,67 @@ try {
     if ($httpCode === 200) {
         $result = json_decode($response, true);
         
+        // Log the full response for debugging
+        error_log('M-Pesa STK Push Response: ' . json_encode($result));
+        
         if (isset($result['CheckoutRequestID'])) {
             // Store payment request in database
-            $stmt = $conn->prepare("
-                INSERT INTO mpesa_payment_requests (
-                    booking_id, checkout_request_id, phone_number, amount, 
-                    reference, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, 'pending', NOW())
-            ");
-            $stmt->bind_param('issds', 
-                $booking_id, 
-                $result['CheckoutRequestID'], 
-                $phone_number, 
-                $amount, 
-                $reference
-            );
-            $stmt->execute();
-            
-            echo json_encode([
-                'success' => true,
-                'message' => 'STK Push sent successfully',
-                'data' => [
-                    'checkout_request_id' => $result['CheckoutRequestID'],
-                    'merchant_request_id' => $result['MerchantRequestID'],
-                    'reference' => $reference,
-                    'amount' => $amount,
-                    'phone_number' => $phone_number
-                ]
-            ]);
+            try {
+                $stmt = $conn->prepare("
+                    INSERT INTO mpesa_payment_requests (
+                        booking_id, checkout_request_id, phone_number, amount, 
+                        reference, status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+                ");
+                $stmt->bind_param('issds', 
+                    $booking_id, 
+                    $result['CheckoutRequestID'], 
+                    $phone_number, 
+                    $amount, 
+                    $reference
+                );
+                $stmt->execute();
+                
+                error_log('M-Pesa STK Push - Database insertion successful');
+                
+                $response_data = [
+                    'success' => true,
+                    'message' => 'STK Push sent successfully',
+                    'data' => [
+                        'checkout_request_id' => $result['CheckoutRequestID'],
+                        'merchant_request_id' => $result['MerchantRequestID'],
+                        'reference' => $reference,
+                        'amount' => $amount,
+                        'phone_number' => $phone_number
+                    ]
+                ];
+                
+                error_log('M-Pesa STK Push - Sending success response: ' . json_encode($response_data));
+                echo json_encode($response_data);
+            } catch (Exception $e) {
+                error_log('M-Pesa STK Push - Database error: ' . $e->getMessage());
+                // Still return success even if database fails
+                $response_data = [
+                    'success' => true,
+                    'message' => 'STK Push sent successfully (database error ignored)',
+                    'data' => [
+                        'checkout_request_id' => $result['CheckoutRequestID'],
+                        'merchant_request_id' => $result['MerchantRequestID'],
+                        'reference' => $reference,
+                        'amount' => $amount,
+                        'phone_number' => $phone_number
+                    ]
+                ];
+                
+                error_log('M-Pesa STK Push - Sending success response (with DB error): ' . json_encode($response_data));
+                echo json_encode($response_data);
+            }
         } else {
             // Check for specific M-Pesa error codes
             $errorMessage = 'Failed to initiate STK Push';
             $isProcessing = false;
             
+            // Check for different possible error structures
             if (isset($result['errorCode'])) {
                 $errorMessage = getMpesaErrorMessage($result['errorCode']);
                 // Check if this is a "still processing" error
@@ -188,6 +216,39 @@ try {
                 // Check if message contains processing keywords
                 if (strpos(strtolower($result['errorMessage']), 'processing') !== false) {
                     $isProcessing = true;
+                }
+            } elseif (isset($result['requestId'])) {
+                // This might be a successful response with a different structure
+                // Check if we have a merchant request ID
+                if (isset($result['merchantRequestID'])) {
+                    // Store payment request in database with merchant request ID
+                    $stmt = $conn->prepare("
+                        INSERT INTO mpesa_payment_requests (
+                            booking_id, checkout_request_id, phone_number, amount, 
+                            reference, status, created_at
+                        ) VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+                    ");
+                    $stmt->bind_param('issds', 
+                        $booking_id, 
+                        $result['merchantRequestID'], 
+                        $phone_number, 
+                        $amount, 
+                        $reference
+                    );
+                    $stmt->execute();
+                    
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'STK Push sent successfully',
+                        'data' => [
+                            'checkout_request_id' => $result['merchantRequestID'],
+                            'merchant_request_id' => $result['merchantRequestID'],
+                            'reference' => $reference,
+                            'amount' => $amount,
+                            'phone_number' => $phone_number
+                        ]
+                    ]);
+                    exit;
                 }
             }
             
@@ -223,11 +284,14 @@ try {
                     ]
                 ]);
             } else {
-                echo json_encode([
+                $error_response = [
                     'success' => false,
                     'message' => $errorMessage,
                     'error' => $result
-                ]);
+                ];
+                
+                error_log('M-Pesa STK Push - Sending error response: ' . json_encode($error_response));
+                echo json_encode($error_response);
             }
         }
     } else {

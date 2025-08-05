@@ -16,11 +16,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Only accept POST requests
+// Accept all methods for testing, but log non-POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
-    exit();
+    $logEntry = date('Y-m-d H:i:s') . " - Non-POST request received: " . $_SERVER['REQUEST_METHOD'] . "\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+    
+    // For testing purposes, allow GET requests but log them
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Callback endpoint is accessible',
+            'method' => 'GET',
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
+        exit();
+    }
 }
 
 // Get the raw POST data
@@ -69,8 +79,27 @@ $response = [
     'data' => $callbackData
 ];
 
-// Check if payment was successful
-if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' || $callbackData['ResultCode'] === 0)) {
+// Determine payment status based on result code
+$resultCode = $callbackData['ResultCode'] ?? null;
+$resultDesc = $callbackData['ResultDesc'] ?? 'Unknown';
+
+// Define status based on result code
+if ($resultCode === '0' || $resultCode === 0) {
+    $status = 'completed';
+    $response['payment_status'] = 'success';
+} elseif ($resultCode === '4999' || $resultCode === 4999) {
+    $status = 'processing';
+    $response['payment_status'] = 'processing';
+} elseif (in_array($resultCode, ['1032', '1037', '1039'])) {
+    $status = 'failed';
+    $response['payment_status'] = 'failed';
+} else {
+    $status = 'failed';
+    $response['payment_status'] = 'failed';
+}
+
+// Handle successful payments
+if ($status === 'completed') {
     $response['payment_status'] = 'success';
     
     // Extract data from CallbackMetadata if present
@@ -141,7 +170,7 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
                 
                 // Update the payment request status with optimistic locking
                 $updateQuery = "UPDATE mpesa_payment_requests SET 
-                    status = 'completed',
+                    status = ?,
                     result_code = ?,
                     result_desc = ?,
                     mpesa_receipt_number = ?,
@@ -152,6 +181,7 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
                 
                 $stmt = $pdo->prepare($updateQuery);
                 $result = $stmt->execute([
+                    $status,
                     $resultCode,
                     $resultDesc,
                     $mpesaReceiptNumber,
@@ -167,63 +197,72 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
                 
                 $bookingId = $existingPayment['booking_id'];
                 
-                // Update booking status with transaction safety
-                $updateBookingQuery = "UPDATE rental_bookings SET 
-                    status = 'confirmed',
-                    payment_status = 'paid',
-                    updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
+                // Only update booking status if payment is completed
+                if ($status === 'completed') {
+                    // Update booking status with transaction safety
+                    $updateBookingQuery = "UPDATE rental_bookings SET 
+                        status = 'confirmed',
+                        payment_status = 'paid',
+                        updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
+                    
+                    $stmt = $pdo->prepare($updateBookingQuery);
+                    $stmt->execute([$bookingId]);
+                    
+                    // Verify booking was updated
+                    if ($stmt->rowCount() === 0) {
+                        throw new Exception("Booking status update failed");
+                    }
                 
-                $stmt = $pdo->prepare($updateBookingQuery);
-                $stmt->execute([$bookingId]);
-                
-                // Verify booking was updated
-                if ($stmt->rowCount() === 0) {
-                    throw new Exception("Booking status update failed");
+                // Only record payment if payment is completed
+                if ($status === 'completed') {
+                    // Include payment tracking helper
+                    require_once 'includes/payment_tracking_helper.php';
+                    
+                    // Check if this is the first payment for this booking
+                    $hasFirstPayment = hasFirstPaymentBeenMade($pdo, $bookingId);
+                    
+                    if (!$hasFirstPayment) {
+                        // This is the initial payment (security deposit + first month rent)
+                        $breakdown = getInitialPaymentBreakdown($pdo, $bookingId);
+                        $securityDepositAmount = $breakdown['security_deposit'];
+                        $monthlyRentAmount = $breakdown['monthly_rent'];
+                        
+                        // Record initial payment
+                        recordInitialPayment(
+                            $pdo, 
+                            $bookingId, 
+                            $amount, 
+                            $securityDepositAmount, 
+                            $monthlyRentAmount, 
+                            'M-Pesa', 
+                            $checkoutRequestId, 
+                            $mpesaReceiptNumber, 
+                            'M-Pesa Initial Payment - Checkout Request: ' . $checkoutRequestId
+                        );
+                    } else {
+                        // This is a monthly rent payment
+                        $nextMonth = getNextUnpaidMonth($pdo, $bookingId);
+                        
+                        // Record monthly payment
+                        recordMonthlyPayment(
+                            $pdo, 
+                            $bookingId, 
+                            $nextMonth, 
+                            $amount, 
+                            'M-Pesa', 
+                            $checkoutRequestId, 
+                            $mpesaReceiptNumber, 
+                            'M-Pesa Monthly Payment - Checkout Request: ' . $checkoutRequestId
+                        );
+                    }
                 }
                 
-                // Include payment tracking helper
-                require_once 'includes/payment_tracking_helper.php';
-                
-                // Check if this is the first payment for this booking
-                $hasFirstPayment = hasFirstPaymentBeenMade($pdo, $bookingId);
-                
-                if (!$hasFirstPayment) {
-                    // This is the initial payment (security deposit + first month rent)
-                    $breakdown = getInitialPaymentBreakdown($pdo, $bookingId);
-                    $securityDepositAmount = $breakdown['security_deposit'];
-                    $monthlyRentAmount = $breakdown['monthly_rent'];
-                    
-                    // Record initial payment
-                    recordInitialPayment(
-                        $pdo, 
-                        $bookingId, 
-                        $amount, 
-                        $securityDepositAmount, 
-                        $monthlyRentAmount, 
-                        'M-Pesa', 
-                        $checkoutRequestId, 
-                        $mpesaReceiptNumber, 
-                        'M-Pesa Initial Payment - Checkout Request: ' . $checkoutRequestId
-                    );
+                if ($status === 'completed') {
+                    $logEntry = date('Y-m-d H:i:s') . " - Booking $bookingId updated to confirmed and monthly payment recorded\n";
                 } else {
-                    // This is a monthly rent payment
-                    $nextMonth = getNextUnpaidMonth($pdo, $bookingId);
-                    
-                    // Record monthly payment
-                    recordMonthlyPayment(
-                        $pdo, 
-                        $bookingId, 
-                        $nextMonth, 
-                        $amount, 
-                        'M-Pesa', 
-                        $checkoutRequestId, 
-                        $mpesaReceiptNumber, 
-                        'M-Pesa Monthly Payment - Checkout Request: ' . $checkoutRequestId
-                    );
+                    $logEntry = date('Y-m-d H:i:s') . " - Payment status updated to: $status for booking $bookingId\n";
                 }
-                
-                $logEntry = date('Y-m-d H:i:s') . " - Booking $bookingId updated to confirmed and monthly payment recorded\n";
                 file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
                 
                 // Commit the transaction
@@ -262,28 +301,26 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
     file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
     
 } else {
-    $response['payment_status'] = 'failed';
+    // Handle non-completed payments (processing, failed, etc.)
     $response['error_code'] = $callbackData['ResultCode'] ?? 'Unknown';
     $response['error_message'] = $callbackData['ResultDesc'] ?? 'Unknown error';
     
-    // Update payment request status to failed
+    // Update payment request status based on determined status
     try {
         $checkoutRequestId = $callbackData['CheckoutRequestID'] ?? null;
-        $resultCode = $callbackData['ResultCode'] ?? null;
-        $resultDesc = $callbackData['ResultDesc'] ?? null;
         
         if ($checkoutRequestId) {
             $updateQuery = "UPDATE mpesa_payment_requests SET 
-                status = 'failed',
+                status = ?,
                 result_code = ?,
                 result_desc = ?,
                 updated_at = CURRENT_TIMESTAMP
                 WHERE checkout_request_id = ?";
             
             $stmt = $pdo->prepare($updateQuery);
-            $stmt->execute([$resultCode, $resultDesc, $checkoutRequestId]);
+            $stmt->execute([$status, $resultCode, $resultDesc, $checkoutRequestId]);
             
-            $logEntry = date('Y-m-d H:i:s') . " - Payment request updated to failed\n";
+            $logEntry = date('Y-m-d H:i:s') . " - Payment request updated to $status\n";
             file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
         }
         
@@ -292,9 +329,9 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
         file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
     }
     
-    $logEntry = date('Y-m-d H:i:s') . " - Payment FAILED:\n";
-    $logEntry .= "Error Code: " . ($callbackData['ResultCode'] ?? 'Unknown') . "\n";
-    $logEntry .= "Error Message: " . ($callbackData['ResultDesc'] ?? 'Unknown error') . "\n";
+    $logEntry = date('Y-m-d H:i:s') . " - Payment $status:\n";
+    $logEntry .= "Result Code: " . ($callbackData['ResultCode'] ?? 'Unknown') . "\n";
+    $logEntry .= "Result Description: " . ($callbackData['ResultDesc'] ?? 'Unknown error') . "\n";
     $logEntry .= "CheckoutRequestID: " . ($callbackData['CheckoutRequestID'] ?? 'N/A') . "\n";
     $logEntry .= "----------------------------------------\n";
     file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);

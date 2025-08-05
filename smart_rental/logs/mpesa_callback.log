@@ -396,3 +396,441 @@ CheckoutRequestID: ws_CO_050820250006438712512358
 }
 ----------------------------------------
 2025-08-05 13:33:35 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 13:57:52 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e35908",
+            "CheckoutRequestID": "ws_CO_050820251457344712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH5214WP2S"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10713600, BasicAmount=107136.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250805145750
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-05 13:57:52 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 14:19:07 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e36116",
+            "CheckoutRequestID": "ws_CO_050820251518565712512358",
+            "ResultCode": 1032,
+            "ResultDesc": "Request Cancelled by user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:19:07 - Payment request updated to failed
+2025-08-05 14:19:07 - Payment FAILED:
+Error Code: 1032
+Error Message: Request Cancelled by user
+CheckoutRequestID: ws_CO_050820251518565712512358
+----------------------------------------
+2025-08-05 14:19:40 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8022759",
+            "CheckoutRequestID": "ws_CO_050820251519142712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:19:40 - Payment request updated to failed
+2025-08-05 14:19:40 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251519142712512358
+----------------------------------------
+2025-08-05 14:22:21 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e36148",
+            "CheckoutRequestID": "ws_CO_050820251521546712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:22:21 - Payment request updated to failed
+2025-08-05 14:22:21 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251521546712512358
+----------------------------------------
+2025-08-05 14:28:50 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "cb81-4fb1-82b1-057f3b6d21d96112",
+            "CheckoutRequestID": "ws_CO_050820251528289712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH581A4KXA"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10621000, BasicAmount=106210.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250805152847
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:28:50 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 14:32:49 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "cb81-4fb1-82b1-057f3b6d21d96153",
+            "CheckoutRequestID": "ws_CO_050820251532224712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:32:49 - Payment request updated to failed
+2025-08-05 14:32:49 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251532224712512358
+----------------------------------------
+2025-08-05 14:47:38 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd022510",
+            "CheckoutRequestID": "ws_CO_050820251547250712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH581DCHZ0"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10622700, BasicAmount=106227.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250805154737
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:47:38 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 14:49:49 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd022526",
+            "CheckoutRequestID": "ws_CO_050820251549222712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:49:49 - Payment request updated to failed
+2025-08-05 14:49:49 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251549222712512358
+----------------------------------------
+2025-08-05 14:50:16 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8023107",
+            "CheckoutRequestID": "ws_CO_050820251550150712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "DS timeout user cannot be reached"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:50:16 - Payment request updated to failed
+2025-08-05 14:50:16 - Payment FAILED:
+Error Code: 1037
+Error Message: DS timeout user cannot be reached
+CheckoutRequestID: ws_CO_050820251550150712512358
+----------------------------------------
+2025-08-05 14:55:04 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e36403",
+            "CheckoutRequestID": "ws_CO_050820251554378712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:55:04 - Payment request updated to failed
+2025-08-05 14:55:04 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251554378712512358
+----------------------------------------
+2025-08-05 14:56:37 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e36420",
+            "CheckoutRequestID": "ws_CO_050820251556354712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "DS timeout user cannot be reached"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:56:37 - Payment request updated to failed
+2025-08-05 14:56:37 - Payment FAILED:
+Error Code: 1037
+Error Message: DS timeout user cannot be reached
+CheckoutRequestID: ws_CO_050820251556354712512358
+----------------------------------------
+2025-08-05 14:58:02 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "cb81-4fb1-82b1-057f3b6d21d96340",
+            "CheckoutRequestID": "ws_CO_050820251557499712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH551F4S5H"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10625200, BasicAmount=106252.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250805155800
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:58:02 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 14:59:08 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd022799",
+            "CheckoutRequestID": "ws_CO_050820251558424712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 14:59:08 - Payment request updated to failed
+2025-08-05 14:59:08 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251558424712512358
+----------------------------------------
+2025-08-05 15:03:24 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd022942",
+            "CheckoutRequestID": "ws_CO_050820251602578712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 15:03:24 - Payment request updated to failed
+2025-08-05 15:03:24 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251602578712512358
+----------------------------------------
+2025-08-05 15:08:23 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "cb81-4fb1-82b1-057f3b6d21d96466",
+            "CheckoutRequestID": "ws_CO_050820251608170712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH581GXA30"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10621600, BasicAmount=106216.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250805160822
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-05 15:08:23 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 15:16:42 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd023202",
+            "CheckoutRequestID": "ws_CO_050820251616209712512358",
+            "ResultCode": 1032,
+            "ResultDesc": "Request Cancelled by user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 15:16:42 - Payment request updated to failed
+2025-08-05 15:16:42 - Payment FAILED:
+Error Code: 1032
+Error Message: Request Cancelled by user
+CheckoutRequestID: ws_CO_050820251616209712512358
+----------------------------------------
+2025-08-05 15:17:21 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e36614",
+            "CheckoutRequestID": "ws_CO_050820251617143712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH521IHXW6"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10622500, BasicAmount=106225.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250805161719
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-05 15:17:21 - Payment processing error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'callback_data' in 'field list'
+2025-08-05 15:19:27 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "cb81-4fb1-82b1-057f3b6d21d96547",
+            "CheckoutRequestID": "ws_CO_050820251619008712512358",
+            "ResultCode": 1037,
+            "ResultDesc": "No response from user"
+        }
+    }
+}
+----------------------------------------
+2025-08-05 15:19:27 - Payment request updated to failed
+2025-08-05 15:19:27 - Payment FAILED:
+Error Code: 1037
+Error Message: No response from user
+CheckoutRequestID: ws_CO_050820251619008712512358
+----------------------------------------

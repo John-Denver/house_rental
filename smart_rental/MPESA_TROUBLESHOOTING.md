@@ -1,132 +1,101 @@
-# M-Pesa STK Push Troubleshooting Guide
+# M-Pesa Integration Troubleshooting Guide
 
-## Issue: "Payment Failed - Unknown error occurred" before entering PIN
+## Current Issues Identified
 
-### Root Causes Identified:
+### 1. 403 Forbidden Error
+**Problem**: M-Pesa API returning 403 error with Incapsula security page
+**Cause**: Invalid or expired API credentials
+**Solution**: 
+- Get fresh credentials from Safaricom Developer Portal
+- Ensure your IP is whitelisted
+- Check if your account is active
 
-1. **Nested Callback Structure**: M-Pesa sends callbacks in a nested format that wasn't being handled properly
-2. **Expired/Invalid ngrok URL**: The callback URL might be using an expired ngrok tunnel
-3. **M-Pesa Test Environment Issues**: Test credentials might have limitations
+### 2. Callback URL HTTP 405 Error
+**Problem**: Callback URL returning "Method Not Allowed"
+**Cause**: The callback endpoint doesn't accept POST requests properly
+**Solution**: 
+- Test callback URL: `test_callback.php`
+- Ensure ngrok tunnel is active
+- Check if callback URL is accessible
 
-### Solutions Implemented:
+## Testing Steps
 
-#### 1. Fixed Callback Structure Handling ✅
-
-**File**: `mpesa_callback.php`
-**Issue**: M-Pesa sends callbacks in this format:
-```json
-{
-  "Body": {
-    "stkCallback": {
-      "MerchantRequestID": "...",
-      "CheckoutRequestID": "...",
-      "ResultCode": 1032,
-      "ResultDesc": "Request Cancelled by user"
-    }
-  }
-}
-```
-
-**Fix**: Added code to handle nested structure:
-```php
-// Handle nested callback structure
-if (isset($callbackData['Body']['stkCallback'])) {
-    $callbackData = $callbackData['Body']['stkCallback'];
-}
-```
-
-#### 2. Updated ngrok URL Configuration ✅
-
-**File**: `mpesa_config.php`
-**Issue**: Using expired ngrok URL
-**Fix**: Updated to use placeholder that needs to be updated with current ngrok URL
-
-#### 3. Enhanced Error Handling ✅
-
-**Files**: `mpesa_stk_push.php`, `booking_payment.php`
-**Improvements**:
-- Better error messages for specific M-Pesa error codes
-- More detailed logging
-- User-friendly error messages in the frontend
-
-### Steps to Fix Your Issue:
-
-#### Step 1: Update ngrok URL
-1. Start ngrok: `ngrok http 80`
-2. Copy the new URL (e.g., `https://abc123.ngrok-free.app`)
-3. Update `mpesa_config.php`:
-```php
-define('MPESA_CALLBACK_URL', 'https://your-new-ngrok-url.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
-```
-
-#### Step 2: Test M-Pesa Configuration
-Run the test script:
+### Step 1: Test Callback URL
 ```bash
-php test_mpesa_config.php
+# Test if callback URL is accessible
+curl -X POST https://71697fa889e3.ngrok-free.app/rental_system_bse/smart_rental/test_callback.php
 ```
 
-#### Step 3: Test STK Push
-Run the debug script:
-```bash
-php debug_mpesa_stk_push.php
-```
+### Step 2: Test M-Pesa API Credentials
+1. Go to: `test_mpesa_connection.php`
+2. Check if access token is obtained
+3. If 403 error persists, credentials need updating
 
-#### Step 4: Check Logs
-Monitor these log files:
-- `logs/mpesa_callback.log` - Callback responses
-- `logs/mpesa_debug.log` - STK push requests
+### Step 3: Manual Payment Testing
+1. Use: `manual_payment_status.php` for testing
+2. Make a payment and manually update status
+3. Verify booking status updates correctly
 
-### Common M-Pesa Error Codes:
+## Common Solutions
 
-| Code | Meaning | Solution |
-|------|---------|----------|
-| 0 | Success | Payment completed |
-| 1 | Insufficient funds | User needs more money in M-Pesa |
-| 1032 | Request cancelled by user | User cancelled the payment |
-| 1037 | Timeout | Request expired, try again |
-| 1038 | Transaction failed | Technical issue, try again |
-| 1001 | Invalid request | Check phone number and amount |
-| 1002 | Invalid credentials | Check M-Pesa API credentials |
-| 1003 | Invalid amount | Amount must be > 0 |
-| 1004 | Invalid phone number | Check phone number format |
+### For 403 Error:
+1. **Get Fresh Credentials**:
+   - Visit: https://developer.safaricom.co.ke/
+   - Create new app or regenerate credentials
+   - Update `MPESA_CONSUMER_KEY` and `MPESA_CONSUMER_SECRET`
 
-### Testing Checklist:
+2. **Whitelist Your IP**:
+   - Add your server IP to Safaricom whitelist
+   - For ngrok, use the ngrok IP
 
-- [ ] ngrok is running and accessible
-- [ ] Callback URL is updated with current ngrok URL
-- [ ] M-Pesa test credentials are valid
-- [ ] Phone number is in correct format (254XXXXXXXXX)
-- [ ] Amount is valid (> 0)
-- [ ] Network connection is stable
+3. **Check Account Status**:
+   - Ensure your Safaricom developer account is active
+   - Verify you have sufficient API credits
 
-### Debug Commands:
+### For Callback Issues:
+1. **Test Callback URL**:
+   - Visit: `test_callback.php` directly
+   - Should return JSON response
 
-```bash
-# Test configuration
-php test_mpesa_config.php
+2. **Check Ngrok Tunnel**:
+   - Ensure ngrok is running: `ngrok http 80`
+   - Update callback URL if tunnel changes
 
-# Test STK push
-php debug_mpesa_stk_push.php
+3. **Verify File Permissions**:
+   - Ensure `mpesa_callback.php` is accessible
+   - Check file permissions (644 or 755)
 
-# Check callback logs
-tail -f logs/mpesa_callback.log
+## Alternative Testing Approach
 
-# Check debug logs
-tail -f logs/mpesa_debug.log
-```
+Since M-Pesa API has issues, use manual testing:
 
-### If Still Having Issues:
+1. **Make Payment**: Complete payment on phone
+2. **Manual Update**: Go to `manual_payment_status.php`
+3. **Mark Complete**: Click "Mark Completed" for your payment
+4. **Verify**: Check booking status updates
 
-1. **Check ngrok tunnel**: Make sure ngrok is running and the URL is accessible
-2. **Verify M-Pesa credentials**: Test credentials might have expired
-3. **Check phone number**: Must be registered with M-Pesa
-4. **Test with small amount**: Try with KSh 1 first
-5. **Check network**: Ensure stable internet connection
+## Debug Tools Available
 
-### Production Considerations:
+1. **`test_mpesa_connection.php`** - Test API connectivity
+2. **`test_mpesa_status.php`** - Test payment status
+3. **`manual_payment_status.php`** - Manual status updates
+4. **`test_callback.php`** - Test callback URL
 
-- Use live M-Pesa credentials instead of test credentials
-- Use a proper domain instead of ngrok
-- Implement proper SSL certificates
-- Add rate limiting and security measures
-- Monitor payment logs regularly 
+## Next Steps
+
+1. **Get Fresh Credentials** from Safaricom
+2. **Test Callback URL** accessibility
+3. **Use Manual Testing** until API issues are resolved
+4. **Monitor Error Logs** for detailed debugging
+
+## Error Log Locations
+
+- **PHP Error Log**: Check your server's error log
+- **M-Pesa Logs**: `logs/mpesa_debug.log`
+- **Callback Logs**: `logs/mpesa_callback.log`
+
+## Contact Information
+
+If issues persist:
+- Safaricom Developer Support: https://developer.safaricom.co.ke/support
+- Check API documentation: https://developer.safaricom.co.ke/docs 

@@ -145,9 +145,15 @@ try {
         exit;
     }
 
+    if ($payment_request['status'] === 'processing') {
+        // Payment is in processing state - check with M-Pesa API to see if it's completed
+        error_log("Payment is in processing state for checkout_request_id: $checkout_request_id - checking with M-Pesa API");
+    }
+
     // If still pending, check with M-Pesa API
     $access_token = getMpesaAccessToken();
     if (!$access_token) {
+        error_log("Failed to get M-Pesa access token for checkout_request_id: $checkout_request_id");
         http_response_code(500);
         ob_clean();
         header('Content-Type: application/json');
@@ -196,8 +202,16 @@ try {
             $result_code = $result['ResultCode'];
             $result_desc = $result['ResultDesc'];
             
-            // Update payment request status based on result
-            $status = ($result_code === 0) ? 'completed' : 'failed';
+            // Update payment request status based on result code
+            if ($result_code === 0) {
+                $status = 'completed';
+            } elseif ($result_code === '4999' || $result_code === 4999) {
+                $status = 'processing';
+            } elseif (in_array($result_code, ['1032', '1037', '1039'])) {
+                $status = 'failed';
+            } else {
+                $status = 'failed';
+            }
             
             $stmt = $conn->prepare("
                 UPDATE mpesa_payment_requests 
@@ -212,14 +226,14 @@ try {
             $stmt->execute();
 
             // If payment was successful, update booking status
-            if ($result_code === 0) {
+            if ($status === 'completed') {
                 // Log successful payment detection
                 error_log("Payment successful detected via API for checkout_request_id: $checkout_request_id");
                 
-                // Update booking status to paid
+                // Update booking status to confirmed and payment_status to paid
                 $stmt = $conn->prepare("
                     UPDATE rental_bookings 
-                    SET status = 'paid', updated_at = NOW() 
+                    SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() 
                     WHERE id = ?
                 ");
                 $stmt->bind_param('i', $payment_request['booking_id']);
@@ -294,6 +308,17 @@ try {
                         'message' => 'Payment completed successfully'
                     ]
                 ]);
+            } elseif ($status === 'processing') {
+                // Payment is still being processed
+                ob_clean();
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'status' => 'processing',
+                        'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt.'
+                    ]
+                ]);
             } else {
                 // Check if it's a cancelled payment
                 $isCancelled = ($result_code === '1032' || $result_code === '1039');
@@ -315,62 +340,94 @@ try {
         } else {
             // No ResultCode in response - this usually means the payment is still pending
             error_log("No ResultCode in M-Pesa response - payment still pending for checkout_request_id: $checkout_request_id");
+            error_log("Full M-Pesa response: " . json_encode($result));
             
-            // Still pending - check if it's been too long (STK push expires after 3 minutes)
-            $requestTime = strtotime($payment_request['created_at']);
-            $currentTime = time();
-            $timeDiff = $currentTime - $requestTime;
-            
-            if ($timeDiff > 180) { // 3 minutes - give more time for user to complete payment
-                // STK push has likely expired
-                $stmt = $conn->prepare("
-                    UPDATE mpesa_payment_requests 
-                    SET 
-                        result_code = '1037',
-                        result_desc = 'STK Push expired - no response received after 3 minutes',
-                        status = 'failed',
-                        updated_at = NOW()
-                    WHERE checkout_request_id = ?
-                ");
-                $stmt->bind_param('s', $checkout_request_id);
-                $stmt->execute();
+            // Check if the response indicates the service is processed successfully (this is normal for pending payments)
+            if (isset($result['ResultDesc']) && strpos(strtolower($result['ResultDesc']), 'processed successfully') !== false) {
+                // This is a normal response for pending payments - not an error
+                error_log("M-Pesa indicates service processed successfully - payment still pending");
                 
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'data' => [
-                        'status' => 'failed',
-                        'message' => 'Payment request expired. Please try again.',
-                        'error_code' => '1037',
-                        'is_expired' => true
-                    ]
-                ]);
+                // Still pending - check if it's been too long (STK push expires after 5 minutes)
+                $requestTime = strtotime($payment_request['created_at']);
+                $currentTime = time();
+                $timeDiff = $currentTime - $requestTime;
+                
+                if ($timeDiff > 300) { // 5 minutes - give more time for user to complete payment
+                    // STK push has likely expired
+                    $stmt = $conn->prepare("
+                        UPDATE mpesa_payment_requests 
+                        SET 
+                            result_code = '1037',
+                            result_desc = 'STK Push expired - no response received after 5 minutes',
+                            status = 'failed',
+                            updated_at = NOW()
+                        WHERE checkout_request_id = ?
+                    ");
+                    $stmt->bind_param('s', $checkout_request_id);
+                    $stmt->execute();
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'data' => [
+                            'status' => 'failed',
+                            'message' => 'Payment request expired. Please try again.',
+                            'error_code' => '1037',
+                            'is_expired' => true
+                        ]
+                    ]);
+                } else {
+                    // Still pending - provide encouraging message
+                    $timeRemaining = 300 - $timeDiff;
+                    $minutes = floor($timeRemaining / 60);
+                    $seconds = $timeRemaining % 60;
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'data' => [
+                            'status' => 'processing',
+                            'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt and complete the payment.',
+                            'time_remaining' => $timeRemaining,
+                            'time_formatted' => sprintf('%02d:%02d', $minutes, $seconds)
+                        ]
+                    ]);
+                }
             } else {
-                // Still pending - provide encouraging message
-                $timeRemaining = 180 - $timeDiff;
-                $minutes = floor($timeRemaining / 60);
-                $seconds = $timeRemaining % 60;
-                
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'data' => [
-                        'status' => 'pending',
-                        'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt and complete the payment.',
-                        'time_remaining' => $timeRemaining,
-                        'time_formatted' => sprintf('%02d:%02d', $minutes, $seconds)
-                    ]
-                ]);
+                // Check if there's an actual error in the response
+                if (isset($result['errorCode']) || isset($result['errorMessage'])) {
+                    error_log("M-Pesa API Error - ErrorCode: " . ($result['errorCode'] ?? 'none') . ", ErrorMessage: " . ($result['errorMessage'] ?? 'none'));
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'M-Pesa API Error: ' . ($result['errorMessage'] ?? 'Unknown error'),
+                        'error_code' => $result['errorCode'] ?? 'unknown'
+                    ]);
+                } else {
+                    // Unknown response format
+                    error_log("Unknown M-Pesa response format: " . json_encode($result));
+                    
+                    ob_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Unable to determine payment status. Please try again or contact support.',
+                        'response' => $result
+                    ]);
+                }
             }
         }
     } else {
+        error_log("M-Pesa STK Query failed - HTTP Code: $httpCode, Response: $response");
         ob_clean();
         header('Content-Type: application/json');
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to check payment status',
+            'message' => 'Unable to determine payment status. Please try again or contact support.',
             'http_code' => $httpCode,
             'response' => $response
         ]);

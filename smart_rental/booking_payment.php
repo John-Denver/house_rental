@@ -496,6 +496,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 120000);
                 
+            } else if (
+                (result.error && (result.error.ResultCode == 4999 || result.error.ResultCode == '4999')) ||
+                (result.message && result.message.toLowerCase().includes('still under processing')) ||
+                (result.data && result.data.status === 'processing')
+            ) {
+                // Show "processing" UI, not "failed"
+                processingStatus.style.display = 'none';
+                successStatus.style.display = 'block';
+                checkStatusBtn.style.display = 'inline-block';
+                document.getElementById('modalTitle').textContent = 'Payment Processing';
+                successStatus.innerHTML = `
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                    <h6 class="text-warning">Payment Processing</h6>
+                    <p class="text-muted">Your payment is still being processed by M-Pesa. Please check your phone and wait for the prompt. You can check payment status after a few seconds.</p>
+                `;
+                // Start polling for payment status
+                pollPaymentStatus();
+                return;
             } else if (result.message && result.message.includes('Invalid JSON data')) {
                 // This is a server-side parsing error, not a payment failure
                 console.log('Server parsing error, retrying...');
@@ -670,6 +688,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
                     }, 3000);
+                    
+                } else if (result.success && result.data.status === 'processing') {
+                    // Payment is still being processed - continue polling
+                    console.log('Payment still processing - continuing to poll');
+                    // Update the message to show it's still processing
+                    successStatus.innerHTML = `
+                        <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                        <h6 class="text-warning">Payment Processing</h6>
+                        <p class="text-muted">Your payment is still being processed by M-Pesa.</p>
+                        <p class="text-muted small">${result.data.message || 'Please check your phone for the M-Pesa prompt.'}</p>
+                        ${result.data.time_formatted ? `<p class="text-muted small">Time remaining: ${result.data.time_formatted}</p>` : ''}
+                    `;
                     
                 } else if (result.success && (result.data.status === 'failed' || result.data.status === 'cancelled')) {
                     clearInterval(pollInterval);
