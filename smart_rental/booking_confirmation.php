@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/db.php';
 require_once 'controllers/BookingController.php';
+require_once 'mpesa_config.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -18,6 +19,11 @@ if (!isset($_GET['id'])) {
 $bookingId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $bookingController = new BookingController($conn);
 
+// Check for payment success/failure messages
+$paymentStatus = $_GET['status'] ?? '';
+$mpesaReceipt = $_GET['receipt'] ?? '';
+$amountPaid = $_GET['amount'] ?? 0;
+
 try {
     // Get booking details
     $booking = $bookingController->getBookingDetails($bookingId);
@@ -25,6 +31,22 @@ try {
     // Verify that the current user is the one who made the booking
     if ($booking['user_id'] != $_SESSION['user_id']) {
         throw new Exception('Unauthorized access to this booking');
+    }
+    
+    // Check if this is a successful M-Pesa payment callback
+    if ($paymentStatus === 'success' && !empty($mpesaReceipt)) {
+        // Update booking payment status
+        $updateSql = "UPDATE rental_bookings SET payment_status = 'completed', payment_method = 'M-Pesa', 
+                      payment_reference = ?, payment_date = NOW() WHERE id = ?";
+        $stmt = $conn->prepare($updateSql);
+        $stmt->bind_param('si', $mpesaReceipt, $bookingId);
+        $stmt->execute();
+        
+        // Refresh booking data
+        $booking = $bookingController->getBookingDetails($bookingId);
+        
+        // Set success message
+        $_SESSION['success'] = "Payment of KSh " . number_format($amountPaid, 2) . " received successfully!";
     }
     
 } catch (Exception $e) {
@@ -45,11 +67,29 @@ include 'includes/header.php';
                 <div class="card-body p-5">
                     <!-- Success Icon -->
                     <div class="text-center mb-4">
-                        <div class="bg-success bg-opacity-10 d-inline-flex p-3 rounded-circle mb-3">
-                            <i class="fas fa-check-circle fa-4x text-success"></i>
-                        </div>
-                        <h2 class="fw-bold">Booking Confirmed!</h2>
-                        <p class="text-muted">Your booking has been received and is being processed.</p>
+                        <?php if ($paymentStatus === 'success'): ?>
+                            <div class="bg-success bg-opacity-10 d-inline-flex p-3 rounded-circle mb-3">
+                                <i class="fas fa-check-circle fa-4x text-success"></i>
+                            </div>
+                            <h2 class="fw-bold">Payment Successful!</h2>
+                            <p class="text-muted">Your payment of KSh <?php echo number_format($amountPaid, 2); ?> has been received.</p>
+                            <div class="alert alert-success">
+                                <i class="fas fa-receipt me-2"></i>
+                                <strong>M-Pesa Receipt:</strong> <?php echo htmlspecialchars($mpesaReceipt); ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="bg-<?php echo ($booking['payment_status'] === 'completed') ? 'success' : 'warning'; ?> bg-opacity-10 d-inline-flex p-3 rounded-circle mb-3">
+                                <i class="fas fa-<?php echo ($booking['payment_status'] === 'completed') ? 'check-circle' : 'clock'; ?> fa-4x text-<?php echo ($booking['payment_status'] === 'completed') ? 'success' : 'warning'; ?>"></i>
+                            </div>
+                            <h2 class="fw-bold">Booking <?php echo ($booking['payment_status'] === 'completed') ? 'Confirmed' : 'Pending Payment'; ?>!</h2>
+                            <p class="text-muted">
+                                <?php if ($booking['payment_status'] === 'completed'): ?>
+                                    Your booking and payment have been confirmed.
+                                <?php else: ?>
+                                    Your booking is pending payment confirmation.
+                                <?php endif; ?>
+                            </p>
+                        <?php endif; ?>
                     </div>
                     
                     <!-- Booking Details -->
@@ -99,29 +139,72 @@ include 'includes/header.php';
                                             <td class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'], 2); ?></td>
                                         </tr>
                                         <tr>
-                                            <td>Security Deposit (2 months)</td>
-                                            <td class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'] * 2, 2); ?></td>
+                                            <td>Security Deposit</td>
+                                            <td class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'], 2); ?></td>
                                         </tr>
                                         <tr class="table-active">
                                             <th>Total Amount Due</th>
-                                            <th class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'] * 3, 2); ?></th>
+                                            <th class="text-end"><?php echo 'KSh ' . number_format($booking['property_price'] * 2, 2); ?></th>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             
-                            <div class="alert alert-info">
-                                <h6><i class="fas fa-info-circle me-2"></i>Payment Instructions</h6>
-                                <p class="mb-1">Please make payment to the following account:</p>
-                                <p class="mb-1">Bank: Equity Bank Kenya</p>
-                                <p class="mb-1">Account Name: Smart Rental Solutions</p>
-                                <p class="mb-1">Account Number: 1234567890</p>
-                                <p class="mb-0">Reference: BOOKING-<?php echo str_pad($booking['id'], 6, '0', STR_PAD_LEFT); ?></p>
-                            </div>
+                            <?php if ($booking['payment_status'] !== 'completed'): ?>
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Payment Instructions</h6>
+                                    <p class="mb-1">Please make payment using one of the following methods:</p>
+                                    
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>M-Pesa</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <ol class="mb-0">
+                                                <li>Go to M-Pesa on your phone</li>
+                                                <li>Select <strong>Lipa na M-Pesa</strong></li>
+                                                <li>Select <strong>Buy Goods and Services</strong></li>
+                                                <li>Enter Till Number: <strong>3745884</strong></li>
+                                                <li>Enter Amount: <strong>KSh <?php echo number_format($booking['property_price'] * 2, 2); ?></strong></li>
+                                                <li>Enter your M-Pesa PIN</li>
+                                                <li>Confirm the payment</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0"><i class="fas fa-university me-2"></i>Bank Transfer</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-1">Bank: <strong>Equity Bank</strong></p>
+                                            <p class="mb-1">Account Name: <strong>Smart Rental Solutions</strong></p>
+                                            <p class="mb-1">Account Number: <strong>1234567890</strong></p>
+                                            <p class="mb-0">Reference: <strong>BOOKING-<?php echo str_pad($booking['id'], 6, '0', STR_PAD_LEFT); ?></strong></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-warning">
+                                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Important Notice</h6>
+                                    <p class="mb-0">
+                                        Your booking will be confirmed once payment is received. 
+                                        Please upload your payment proof after completing the transaction.
+                                    </p>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-success">
+                                    <h6><i class="fas fa-check-circle me-2"></i>Payment Confirmed</h6>
+                                    <p class="mb-0">
+                                        Thank you for your payment! Your booking is now confirmed.
+                                        A confirmation email has been sent to your registered email address.
+                                    </p>
+                                </div>
+                            <?php endif; ?>
                             
-                            <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#uploadPaymentProof">
+                            <!-- <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#uploadPaymentProof">
                                 <i class="fas fa-upload me-2"></i>Upload Payment Proof
-                            </button>
+                            </button> -->
                         </div>
                     </div>
                     

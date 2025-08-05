@@ -25,11 +25,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get POST data
-$input = json_decode(file_get_contents('php://input'), true);
+$raw_input = file_get_contents('php://input');
+$input = json_decode($raw_input, true);
+
+// Log the raw input for debugging
+error_log('M-Pesa STK Push - Raw input: ' . $raw_input);
+error_log('M-Pesa STK Push - Parsed input: ' . json_encode($input));
 
 if (!$input) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid JSON data']);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Invalid JSON data',
+        'raw_input' => $raw_input,
+        'json_error' => json_last_error_msg()
+    ]);
     exit;
 }
 
@@ -163,16 +173,76 @@ try {
                 ]
             ]);
         } else {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Failed to initiate STK Push',
-                'error' => $result
-            ]);
+            // Check for specific M-Pesa error codes
+            $errorMessage = 'Failed to initiate STK Push';
+            $isProcessing = false;
+            
+            if (isset($result['errorCode'])) {
+                $errorMessage = getMpesaErrorMessage($result['errorCode']);
+                // Check if this is a "still processing" error
+                if (in_array($result['errorCode'], ['2001', '2002', '2003', '2004'])) {
+                    $isProcessing = true;
+                }
+            } elseif (isset($result['errorMessage'])) {
+                $errorMessage = $result['errorMessage'];
+                // Check if message contains processing keywords
+                if (strpos(strtolower($result['errorMessage']), 'processing') !== false) {
+                    $isProcessing = true;
+                }
+            }
+            
+            if ($isProcessing) {
+                // This is actually a success case - STK push was sent but still processing
+                // Store a placeholder request so user can check status
+                $placeholder_id = 'PROC_' . time() . '_' . rand(1000, 9999);
+                
+                $stmt = $conn->prepare("
+                    INSERT INTO mpesa_payment_requests (
+                        booking_id, checkout_request_id, phone_number, amount, 
+                        reference, status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, 'processing', NOW())
+                ");
+                $stmt->bind_param('issds', 
+                    $booking_id, 
+                    $placeholder_id, 
+                    $phone_number, 
+                    $amount, 
+                    $reference
+                );
+                $stmt->execute();
+                
+                echo json_encode([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'processing' => true,
+                    'data' => [
+                        'checkout_request_id' => $placeholder_id,
+                        'reference' => $reference,
+                        'amount' => $amount,
+                        'phone_number' => $phone_number
+                    ]
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'error' => $result
+                ]);
+            }
         }
     } else {
+        $errorMessage = 'Failed to connect to M-Pesa API';
+        if ($httpCode === 401) {
+            $errorMessage = 'Authentication failed - check M-Pesa credentials';
+        } elseif ($httpCode === 403) {
+            $errorMessage = 'Access denied - check M-Pesa permissions';
+        } elseif ($httpCode === 500) {
+            $errorMessage = 'M-Pesa server error - try again later';
+        }
+        
         echo json_encode([
             'success' => false,
-            'message' => 'Failed to connect to M-Pesa API',
+            'message' => $errorMessage,
             'http_code' => $httpCode,
             'response' => $response
         ]);

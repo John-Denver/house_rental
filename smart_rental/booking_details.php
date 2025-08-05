@@ -33,15 +33,47 @@ try {
     $hasReview = $bookingController->hasBookingReview($bookingId);
     $canReview = $booking['status'] === 'completed' && !$hasReview;
     
+    // Get payment information
+    $paymentStatus = 'pending';
+    $paymentDate = null;
+    if (!empty($payments)) {
+        $latestPayment = $payments[0]; // First payment is the latest due to DESC ordering
+        $paymentStatus = $latestPayment['status'] ?? 'pending';
+        $paymentDate = $latestPayment['payment_date'] ?? null;
+    }
+    
+    // Add payment information to booking array with fallbacks
+    $booking['payment_status'] = $paymentStatus;
+    $booking['payment_date'] = $paymentDate;
+    
+    // Ensure all required fields have fallback values
+    $booking['property_price'] = $booking['property_price'] ?? 0;
+    $booking['security_deposit'] = $booking['security_deposit'] ?? 0;
+    $booking['start_date'] = $booking['start_date'] ?? date('Y-m-d');
+    $booking['end_date'] = $booking['end_date'] ?? date('Y-m-d', strtotime('+1 year'));
+    
 } catch (Exception $e) {
     $_SESSION['error'] = $e->getMessage();
     header('Location: my_bookings.php');
     exit();
 }
 
-// Include header
-$pageTitle = 'Booking #' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT);
-include 'includes/header.php';
+    // Include header
+    $pageTitle = 'Booking #' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT);
+    include 'includes/header.php';
+    
+    // Debug information (remove in production)
+    if (isset($_GET['debug']) && $_SESSION['is_admin']) {
+        echo '<div class="alert alert-info">';
+        echo '<strong>Debug Info:</strong><br>';
+        echo 'Payment Status: ' . ($booking['payment_status'] ?? 'undefined') . '<br>';
+        echo 'Payment Date: ' . ($booking['payment_date'] ?? 'null') . '<br>';
+        echo 'Number of Payments: ' . count($payments) . '<br>';
+        if (!empty($payments)) {
+            echo 'Latest Payment: ' . json_encode($payments[0]) . '<br>';
+        }
+        echo '</div>';
+    }
 ?>
 
 <div class="container py-5">
@@ -68,7 +100,7 @@ include 'includes/header.php';
             <i class="fas fa-info-circle me-2"></i>
             Your booking is pending approval from the property owner.
         </div>
-    <?php elseif ($booking['status'] === 'confirmed' && $booking['payment_status'] !== 'paid'): ?>
+    <?php elseif ($booking['status'] === 'confirmed' && ($booking['payment_status'] !== 'completed' && $booking['payment_status'] !== 'paid')): ?>
         <div class="alert alert-info">
             <i class="fas fa-credit-card me-2"></i>
             Your booking is confirmed! Please complete your payment.
@@ -175,9 +207,9 @@ include 'includes/header.php';
                             ],
                             [
                                 'icon' => 'money-bill-wave',
-                                'date' => $booking['payment_status'] === 'paid' ? $booking['payment_date'] : null,
-                                'title' => $booking['payment_status'] === 'paid' ? 'Payment Completed' : 'Payment Pending',
-                                'description' => $booking['payment_status'] === 'paid' 
+                                'date' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') && !empty($booking['payment_date']) ? $booking['payment_date'] : null,
+                                'title' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') ? 'Payment Completed' : 'Payment Pending',
+                                'description' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') 
                                     ? 'Payment of KSh ' . number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2) . ' received.'
                                     : 'Complete your payment to secure your booking.'
                             ]
@@ -185,6 +217,11 @@ include 'includes/header.php';
                         
                         foreach ($timeline as $event): 
                             if (!$event['date'] && $event['title'] !== 'Booking Requested') continue;
+                            // Skip payment event if no payment date and status is not completed/paid
+                            if ($event['icon'] === 'money-bill-wave' && !$event['date'] && 
+                                ($booking['payment_status'] !== 'completed' && $booking['payment_status'] !== 'paid')) {
+                                continue;
+                            }
                         ?>
                             <div class="timeline-item">
                                 <div class="timeline-icon">
@@ -242,7 +279,7 @@ include 'includes/header.php';
                         <span>KSh <?php echo number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
                     </div>
                     
-                    <?php if ($booking['payment_status'] !== 'paid' && $booking['status'] === 'confirmed'): ?>
+                    <?php if (($booking['payment_status'] !== 'completed' && $booking['payment_status'] !== 'paid') && $booking['status'] === 'confirmed'): ?>
                         <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-success w-100 mt-3">
                             <i class="fas fa-credit-card me-1"></i> Make Payment
                         </a>

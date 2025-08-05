@@ -130,12 +130,14 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                             </div>
                         </div>
                         <div class="col-12 col-sm-6 col-xl mb-3 mb-xl-0">
-                            <div class="card bg-warning text-dark h-100">
-                                <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
-                                    <h5 class="card-title mb-2">Pending Rentals</h5>
-                                    <p class="card-text display-6 mb-0"><?php echo $rental_stats['pending_rentals']; ?></p>
+                            <a href="bookings.php" class="text-decoration-none">
+                                <div class="card bg-warning text-dark h-100 hover-shadow">
+                                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
+                                        <h5 class="card-title mb-2">Pending Rentals</h5>
+                                        <p class="card-text display-6 mb-0"><?php echo $rental_stats['pending_rentals']; ?></p>
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                         <div class="col-12 col-sm-6 col-xl mb-3 mb-xl-0">
                             <div class="card bg-danger text-white h-100">

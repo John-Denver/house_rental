@@ -336,19 +336,41 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 checkoutRequestId = result.data.checkout_request_id;
                 
-                // Show success status
-                processingStatus.style.display = 'none';
-                successStatus.style.display = 'block';
-                checkStatusBtn.style.display = 'block';
+                // Show processing status with instructions
+                processingStatus.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-mobile-alt fa-4x text-primary mb-3"></i>
+                        <h5>Check Your Phone</h5>
+                        <p class="mb-3">We've sent an M-Pesa payment request to your phone.</p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Please enter your M-Pesa PIN on your phone to complete the payment.
+                        </div>
+                    </div>
+                `;
                 
                 // Update modal title
-                document.getElementById('modalTitle').textContent = 'Payment Initiated';
+                document.getElementById('modalTitle').textContent = 'Complete Payment on Your Phone';
                 
-                // Start polling for payment status
-                pollPaymentStatus();
+                // Start polling for payment status after a short delay
+                setTimeout(() => {
+                    pollPaymentStatus();
+                }, 5000); // Wait 5 seconds before starting to poll
                 
             } else {
-                throw new Error(result.message || 'Payment initiation failed');
+                // Only throw error if the STK push itself failed
+                if (result.errorCode) {
+                    // Get user-friendly error message
+                    let errorMsg = result.message || 'Payment initiation failed';
+                    if (result.errorCode === '500.001.1001') {
+                        errorMsg = 'Invalid phone number. Please check and try again.';
+                    } else if (result.errorCode === '400.002.02') {
+                        errorMsg = 'Invalid amount. Please try again or contact support.';
+                    }
+                    throw new Error(errorMsg);
+                } else {
+                    throw new Error(result.message || 'Payment initiation failed');
+                }
             }
             
         } catch (error) {
@@ -372,7 +394,43 @@ document.addEventListener('DOMContentLoaded', function() {
     function pollPaymentStatus() {
         if (!checkoutRequestId) return;
         
+        // Show polling indicator
+        if (document.getElementById('pollingIndicator')) {
+            document.getElementById('pollingIndicator').remove();
+        }
+        
+        const pollingIndicator = document.createElement('div');
+        pollingIndicator.id = 'pollingIndicator';
+        pollingIndicator.className = 'text-center mt-3';
+        pollingIndicator.innerHTML = `
+            <div class="spinner-border text-primary spinner-border-sm me-2" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="text-muted small">Waiting for payment confirmation...</span>
+        `;
+        processingStatus.appendChild(pollingIndicator);
+        
+        let pollCount = 0;
+        const maxPolls = 30; // 30 polls * 5 seconds = 2.5 minutes max
+        
         const pollInterval = setInterval(async function() {
+            pollCount++;
+            
+            // Stop polling after max attempts
+            if (pollCount > maxPolls) {
+                clearInterval(pollInterval);
+                processingStatus.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                        <h6>Payment Taking Longer Than Expected</h6>
+                        <p class="text-muted">Your payment is still being processed. You can check your M-Pesa statement or try again later.</p>
+                        <button class="btn btn-outline-primary mt-2" onclick="window.location.reload()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh Status
+                        </button>
+                    </div>
+                `;
+                return;
+            }
             try {
                 const response = await fetch('mpesa_payment_status.php', {
                     method: 'POST',

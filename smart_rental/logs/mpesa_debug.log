@@ -1,0 +1,146 @@
+2025-08-04 22:50:59 - Starting M-Pesa STK Push Debug Test
+{
+    "booking_id": 1,
+    "phone_number": "254700000000",
+    "amount": 100
+}
+----------------------------------------
+2025-08-04 22:50:59 - Getting M-Pesa access token...
+----------------------------------------
+2025-08-04 22:50:59 - Access token obtained successfully
+{
+    "token": "ENVjp9K8EwLvluI9Eu8I..."
+}
+----------------------------------------
+2025-08-04 22:50:59 - Generating M-Pesa password...
+----------------------------------------
+2025-08-04 22:50:59 - Password generated
+{
+    "password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMjUwODA0MjI1MDU5",
+    "timestamp": "20250804225059"
+}
+----------------------------------------
+2025-08-04 22:50:59 - Formatting phone number...
+----------------------------------------
+2025-08-04 22:50:59 - Phone number formatted
+{
+    "original": "254700000000",
+    "formatted": "254700000000"
+}
+----------------------------------------
+2025-08-04 22:50:59 - Reference generated
+{
+    "reference": "RENTAL_1_1754340659"
+}
+----------------------------------------
+2025-08-04 22:50:59 - STK Push request data prepared
+{
+    "BusinessShortCode": "174379",
+    "Password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMjUwODA0MjI1MDU5",
+    "Timestamp": "20250804225059",
+    "TransactionType": "CustomerPayBillOnline",
+    "Amount": 100,
+    "PartyA": "254700000000",
+    "PartyB": "174379",
+    "PhoneNumber": "254700000000",
+    "CallBackURL": "https:\/\/7ffae7789977.ngrok-free.app\/rental_system_bse\/smart_rental\/mpesa_callback.php",
+    "AccountReference": "RENTAL_1_1754340659",
+    "TransactionDesc": "Rental Payment - Test"
+}
+----------------------------------------
+2025-08-04 22:50:59 - Making STK Push request to M-Pesa API...
+----------------------------------------
+2025-08-04 22:51:00 - CURL Verbose Output
+{
+    "output": "*   Trying 45.223.139.195:443...\n* Connected to sandbox.safaricom.co.ke (45.223.139.195) port 443\n* ALPN: curl offers h2,http\/1.1\n* SSL connection using TLSv1.3 \/ TLS_AES_128_GCM_SHA256\n* ALPN: server accepted h2\n* Server certificate:\n*  subject: C=KE; L=Nairobi; O=Safaricom PLC; CN=sandbox.safaricom.co.ke\n*  start date: Oct  8 00:00:00 2024 GMT\n*  expire date: Oct  7 23:59:59 2025 GMT\n*  subjectAltName: host \"sandbox.safaricom.co.ke\" matched cert's \"sandbox.safaricom.co.ke\"\n*  issuer: C=US; O=DigiCert Inc; CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1\n*  SSL certificate verify result: self-signed certificate in certificate chain (19), continuing anyway.\n* using HTTP\/2\n* [HTTP\/2] [1] OPENED stream for https:\/\/sandbox.safaricom.co.ke\/mpesa\/stkpush\/v1\/processrequest\n* [HTTP\/2] [1] [:method: POST]\n* [HTTP\/2] [1] [:scheme: https]\n* [HTTP\/2] [1] [:authority: sandbox.safaricom.co.ke]\n* [HTTP\/2] [1] [:path: \/mpesa\/stkpush\/v1\/processrequest]\n* [HTTP\/2] [1] [accept: *\/*]\n* [HTTP\/2] [1] [authorization: Bearer ENVjp9K8EwLvluI9Eu8IoKhO8wXz]\n* [HTTP\/2] [1] [content-type: application\/json]\n* [HTTP\/2] [1] [content-length: 501]\n> POST \/mpesa\/stkpush\/v1\/processrequest HTTP\/2\r\nHost: sandbox.safaricom.co.ke\r\nAccept: *\/*\r\nAuthorization: Bearer ENVjp9K8EwLvluI9Eu8IoKhO8wXz\r\nContent-Type: application\/json\r\nContent-Length: 501\r\n\r\n* old SSL session ID is stale, removing\n< HTTP\/2 200 \r\n< cache-control: no-store\r\n< content-type: application\/json;charset=UTF-8\r\n< x-request-id: f828fcba-46e8-4697-a923-b86bada8cb83\r\n< content-length: 338\r\n< date: Mon, 04 Aug 2025 20:51:00 GMT\r\n< set-cookie: visid_incap_2742146=O1fRafxWQ8K4G4dDHjvEaTMdkWgAAAAAQUIPAAAAAACmqeH6dfrPhgnROUqOfovN; expires=Tue, 04 Aug 2026 15:15:58 GMT; HttpOnly; path=\/; Domain=.safaricom.co.ke; Secure; SameSite=None\r\n< set-cookie: incap_ses_899_2742146=FX64KJ9FZGhpoyn6zON5DDMdkWgAAAAAiX2SxP7BTDTkeyly8k2xRQ==; path=\/; Domain=.safaricom.co.ke; Secure; SameSite=None\r\n< strict-transport-security: max-age=31536000\r\n< x-cdn: Imperva\r\n< x-iinfo: 54-59440854-59440873 NNNN CT(55 54 0) RT(1754340659953 78) q(0 0 1 -1) r(4 4) U6\r\n< \r\n* Connection #0 to host sandbox.safaricom.co.ke left intact\n"
+}
+----------------------------------------
+2025-08-04 22:51:00 - M-Pesa API Response
+{
+    "http_code": 200,
+    "curl_error": "",
+    "response": "{\n            \"MerchantRequestID\":\"d2c6-4205-830c-9d5d446e2e8011550\",\n            \"CheckoutRequestID\":\"ws_CO_040820252351002700000000\",\n            \"ResponseCode\": \"0\",\n            \"ResponseDescription\":\"Success. Request accepted for processing\",\n            \"CustomerMessage\":\"Success. Request accepted for processing\"\n        }\n        "
+}
+----------------------------------------
+2025-08-04 22:51:00 - SUCCESS: STK Push initiated successfully
+{
+    "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8011550",
+    "CheckoutRequestID": "ws_CO_040820252351002700000000",
+    "ResponseCode": "0",
+    "ResponseDescription": "Success. Request accepted for processing",
+    "CustomerMessage": "Success. Request accepted for processing"
+}
+----------------------------------------
+2025-08-04 22:55:42 - Starting M-Pesa STK Push Debug Test
+{
+    "booking_id": 1,
+    "phone_number": "254700000000",
+    "amount": 100
+}
+----------------------------------------
+2025-08-04 22:55:42 - Getting M-Pesa access token...
+----------------------------------------
+2025-08-04 22:55:43 - Access token obtained successfully
+{
+    "token": "0uuL3zZaWYfra4HAPkl7..."
+}
+----------------------------------------
+2025-08-04 22:55:43 - Generating M-Pesa password...
+----------------------------------------
+2025-08-04 22:55:43 - Password generated
+{
+    "password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMjUwODA0MjI1NTQz",
+    "timestamp": "20250804225543"
+}
+----------------------------------------
+2025-08-04 22:55:43 - Formatting phone number...
+----------------------------------------
+2025-08-04 22:55:43 - Phone number formatted
+{
+    "original": "254700000000",
+    "formatted": "254700000000"
+}
+----------------------------------------
+2025-08-04 22:55:43 - Reference generated
+{
+    "reference": "RENTAL_1_1754340943"
+}
+----------------------------------------
+2025-08-04 22:55:43 - STK Push request data prepared
+{
+    "BusinessShortCode": "174379",
+    "Password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMjUwODA0MjI1NTQz",
+    "Timestamp": "20250804225543",
+    "TransactionType": "CustomerPayBillOnline",
+    "Amount": 100,
+    "PartyA": "254700000000",
+    "PartyB": "174379",
+    "PhoneNumber": "254700000000",
+    "CallBackURL": "https:\/\/7ffae7789977.ngrok-free.app\/rental_system_bse\/smart_rental\/mpesa_callback.php",
+    "AccountReference": "RENTAL_1_1754340943",
+    "TransactionDesc": "Rental Payment - Test"
+}
+----------------------------------------
+2025-08-04 22:55:43 - Making STK Push request to M-Pesa API...
+----------------------------------------
+2025-08-04 22:55:43 - CURL Verbose Output
+{
+    "output": "*   Trying 45.223.139.195:443...\n* Connected to sandbox.safaricom.co.ke (45.223.139.195) port 443\n* ALPN: curl offers h2,http\/1.1\n* SSL connection using TLSv1.3 \/ TLS_AES_128_GCM_SHA256\n* ALPN: server accepted h2\n* Server certificate:\n*  subject: C=KE; L=Nairobi; O=Safaricom PLC; CN=sandbox.safaricom.co.ke\n*  start date: Oct  8 00:00:00 2024 GMT\n*  expire date: Oct  7 23:59:59 2025 GMT\n*  subjectAltName: host \"sandbox.safaricom.co.ke\" matched cert's \"sandbox.safaricom.co.ke\"\n*  issuer: C=US; O=DigiCert Inc; CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1\n*  SSL certificate verify result: self-signed certificate in certificate chain (19), continuing anyway.\n* using HTTP\/2\n* [HTTP\/2] [1] OPENED stream for https:\/\/sandbox.safaricom.co.ke\/mpesa\/stkpush\/v1\/processrequest\n* [HTTP\/2] [1] [:method: POST]\n* [HTTP\/2] [1] [:scheme: https]\n* [HTTP\/2] [1] [:authority: sandbox.safaricom.co.ke]\n* [HTTP\/2] [1] [:path: \/mpesa\/stkpush\/v1\/processrequest]\n* [HTTP\/2] [1] [accept: *\/*]\n* [HTTP\/2] [1] [authorization: Bearer 0uuL3zZaWYfra4HAPkl7GqjuFvcd]\n* [HTTP\/2] [1] [content-type: application\/json]\n* [HTTP\/2] [1] [content-length: 501]\n> POST \/mpesa\/stkpush\/v1\/processrequest HTTP\/2\r\nHost: sandbox.safaricom.co.ke\r\nAccept: *\/*\r\nAuthorization: Bearer 0uuL3zZaWYfra4HAPkl7GqjuFvcd\r\nContent-Type: application\/json\r\nContent-Length: 501\r\n\r\n* old SSL session ID is stale, removing\n< HTTP\/2 200 \r\n< cache-control: no-store\r\n< content-type: application\/json;charset=UTF-8\r\n< x-request-id: 711e8688-4aa2-47ee-a1d2-06f8248820c2\r\n< content-length: 338\r\n< date: Mon, 04 Aug 2025 20:55:44 GMT\r\n< set-cookie: visid_incap_2742146=wurbQ0a+QT2MAmggj55bWE8ekWgAAAAAQUIPAAAAAAC9rgaDTTgPRWRlSN0nssFA; expires=Tue, 04 Aug 2026 15:15:59 GMT; HttpOnly; path=\/; Domain=.safaricom.co.ke; Secure; SameSite=None\r\n< set-cookie: incap_ses_899_2742146=7eV5PsrJ8xj1Wyv6zON5DE8ekWgAAAAAf1h3lr4lAj+mtD7CbRZpCQ==; path=\/; Domain=.safaricom.co.ke; Secure; SameSite=None\r\n< strict-transport-security: max-age=31536000\r\n< x-cdn: Imperva\r\n< x-iinfo: 38-2253933-2253935 NNNN CT(57 59 0) RT(1754340943658 70) q(0 0 1 -1) r(5 5) U6\r\n< \r\n* Connection #0 to host sandbox.safaricom.co.ke left intact\n"
+}
+----------------------------------------
+2025-08-04 22:55:43 - M-Pesa API Response
+{
+    "http_code": 200,
+    "curl_error": "",
+    "response": "{\n            \"MerchantRequestID\":\"d2c6-4205-830c-9d5d446e2e8011643\",\n            \"CheckoutRequestID\":\"ws_CO_040820252355439700000000\",\n            \"ResponseCode\": \"0\",\n            \"ResponseDescription\":\"Success. Request accepted for processing\",\n            \"CustomerMessage\":\"Success. Request accepted for processing\"\n        }\n        "
+}
+----------------------------------------
+2025-08-04 22:55:43 - SUCCESS: STK Push initiated successfully
+{
+    "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8011643",
+    "CheckoutRequestID": "ws_CO_040820252355439700000000",
+    "ResponseCode": "0",
+    "ResponseDescription": "Success. Request accepted for processing",
+    "CustomerMessage": "Success. Request accepted for processing"
+}
+----------------------------------------

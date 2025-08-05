@@ -42,6 +42,11 @@ $logEntry .= json_encode($callbackData, JSON_PRETTY_PRINT) . "\n";
 $logEntry .= "----------------------------------------\n";
 file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 
+// Handle nested callback structure
+if (isset($callbackData['Body']['stkCallback'])) {
+    $callbackData = $callbackData['Body']['stkCallback'];
+}
+
 // Database connection
 try {
     $pdo = new PDO('mysql:host=localhost;dbname=house_rental;charset=utf8mb4', 'root', '');
@@ -65,11 +70,36 @@ $response = [
 ];
 
 // Check if payment was successful
-if (isset($callbackData['ResultCode']) && $callbackData['ResultCode'] === '0') {
+if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' || $callbackData['ResultCode'] === 0)) {
     $response['payment_status'] = 'success';
-    $response['receipt_number'] = $callbackData['MpesaReceiptNumber'] ?? 'N/A';
-    $response['amount'] = $callbackData['Amount'] ?? 'N/A';
-    $response['phone'] = $callbackData['PhoneNumber'] ?? 'N/A';
+    
+    // Extract data from CallbackMetadata if present
+    $receiptNumber = $callbackData['MpesaReceiptNumber'] ?? 'N/A';
+    $amount = $callbackData['Amount'] ?? 'N/A';
+    $phone = $callbackData['PhoneNumber'] ?? 'N/A';
+    
+    // Check if data is in CallbackMetadata structure
+    if (isset($callbackData['CallbackMetadata']['Item'])) {
+        foreach ($callbackData['CallbackMetadata']['Item'] as $item) {
+            if (isset($item['Name']) && isset($item['Value'])) {
+                switch ($item['Name']) {
+                    case 'MpesaReceiptNumber':
+                        $receiptNumber = $item['Value'];
+                        break;
+                    case 'Amount':
+                        $amount = $item['Value'];
+                        break;
+                    case 'PhoneNumber':
+                        $phone = $item['Value'];
+                        break;
+                }
+            }
+        }
+    }
+    
+    $response['receipt_number'] = $receiptNumber;
+    $response['amount'] = $amount;
+    $response['phone'] = $phone;
     
     // Update payment request in database
     try {
@@ -77,10 +107,10 @@ if (isset($callbackData['ResultCode']) && $callbackData['ResultCode'] === '0') {
         $merchantRequestId = $callbackData['MerchantRequestID'] ?? null;
         $resultCode = $callbackData['ResultCode'] ?? null;
         $resultDesc = $callbackData['ResultDesc'] ?? null;
-        $mpesaReceiptNumber = $callbackData['MpesaReceiptNumber'] ?? null;
+        $mpesaReceiptNumber = $receiptNumber;
         $transactionDate = $callbackData['TransactionDate'] ?? null;
-        $amount = $callbackData['Amount'] ?? null;
-        $phoneNumber = $callbackData['PhoneNumber'] ?? null;
+        $dbAmount = $amount;
+        $dbPhoneNumber = $phone;
         
         if ($checkoutRequestId) {
             // Update the payment request status
@@ -176,10 +206,12 @@ if (isset($callbackData['ResultCode']) && $callbackData['ResultCode'] === '0') {
     }
     
     $logEntry = date('Y-m-d H:i:s') . " - Payment SUCCESS:\n";
-    $logEntry .= "Receipt: " . ($callbackData['MpesaReceiptNumber'] ?? 'N/A') . "\n";
-    $logEntry .= "Amount: " . ($callbackData['Amount'] ?? 'N/A') . "\n";
-    $logEntry .= "Phone: " . ($callbackData['PhoneNumber'] ?? 'N/A') . "\n";
+    $logEntry .= "Receipt: " . $receiptNumber . "\n";
+    $logEntry .= "Amount: " . $amount . "\n";
+    $logEntry .= "Phone: " . $phone . "\n";
     $logEntry .= "CheckoutRequestID: " . ($callbackData['CheckoutRequestID'] ?? 'N/A') . "\n";
+    $logEntry .= "ResultCode: " . ($callbackData['ResultCode'] ?? 'N/A') . "\n";
+    $logEntry .= "ResultDesc: " . ($callbackData['ResultDesc'] ?? 'N/A') . "\n";
     $logEntry .= "----------------------------------------\n";
     file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
     
