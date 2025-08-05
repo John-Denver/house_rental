@@ -88,6 +88,83 @@ function recordInitialPayment($conn, $bookingId, $amount, $securityDepositAmount
 }
 
 /**
+ * Record pre-payment for next unpaid month
+ */
+function recordPrePayment($conn, $bookingId, $amount, $paymentMethod, $transactionId = null, $mpesaReceiptNumber = null, $notes = null) {
+    $paymentDate = date('Y-m-d H:i:s');
+    
+    // Get the next unpaid month
+    $nextUnpaidMonth = getNextUnpaidMonth($conn, $bookingId);
+    
+    if (!$nextUnpaidMonth) {
+        throw new Exception('No unpaid months found for pre-payment');
+    }
+    
+    // Record in payment_tracking table
+    $stmt = $conn->prepare("
+        INSERT INTO payment_tracking
+        (booking_id, payment_type, amount, monthly_rent_amount, month, is_first_payment, status, payment_date, payment_method, transaction_id, mpesa_receipt_number, notes)
+        VALUES (?, 'monthly_rent', ?, ?, ?, 0, 'completed', ?, ?, ?, ?, ?)
+    ");
+    
+    $stmt->bind_param('idssssssss',
+        $bookingId,
+        $amount,
+        $amount,
+        $nextUnpaidMonth,
+        $paymentDate,
+        $paymentMethod,
+        $transactionId,
+        $mpesaReceiptNumber,
+        $notes
+    );
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Failed to record payment tracking: " . $stmt->error);
+    }
+    
+    // Record in monthly_rent_payments table
+    $stmt = $conn->prepare("
+        INSERT INTO monthly_rent_payments
+        (booking_id, month, amount, status, payment_type, is_first_payment, monthly_rent_amount, payment_date, payment_method, transaction_id, mpesa_receipt_number, notes)
+        VALUES (?, ?, ?, 'paid', 'monthly_rent', 0, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+        status = 'paid',
+        payment_type = 'monthly_rent',
+        is_first_payment = 0,
+        monthly_rent_amount = VALUES(monthly_rent_amount),
+        payment_date = VALUES(payment_date),
+        payment_method = VALUES(payment_method),
+        transaction_id = VALUES(transaction_id),
+        mpesa_receipt_number = VALUES(mpesa_receipt_number),
+        notes = VALUES(notes),
+        updated_at = CURRENT_TIMESTAMP
+    ");
+    
+    $stmt->bind_param('isdsisssss',
+        $bookingId,
+        $nextUnpaidMonth,
+        $amount,
+        $amount,
+        $paymentDate,
+        $paymentMethod,
+        $transactionId,
+        $mpesaReceiptNumber,
+        $notes
+    );
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Failed to record monthly payment: " . $stmt->error);
+    }
+    
+    return [
+        'success' => true,
+        'month_paid' => $nextUnpaidMonth,
+        'message' => 'Pre-payment recorded for ' . date('F Y', strtotime($nextUnpaidMonth))
+    ];
+}
+
+/**
  * Record monthly rent payment (for subsequent months)
  */
 function recordMonthlyPayment($conn, $bookingId, $month, $amount, $paymentMethod, $transactionId = null, $mpesaReceiptNumber = null, $notes = null) {

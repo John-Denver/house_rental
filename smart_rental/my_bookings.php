@@ -44,29 +44,107 @@ $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Get current month payment status for each booking
 foreach ($bookings as &$booking) {
-    $currentMonth = date('Y-m-01'); // First day of current month
+    // Get the current month (today's month)
+    $currentMonth = date('Y-m-01');
+    $today = date('Y-m-d');
+    $moveInDate = strtotime($booking['start_date']);
+    $moveInMonth = date('Y-m-01', $moveInDate);
     
-    $stmt = $conn->prepare("
-        SELECT status, payment_date, amount 
-        FROM monthly_rent_payments 
-        WHERE booking_id = ? AND month = ?
-    ");
-    $stmt->bind_param('is', $booking['id'], $currentMonth);
-    $stmt->execute();
-    $result = $stmt->get_result()->fetch_assoc();
+    // Check if the booking has started (current date is after or equal to start date)
+    $bookingHasStarted = $today >= $booking['start_date'];
     
-    if ($result) {
-        $booking['current_month_status'] = $result;
-    } else {
-        // If no record exists, check if it's overdue
-        $today = date('Y-m-d');
-        $status = ($today > date('Y-m-15')) ? 'overdue' : 'unpaid'; // Consider overdue after 15th
+    if ($bookingHasStarted) {
+        // Booking has started - check current month payment
+        $stmt = $conn->prepare("
+            SELECT status, payment_date, amount 
+            FROM monthly_rent_payments 
+            WHERE booking_id = ? AND month = ?
+        ");
+        $stmt->bind_param('is', $booking['id'], $currentMonth);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
         
-        $booking['current_month_status'] = [
-            'status' => $status,
-            'payment_date' => null,
-            'amount' => null
-        ];
+        if ($result) {
+            $booking['current_month_status'] = $result;
+        } else {
+            // Check if there's a payment in booking_payments for current month
+            $stmt = $conn->prepare("
+                SELECT payment_date, amount, payment_method, transaction_id
+                FROM booking_payments 
+                WHERE booking_id = ? AND status = 'completed' 
+                AND DATE_FORMAT(payment_date, '%Y-%m-01') = ?
+            ");
+            $stmt->bind_param('is', $booking['id'], $currentMonth);
+            $stmt->execute();
+            $bookingPayment = $stmt->get_result()->fetch_assoc();
+            
+            if ($bookingPayment) {
+                // Payment exists in booking_payments but not in monthly_rent_payments
+                // Create the monthly_rent_payments record
+                $insertStmt = $conn->prepare("
+                    INSERT INTO monthly_rent_payments 
+                    (booking_id, month, amount, status, payment_date, payment_method, mpesa_receipt_number, notes, is_first_payment, payment_type)
+                    VALUES (?, ?, ?, 'paid', ?, ?, ?, ?, 0, 'monthly_rent')
+                ");
+                $insertStmt->bind_param('isdsisss', 
+                    $booking['id'], 
+                    $currentMonth, 
+                    $bookingPayment['amount'],
+                    $bookingPayment['payment_date'],
+                    $bookingPayment['payment_method'],
+                    $bookingPayment['transaction_id'],
+                    'Auto-synced from booking_payments'
+                );
+                $insertStmt->execute();
+                
+                $booking['current_month_status'] = [
+                    'status' => 'paid',
+                    'payment_date' => $bookingPayment['payment_date'],
+                    'amount' => $bookingPayment['amount']
+                ];
+            } else {
+                // No payment for current month - check if it's overdue
+                $currentMonthDay15 = date('Y-m-4');
+                
+                if ($today > $currentMonthDay15) {
+                    $status = 'overdue';
+                } else {
+                    $status = 'unpaid';
+                }
+                
+                $booking['current_month_status'] = [
+                    'status' => $status,
+                    'payment_date' => null,
+                    'amount' => null
+                ];
+            }
+        }
+    } else {
+        // Booking hasn't started yet - check if initial payment was made
+        $stmt = $conn->prepare("
+            SELECT status, payment_date, amount 
+            FROM monthly_rent_payments 
+            WHERE booking_id = ? AND is_first_payment = 1 AND status = 'paid'
+        ");
+        $stmt->bind_param('i', $booking['id']);
+        $stmt->execute();
+        $initialPayment = $stmt->get_result()->fetch_assoc();
+        
+        if ($initialPayment) {
+            // Initial payment was made, so the move-in month is paid
+            $booking['current_month_status'] = [
+                'status' => 'paid',
+                'payment_date' => $initialPayment['payment_date'],
+                'amount' => $initialPayment['amount']
+            ];
+        } else {
+            // No initial payment made yet
+            $booking['current_month_status'] = [
+                'status' => 'unpaid',
+                'payment_date' => null,
+                'amount' => null
+            ];
+        }
     }
 }
 
@@ -196,7 +274,7 @@ include 'includes/header.php';
                                             data-booking-id="<?php echo $booking['id']; ?>"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#monthlyPaymentsModal"
-                                            title="View Monthly Payments">
+                                            title="View Payment History">
                                         <?php 
                                         $statusClass = [
                                             'paid' => 'success',
@@ -389,7 +467,7 @@ include 'includes/header.php';
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="monthlyPaymentsModalLabel">Monthly Payment History</h5>
+                <h5 class="modal-title" id="monthlyPaymentsModalLabel">Payment History & Monthly Status</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">

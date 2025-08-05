@@ -117,7 +117,7 @@ try {
         exit;
     }
     
-    // Get monthly payments for this booking
+    // Get monthly payments for this booking (including initial payments)
     $stmt = $conn->prepare("
         SELECT 
             month,
@@ -126,7 +126,9 @@ try {
             payment_date,
             payment_method,
             mpesa_receipt_number,
-            notes
+            notes,
+            is_first_payment,
+            payment_type
         FROM monthly_rent_payments 
         WHERE booking_id = ?
         ORDER BY month DESC
@@ -135,7 +137,94 @@ try {
     $stmt->execute();
     $monthlyPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     
-    // If no payments exist, generate them based on the booking period
+    // Also check booking_payments table for any payments
+    $stmt = $conn->prepare("
+        SELECT 
+            payment_date,
+            amount,
+            payment_method,
+            transaction_id,
+            notes,
+            status
+        FROM booking_payments 
+        WHERE booking_id = ? AND status = 'completed'
+        ORDER BY payment_date DESC
+    ");
+    $stmt->bind_param('i', $bookingId);
+    $stmt->execute();
+    $bookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    // Log for debugging
+    error_log("Monthly payments for booking $bookingId: " . json_encode($monthlyPayments));
+    error_log("Booking payments for booking $bookingId: " . json_encode($bookingPayments));
+    
+    // If no monthly payments exist but booking payments exist, create monthly payment records
+    if (empty($monthlyPayments) && !empty($bookingPayments)) {
+        // Get property details to get monthly rent
+        $stmt = $conn->prepare("
+            SELECT price FROM houses WHERE id = ?
+        ");
+        $stmt->bind_param('i', $booking['house_id']);
+        $stmt->execute();
+        $property = $stmt->get_result()->fetch_assoc();
+        
+        if ($property) {
+            // For each booking payment, create a corresponding monthly payment record
+            foreach ($bookingPayments as $bookingPayment) {
+                $paymentDate = new DateTime($bookingPayment['payment_date']);
+                $month = $paymentDate->format('Y-m-01');
+                
+                // Check if record already exists
+                $checkStmt = $conn->prepare("
+                    SELECT id FROM monthly_rent_payments 
+                    WHERE booking_id = ? AND month = ?
+                ");
+                $checkStmt->bind_param('is', $bookingId, $month);
+                $checkStmt->execute();
+                
+                if (!$checkStmt->get_result()->fetch_assoc()) {
+                    // Insert monthly payment record based on booking payment
+                    $insertStmt = $conn->prepare("
+                        INSERT INTO monthly_rent_payments 
+                        (booking_id, month, amount, status, payment_date, payment_method, mpesa_receipt_number, notes, is_first_payment, payment_type)
+                        VALUES (?, ?, ?, 'paid', ?, ?, ?, ?, 1, 'initial_payment')
+                    ");
+                    $insertStmt->bind_param('isdsisss', 
+                        $bookingId, 
+                        $month, 
+                        $bookingPayment['amount'],
+                        $bookingPayment['payment_date'],
+                        $bookingPayment['payment_method'],
+                        $bookingPayment['transaction_id'],
+                        $bookingPayment['notes']
+                    );
+                    $insertStmt->execute();
+                }
+            }
+            
+            // Get the updated monthly payments
+            $stmt = $conn->prepare("
+                SELECT 
+                    month,
+                    amount,
+                    status,
+                    payment_date,
+                    payment_method,
+                    mpesa_receipt_number,
+                    notes,
+                    is_first_payment,
+                    payment_type
+                FROM monthly_rent_payments 
+                WHERE booking_id = ?
+                ORDER BY month DESC
+            ");
+            $stmt->bind_param('i', $bookingId);
+            $stmt->execute();
+            $monthlyPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
+    }
+    
+    // If still no payments exist, generate them based on the booking period
     if (empty($monthlyPayments)) {
         // Get property details to get monthly rent
         $stmt = $conn->prepare("
@@ -205,7 +294,9 @@ try {
             'payment_date' => $payment['payment_date'],
             'payment_method' => $payment['payment_method'],
             'mpesa_receipt_number' => $payment['mpesa_receipt_number'],
-            'notes' => $payment['notes']
+            'notes' => $payment['notes'],
+            'is_first_payment' => $payment['is_first_payment'] ?? 0,
+            'payment_type' => $payment['payment_type'] ?? 'monthly_rent'
         ];
     }
     

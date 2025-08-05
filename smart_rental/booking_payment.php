@@ -38,6 +38,7 @@ if (!isset($_GET['id'])) {
 }
 
 $bookingId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$paymentType = $_GET['type'] ?? 'initial'; // 'initial' or 'prepayment'
 $bookingController = new BookingController($conn);
 
 try {
@@ -82,7 +83,17 @@ $additionalFees = $booking['additional_fees'] ?? 0;
 $monthlyRent = floatval($booking['property_price']);
 $securityDeposit = floatval($booking['security_deposit'] ?? 0);
 
-if (!$hasFirstPayment) {
+// Determine payment type and amount based on URL parameter and payment history
+if ($paymentType === 'prepayment') {
+    // Pre-payment for next month
+    if (!$hasFirstPayment) {
+        throw new Exception('Initial payment must be completed before making pre-payments');
+    }
+    
+    $totalAmount = $monthlyRent + $additionalFees;
+    $paymentType = 'monthly_rent';
+    $paymentDescription = 'Pre-Payment for Next Month';
+} elseif (!$hasFirstPayment) {
     // First payment: Security deposit + first month rent + additional fees
     $totalAmount = $monthlyRent + $securityDeposit + $additionalFees;
     $paymentType = 'initial_payment';
@@ -105,15 +116,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notes' => filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_FULL_SPECIAL_CHARS)
         ];
         
-        // Process the payment
-        $result = $bookingController->processPayment($paymentData);
-        
-        if ($result['success']) {
-            $_SESSION['success'] = 'Payment processed successfully!';
-            header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
-            exit();
+        // Process the payment based on type
+        if ($paymentType === 'prepayment') {
+            // Handle pre-payment
+            $result = recordPrePayment(
+                $conn,
+                $bookingId,
+                $paymentData['amount'],
+                $paymentData['payment_method'],
+                $paymentData['transaction_id'],
+                null, // mpesa_receipt_number
+                $paymentData['notes']
+            );
+            
+            if ($result['success']) {
+                $_SESSION['success'] = 'Pre-payment processed successfully! ' . $result['message'];
+                header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
+                exit();
+            } else {
+                throw new Exception($result['message']);
+            }
         } else {
-            throw new Exception($result['message']);
+            // Handle regular payment
+            $result = $bookingController->processPayment($paymentData);
+            
+            if ($result['success']) {
+                $_SESSION['success'] = 'Payment processed successfully!';
+                header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
+                exit();
+            } else {
+                throw new Exception($result['message']);
+            }
         }
         
     } catch (Exception $e) {
@@ -216,6 +249,13 @@ include 'includes/header.php';
                                     <div class="alert alert-info mt-3">
                                         <i class="fas fa-info-circle me-2"></i>
                                         <strong>Note:</strong> Security deposit was paid with your initial payment. This is a monthly rent payment only.
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php if ($paymentType === 'prepayment'): ?>
+                                    <div class="alert alert-warning mt-3">
+                                        <i class="fas fa-calendar-plus me-2"></i>
+                                        <strong>Pre-Payment:</strong> This payment will be applied to the next unpaid month in your rental period.
                                     </div>
                                 <?php endif; ?>
                             </div>
