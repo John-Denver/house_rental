@@ -84,15 +84,15 @@ try {
                 // Just log it and continue
             }
             
-            // Redirect to booking confirmation page
-            header('Location: booking_confirmation.php?id=' . $result['booking_id']);
+            // Redirect to my bookings page with success message
+            header('Location: my_bookings.php?success=1&booking_id=' . $result['booking_id']);
             exit();
             
         } catch (Exception $e) {
             error_log('Error in post-booking processing: ' . $e->getMessage());
             // Even if invoice generation fails, still show success to user
             // but log the error for admin review
-            header('Location: booking_confirmation.php?id=' . $result['booking_id']);
+            header('Location: my_bookings.php?success=1&booking_id=' . $result['booking_id']);
             exit();
         }
     } else {

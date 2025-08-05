@@ -91,6 +91,22 @@ include 'includes/header.php';
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
+    
+    <?php if (isset($_GET['success']) && $_GET['success'] == '1'): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Success!</strong> 
+            <?php if (isset($_GET['payment']) && $_GET['payment'] == '1'): ?>
+                Your booking payment has been processed successfully.
+            <?php else: ?>
+                Your booking has been created successfully.
+            <?php endif; ?>
+            <?php if (isset($_GET['booking_id'])): ?>
+                <br><small class="text-muted">Booking ID: <?php echo htmlspecialchars($_GET['booking_id']); ?></small>
+            <?php endif; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
 
     <!-- Rental Bookings Section -->
     <div class="card mb-5">

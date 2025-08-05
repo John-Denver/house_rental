@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Redirect after 3 seconds
                     setTimeout(() => {
-                        window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
+                        window.location.href = 'my_bookings.php?success=1&payment=1&booking_id=<?php echo $bookingId; ?>';
                     }, 3000);
                     
                 } else if (result.success && result.data.status === 'failed') {
