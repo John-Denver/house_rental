@@ -101,7 +101,7 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
     $response['amount'] = $amount;
     $response['phone'] = $phone;
     
-    // Update payment request in database
+    // Update payment request in database with transaction and race condition protection
     try {
         $checkoutRequestId = $callbackData['CheckoutRequestID'] ?? null;
         $merchantRequestId = $callbackData['MerchantRequestID'] ?? null;
@@ -113,43 +113,74 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
         $dbPhoneNumber = $phone;
         
         if ($checkoutRequestId) {
-            // Update the payment request status
-            $updateQuery = "UPDATE mpesa_payment_requests SET 
-                status = 'completed',
-                result_code = ?,
-                result_desc = ?,
-                mpesa_receipt_number = ?,
-                transaction_date = ?,
-                updated_at = CURRENT_TIMESTAMP
-                WHERE checkout_request_id = ?";
+            // Start database transaction to prevent race conditions
+            $pdo->beginTransaction();
             
-            $stmt = $pdo->prepare($updateQuery);
-            $stmt->execute([
-                $resultCode,
-                $resultDesc,
-                $mpesaReceiptNumber,
-                $transactionDate,
-                $checkoutRequestId
-            ]);
-            
-            // Get the booking ID for this payment
-            $bookingQuery = "SELECT booking_id FROM mpesa_payment_requests WHERE checkout_request_id = ?";
-            $stmt = $pdo->prepare($bookingQuery);
-            $stmt->execute([$checkoutRequestId]);
-            $bookingResult = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($bookingResult) {
-                $bookingId = $bookingResult['booking_id'];
+            try {
+                // Check if payment is already processed to prevent duplicate processing
+                $checkQuery = "SELECT status, booking_id FROM mpesa_payment_requests 
+                              WHERE checkout_request_id = ? FOR UPDATE";
+                $stmt = $pdo->prepare($checkQuery);
+                $stmt->execute([$checkoutRequestId]);
+                $existingPayment = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                // Update booking status to 'confirmed'
+                if (!$existingPayment) {
+                    throw new Exception("Payment request not found: $checkoutRequestId");
+                }
+                
+                // Prevent duplicate processing
+                if ($existingPayment['status'] === 'completed') {
+                    $logEntry = date('Y-m-d H:i:s') . " - Payment already completed for checkout_request_id: $checkoutRequestId\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    
+                    $pdo->rollback();
+                    http_response_code(200);
+                    echo json_encode(['status' => 'success', 'message' => 'Payment already processed']);
+                    exit();
+                }
+                
+                // Update the payment request status with optimistic locking
+                $updateQuery = "UPDATE mpesa_payment_requests SET 
+                    status = 'completed',
+                    result_code = ?,
+                    result_desc = ?,
+                    mpesa_receipt_number = ?,
+                    transaction_date = ?,
+                    callback_data = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                    WHERE checkout_request_id = ? AND status != 'completed'";
+                
+                $stmt = $pdo->prepare($updateQuery);
+                $result = $stmt->execute([
+                    $resultCode,
+                    $resultDesc,
+                    $mpesaReceiptNumber,
+                    $transactionDate,
+                    json_encode($callbackData),
+                    $checkoutRequestId
+                ]);
+                
+                // Check if update was successful (prevents race conditions)
+                if ($stmt->rowCount() === 0) {
+                    throw new Exception("Payment already processed or not found");
+                }
+                
+                $bookingId = $existingPayment['booking_id'];
+                
+                // Update booking status with transaction safety
                 $updateBookingQuery = "UPDATE rental_bookings SET 
                     status = 'confirmed',
                     payment_status = 'paid',
                     updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?";
+                    WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
                 
                 $stmt = $pdo->prepare($updateBookingQuery);
                 $stmt->execute([$bookingId]);
+                
+                // Verify booking was updated
+                if ($stmt->rowCount() === 0) {
+                    throw new Exception("Booking status update failed");
+                }
                 
                 // Include payment tracking helper
                 require_once 'includes/payment_tracking_helper.php';
@@ -194,10 +225,25 @@ if (isset($callbackData['ResultCode']) && ($callbackData['ResultCode'] === '0' |
                 
                 $logEntry = date('Y-m-d H:i:s') . " - Booking $bookingId updated to confirmed and monthly payment recorded\n";
                 file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                
+                // Commit the transaction
+                $pdo->commit();
+                
+                $logEntry = date('Y-m-d H:i:s') . " - Payment request updated successfully with transaction commit\n";
+                file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                
+            } catch (Exception $e) {
+                // Rollback transaction on error
+                $pdo->rollback();
+                
+                $logEntry = date('Y-m-d H:i:s') . " - Payment processing error: " . $e->getMessage() . "\n";
+                file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                
+                // Still return success to M-Pesa to prevent retries
+                http_response_code(200);
+                echo json_encode(['status' => 'success', 'message' => 'Callback processed with errors']);
+                exit();
             }
-            
-            $logEntry = date('Y-m-d H:i:s') . " - Payment request updated successfully\n";
-            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
         }
         
     } catch (PDOException $e) {

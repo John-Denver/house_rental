@@ -1,5 +1,26 @@
 <?php
+// Ensure session is started with proper configuration
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
 session_start();
+
+// Debug: Log that the page is being accessed
+error_log("booking_payment.php accessed - GET params: " . json_encode($_GET));
+error_log("booking_payment.php accessed - Session user_id: " . ($_SESSION['user_id'] ?? 'not set'));
+error_log("booking_payment.php accessed - Session ID: " . session_id());
+error_log("booking_payment.php accessed - All session data: " . json_encode($_SESSION));
+
+// Add immediate output for debugging
+if (isset($_GET['debug'])) {
+    echo "<h1>Booking Payment Debug</h1>";
+    echo "<p>Page accessed successfully!</p>";
+    echo "<p>GET params: " . json_encode($_GET) . "</p>";
+    echo "<p>Session user_id: " . ($_SESSION['user_id'] ?? 'not set') . "</p>";
+    echo "<p>Session ID: " . session_id() . "</p>";
+    echo "<p>All session data: " . json_encode($_SESSION) . "</p>";
+    exit();
+}
+
 require_once '../config/db.php';
 require_once 'controllers/BookingController.php';
 require_once 'mpesa_config.php';
@@ -23,24 +44,28 @@ try {
     // Get booking details
     $booking = $bookingController->getBookingDetails($bookingId);
     
+    // Debug: Log booking details
+    error_log("Booking details for ID $bookingId: " . json_encode($booking));
+    
     // Verify that the current user is the one who made the booking
     if ($booking['user_id'] != $_SESSION['user_id'] && !isset($_SESSION['is_admin'])) {
         throw new Exception('Unauthorized access to this booking');
     }
     
     // Check if booking is already paid
-    if ($booking['payment_status'] === 'paid') {
+    if ($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'partial') {
         $_SESSION['success'] = 'This booking has already been paid.';
         header('Location: booking_details.php?id=' . $bookingId);
         exit();
     }
     
-    // Check if booking is confirmed
-    if ($booking['status'] !== 'confirmed') {
-        throw new Exception('This booking is not confirmed for payment.');
+    // Check if booking is in a valid state for payment
+    if ($booking['status'] !== 'pending' && $booking['status'] !== 'confirmed') {
+        throw new Exception('This booking is not in a valid state for payment. Current status: ' . $booking['status']);
     }
     
 } catch (Exception $e) {
+    error_log("Error in booking_payment.php: " . $e->getMessage());
     $_SESSION['error'] = $e->getMessage();
     header('Location: my_bookings.php');
     exit();

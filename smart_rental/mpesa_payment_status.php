@@ -90,6 +90,34 @@ try {
         // Log the completed payment for debugging
         error_log("Payment already completed for checkout_request_id: $checkout_request_id - Receipt: " . $payment_request['mpesa_receipt_number']);
         
+        // Get booking status to ensure consistency
+        $bookingStmt = $conn->prepare("
+            SELECT status, payment_status 
+            FROM rental_bookings 
+            WHERE id = ?
+        ");
+        $bookingStmt->bind_param('i', $payment_request['booking_id']);
+        $bookingStmt->execute();
+        $booking = $bookingStmt->get_result()->fetch_assoc();
+        
+        // Check for status inconsistency
+        if ($booking && $booking['payment_status'] !== 'paid') {
+            error_log("Status inconsistency detected for booking {$payment_request['booking_id']}: payment completed but booking not marked as paid");
+            
+            // Attempt to fix the inconsistency
+            $fixStmt = $conn->prepare("
+                UPDATE rental_bookings 
+                SET payment_status = 'paid', status = 'confirmed', updated_at = NOW()
+                WHERE id = ? AND payment_status != 'paid'
+            ");
+            $fixStmt->bind_param('i', $payment_request['booking_id']);
+            $fixStmt->execute();
+            
+            if ($fixStmt->affected_rows > 0) {
+                error_log("Status inconsistency fixed for booking {$payment_request['booking_id']}");
+            }
+        }
+        
         ob_clean();
         header('Content-Type: application/json');
         echo json_encode([
