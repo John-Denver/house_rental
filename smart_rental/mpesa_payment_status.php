@@ -480,8 +480,6 @@ try {
                 }
             }
         }
-            }
-        }
     } else {
         error_log("M-Pesa STK Query failed - HTTP Code: $httpCode, Response: $response");
         ob_clean();

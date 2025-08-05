@@ -678,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (parseError) {
                     console.error('Failed to parse JSON response:', parseError);
                     console.error('Response text:', responseText);
-                    throw new Error('Invalid response from server');
+                    throw new Error('Invalid response from server: ' + responseText);
                 }
                 
                 if (result.success && result.data.status === 'completed') {
@@ -840,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (parseError) {
                 console.error('Manual check - Failed to parse JSON:', parseError);
                 console.error('Manual check - Response text:', responseText);
-                alert('Error: Invalid response from server. Please try again.');
+                alert('Error: Invalid response from server. Please try again. Response: ' + responseText);
                 return;
             }
             
