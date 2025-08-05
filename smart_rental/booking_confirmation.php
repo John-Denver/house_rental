@@ -81,13 +81,9 @@ include 'includes/header.php';
                             <div class="bg-<?php echo ($booking['payment_status'] === 'completed') ? 'success' : 'warning'; ?> bg-opacity-10 d-inline-flex p-3 rounded-circle mb-3">
                                 <i class="fas fa-<?php echo ($booking['payment_status'] === 'completed') ? 'check-circle' : 'clock'; ?> fa-4x text-<?php echo ($booking['payment_status'] === 'completed') ? 'success' : 'warning'; ?>"></i>
                             </div>
-                            <h2 class="fw-bold">Booking <?php echo ($booking['payment_status'] === 'completed') ? 'Confirmed' : 'Pending Payment'; ?>!</h2>
+                            <h2 class="fw-bold">Booking Pending Payment!</h2>
                             <p class="text-muted">
-                                <?php if ($booking['payment_status'] === 'completed'): ?>
-                                    Your booking and payment have been confirmed.
-                                <?php else: ?>
-                                    Your booking is pending payment confirmation.
-                                <?php endif; ?>
+                                Your booking has been created successfully. Please complete your payment to secure your booking.
                             </p>
                         <?php endif; ?>
                     </div>

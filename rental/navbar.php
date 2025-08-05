@@ -43,6 +43,7 @@
                             </li>
 					<a href="index.php?page=tenants" class="nav-item nav-tenants"><span class='icon-field'><i data-feather="user"></i></span> Tenants</a>
 					<a href="index.php?page=invoices" class="nav-item nav-invoices"><span class='icon-field'><i data-feather="credit-card"></i></span> Payments</a>
+					<a href="manage_bookings.php" class="nav-item nav-bookings"><span class='icon-field'><i data-feather="calendar"></i></span> Bookings</a>
 					
 					<li class="has_sub">
                         <a href="javascript:void(0);" class="nav-item nav-categories waves-effect">

@@ -108,6 +108,14 @@ try {
                 Pay Now <i class="fas fa-arrow-right ms-1"></i>
             </a>
         </div>
+    <?php elseif ($booking['status'] === 'pending' && ($booking['payment_status'] === 'pending' || $booking['payment_status'] === 'unpaid')): ?>
+        <div class="alert alert-warning">
+            <i class="fas fa-clock me-2"></i>
+            Your booking is pending. Please complete your payment to secure your booking.
+            <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="alert-link ms-2">
+                Pay Now <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
     <?php endif; ?>
     
     <div class="row">
