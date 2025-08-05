@@ -465,10 +465,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success status
                 processingStatus.style.display = 'none';
                 successStatus.style.display = 'block';
+                errorStatus.style.display = 'none'; // Ensure error status is hidden
                 checkStatusBtn.style.display = 'none'; // Hide initially
                 
                 // Update modal title
                 document.getElementById('modalTitle').textContent = 'Payment Request Sent';
+                
+                // Show success message
+                successStatus.innerHTML = `
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h6 class="text-success">Payment Request Sent</h6>
+                    <p class="text-muted">Your payment request has been sent to M-Pesa successfully.</p>
+                    <p class="text-muted small">Please check your phone for the M-Pesa prompt and complete the payment.</p>
+                `;
                 
                 // Start polling for payment status
                 pollPaymentStatus();
@@ -704,9 +713,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (result.success && (result.data.status === 'failed' || result.data.status === 'cancelled')) {
                     clearInterval(pollInterval);
                     
-                    // Show failure or cancellation
-                    errorStatus.style.display = 'block';
-                    successStatus.style.display = 'none';
+                                    // Show failure or cancellation
+                errorStatus.style.display = 'block';
+                successStatus.style.display = 'none';
+                processingStatus.style.display = 'none'; // Ensure processing status is hidden
                     
                     if (result.data.status === 'cancelled') {
                         errorMessage.innerHTML = `

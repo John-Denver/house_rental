@@ -203,15 +203,21 @@ try {
             $result_desc = $result['ResultDesc'];
             
             // Update payment request status based on result code
-            if ($result_code === 0) {
+            // Convert to string for consistent comparison
+            $result_code_str = (string)$result_code;
+            
+            if ($result_code_str === '0') {
                 $status = 'completed';
-            } elseif ($result_code === '4999' || $result_code === 4999) {
+            } elseif ($result_code_str === '4999') {
                 $status = 'processing';
-            } elseif (in_array($result_code, ['1032', '1037', '1039'])) {
+            } elseif (in_array($result_code_str, ['1032', '1037', '1039'])) {
                 $status = 'failed';
             } else {
                 $status = 'failed';
             }
+            
+            // Log the status determination for debugging
+            error_log("ResultCode: $result_code_str, Determined Status: $status");
             
             $stmt = $conn->prepare("
                 UPDATE mpesa_payment_requests 
@@ -239,63 +245,80 @@ try {
                 $stmt->bind_param('i', $payment_request['booking_id']);
                 $stmt->execute();
 
-                // Record payment in booking_payments table
-                $stmt = $conn->prepare("
-                    INSERT INTO booking_payments (
-                        booking_id, amount, payment_method, transaction_id, 
-                        payment_date, status, notes, created_at
-                    ) VALUES (?, ?, 'M-Pesa', ?, NOW(), 'completed', ?, NOW())
-                ");
-                $transaction_id = 'MPESA_' . time();
-                $notes = 'M-Pesa Payment - Checkout Request: ' . $checkout_request_id;
-                $stmt->bind_param('idss', 
-                    $payment_request['booking_id'], 
-                    $payment_request['amount'], 
-                    $transaction_id, 
-                    $notes
-                );
-                $stmt->execute();
-                
-                        // Include payment tracking helper
-        require_once 'includes/payment_tracking_helper.php';
-        
-        // Check if this is the first payment for this booking
-        $hasFirstPayment = hasFirstPaymentBeenMade($conn, $payment_request['booking_id']);
-        
-        if (!$hasFirstPayment) {
-            // This is the initial payment (security deposit + first month rent)
-            $breakdown = getInitialPaymentBreakdown($conn, $payment_request['booking_id']);
-            $securityDepositAmount = $breakdown['security_deposit'];
-            $monthlyRentAmount = $breakdown['monthly_rent'];
-            
-            // Record initial payment
-            recordInitialPayment(
-                $conn, 
-                $payment_request['booking_id'], 
-                $payment_request['amount'], 
-                $securityDepositAmount, 
-                $monthlyRentAmount, 
-                'M-Pesa', 
-                $transaction_id, 
-                null, 
-                'M-Pesa Initial Payment - Checkout Request: ' . $checkout_request_id
-            );
-        } else {
-            // This is a monthly rent payment
-            $nextMonth = getNextUnpaidMonth($conn, $payment_request['booking_id']);
-            
-            // Record monthly payment
-            recordMonthlyPayment(
-                $conn, 
-                $payment_request['booking_id'], 
-                $nextMonth, 
-                $payment_request['amount'], 
-                'M-Pesa', 
-                $transaction_id, 
-                null, 
-                'M-Pesa Monthly Payment - Checkout Request: ' . $checkout_request_id
-            );
-        }
+                                 // Record payment in booking_payments table
+                 try {
+                     $stmt = $conn->prepare("
+                         INSERT INTO booking_payments (
+                             booking_id, amount, payment_method, transaction_id, 
+                             payment_date, status, notes, created_at
+                         ) VALUES (?, ?, 'M-Pesa', ?, NOW(), 'completed', ?, NOW())
+                     ");
+                     $transaction_id = 'MPESA_' . time();
+                     $notes = 'M-Pesa Payment - Checkout Request: ' . $checkout_request_id;
+                     $stmt->bind_param('idss', 
+                         $payment_request['booking_id'], 
+                         $payment_request['amount'], 
+                         $transaction_id, 
+                         $notes
+                     );
+                     $stmt->execute();
+                     error_log("Payment recorded in booking_payments table successfully");
+                 } catch (Exception $e) {
+                     error_log("Failed to record payment in booking_payments table: " . $e->getMessage());
+                     // Continue without recording in booking_payments - the main payment is still successful
+                 }
+                 
+                 // Try to include payment tracking helper if tables exist
+                 try {
+                     // Check if payment_tracking table exists
+                     $tableCheck = $conn->query("SHOW TABLES LIKE 'payment_tracking'");
+                     if ($tableCheck && $tableCheck->num_rows > 0) {
+                         require_once 'includes/payment_tracking_helper.php';
+                         
+                         // Check if this is the first payment for this booking
+                         $hasFirstPayment = hasFirstPaymentBeenMade($conn, $payment_request['booking_id']);
+                         
+                         if (!$hasFirstPayment) {
+                             // This is the initial payment (security deposit + first month rent)
+                             $breakdown = getInitialPaymentBreakdown($conn, $payment_request['booking_id']);
+                             $securityDepositAmount = $breakdown['security_deposit'];
+                             $monthlyRentAmount = $breakdown['monthly_rent'];
+                             
+                             // Record initial payment
+                             recordInitialPayment(
+                                 $conn, 
+                                 $payment_request['booking_id'], 
+                                 $payment_request['amount'], 
+                                 $securityDepositAmount, 
+                                 $monthlyRentAmount, 
+                                 'M-Pesa', 
+                                 $transaction_id, 
+                                 null, 
+                                 'M-Pesa Initial Payment - Checkout Request: ' . $checkout_request_id
+                             );
+                         } else {
+                             // This is a monthly rent payment
+                             $nextMonth = getNextUnpaidMonth($conn, $payment_request['booking_id']);
+                             
+                             // Record monthly payment
+                             recordMonthlyPayment(
+                                 $conn, 
+                                 $payment_request['booking_id'], 
+                                 $nextMonth, 
+                                 $payment_request['amount'], 
+                                 'M-Pesa', 
+                                 $transaction_id, 
+                                 null, 
+                                 'M-Pesa Monthly Payment - Checkout Request: ' . $checkout_request_id
+                             );
+                         }
+                     } else {
+                         error_log("Payment tracking tables not found - skipping advanced payment tracking");
+                     }
+                 } catch (Exception $e) {
+                     error_log("Payment tracking helper error: " . $e->getMessage());
+                     // Continue without payment tracking - basic payment recording is already done
+                 }
 
                 ob_clean();
                 header('Content-Type: application/json');
