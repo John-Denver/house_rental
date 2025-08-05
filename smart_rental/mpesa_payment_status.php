@@ -76,6 +76,8 @@ try {
     
     // Log the current payment request status for debugging
     error_log("Payment request status for checkout_request_id: $checkout_request_id - Status: " . ($payment_request['status'] ?? 'not found'));
+    error_log("Session user_id: " . ($_SESSION['user_id'] ?? 'NOT SET'));
+    error_log("Payment request user_id: " . ($payment_request['user_id'] ?? 'NOT FOUND'));
 
     if (!$payment_request) {
         http_response_code(404);
@@ -148,6 +150,26 @@ try {
     if ($payment_request['status'] === 'processing') {
         // Payment is in processing state - check with M-Pesa API to see if it's completed
         error_log("Payment is in processing state for checkout_request_id: $checkout_request_id - checking with M-Pesa API");
+        
+        // For processing payments, we need to be more aggressive in checking
+        // Check if it's been more than 30 seconds since the payment was created
+        $requestTime = strtotime($payment_request['created_at']);
+        $currentTime = time();
+        $timeDiff = $currentTime - $requestTime;
+        
+        if ($timeDiff < 30) {
+            // Still very early in processing, return processing status
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'status' => 'processing',
+                    'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt.'
+                ]
+            ]);
+            exit;
+        }
     }
 
     // If still pending, check with M-Pesa API
@@ -431,17 +453,33 @@ try {
                         'error_code' => $result['errorCode'] ?? 'unknown'
                     ]);
                 } else {
-                    // Unknown response format
+                    // Unknown response format - this might be a successful payment that hasn't been processed yet
                     error_log("Unknown M-Pesa response format: " . json_encode($result));
                     
-                    ob_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Unable to determine payment status. Please try again or contact support.',
-                        'response' => $result
-                    ]);
+                    // For processing payments, if we get an unknown response, it might mean the payment is still being processed
+                    if ($payment_request['status'] === 'processing') {
+                        ob_clean();
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => true,
+                            'data' => [
+                                'status' => 'processing',
+                                'message' => 'Payment is still being processed. Please check your phone for the M-Pesa prompt.',
+                                'unknown_response' => true
+                            ]
+                        ]);
+                    } else {
+                        ob_clean();
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'Unable to determine payment status. Please try again or contact support.',
+                            'response' => $result
+                        ]);
+                    }
                 }
+            }
+        }
             }
         }
     } else {

@@ -179,7 +179,6 @@ if ($status === 'completed') {
                     result_desc = ?,
                     mpesa_receipt_number = ?,
                     transaction_date = ?,
-                    callback_data = ?,
                     updated_at = CURRENT_TIMESTAMP
                     WHERE checkout_request_id = ? AND status != 'completed'";
                 
@@ -190,7 +189,6 @@ if ($status === 'completed') {
                     $resultDesc,
                     $mpesaReceiptNumber,
                     $transactionDate,
-                    json_encode($callbackData),
                     $checkoutRequestId
                 ]);
                 

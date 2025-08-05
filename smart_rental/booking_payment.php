@@ -673,6 +673,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     result = JSON.parse(responseText);
                     console.log('Payment status check result:', result);
+                    console.log('Status:', result.data?.status);
+                    console.log('Success:', result.success);
                 } catch (parseError) {
                     console.error('Failed to parse JSON response:', parseError);
                     console.error('Response text:', responseText);
@@ -681,6 +683,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (result.success && result.data.status === 'completed') {
                     clearInterval(pollInterval);
+                    console.log('🎉 Payment completed! Redirecting...');
                     
                     // Show success and redirect
                     successStatus.innerHTML = `
@@ -700,15 +703,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 } else if (result.success && result.data.status === 'processing') {
                     // Payment is still being processed - continue polling
-                    console.log('Payment still processing - continuing to poll');
+                    console.log('⏳ Payment still processing - continuing to poll');
+                    console.log('Processing message:', result.data.message);
+                    
+                    // Show processing status
+                    processingStatus.style.display = 'block';
+                    successStatus.style.display = 'none';
+                    errorStatus.style.display = 'none';
+                    
                     // Update the message to show it's still processing
-                    successStatus.innerHTML = `
+                    processingStatus.innerHTML = `
                         <i class="fas fa-clock fa-3x text-warning mb-3"></i>
                         <h6 class="text-warning">Payment Processing</h6>
                         <p class="text-muted">Your payment is still being processed by M-Pesa.</p>
                         <p class="text-muted small">${result.data.message || 'Please check your phone for the M-Pesa prompt.'}</p>
                         ${result.data.time_formatted ? `<p class="text-muted small">Time remaining: ${result.data.time_formatted}</p>` : ''}
+                        <p class="text-muted small">This may take a few moments. Please complete the payment on your phone.</p>
                     `;
+                    
+                    // Show check status button for manual checking
+                    checkStatusBtn.style.display = 'block';
                     
                 } else if (result.success && (result.data.status === 'failed' || result.data.status === 'cancelled')) {
                     clearInterval(pollInterval);
@@ -748,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Status check error:', error);
             }
-        }, 3000); // Check every 3 seconds for faster response
+        }, 2000); // Check every 2 seconds for faster response when processing
         
         // Stop polling after 3 minutes and 30 seconds (give extra time)
         setTimeout(() => {
