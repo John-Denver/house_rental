@@ -107,7 +107,7 @@ function recordPrePayment($conn, $bookingId, $amount, $paymentMethod, $transacti
         VALUES (?, 'monthly_rent', ?, ?, ?, 0, 'completed', ?, ?, ?, ?, ?)
     ");
     
-    $stmt->bind_param('idssssssss',
+    $stmt->bind_param('idsssssss',
         $bookingId,
         $amount,
         $amount,
@@ -141,7 +141,7 @@ function recordPrePayment($conn, $bookingId, $amount, $paymentMethod, $transacti
         updated_at = CURRENT_TIMESTAMP
     ");
     
-    $stmt->bind_param('isdsisssss',
+    $stmt->bind_param('isdsissss',
         $bookingId,
         $nextUnpaidMonth,
         $amount,
@@ -188,7 +188,7 @@ function recordMonthlyPayment($conn, $bookingId, $month, $amount, $paymentMethod
         VALUES (?, 'monthly_rent', ?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?)
     ");
     
-    $stmt->bind_param('idssssssss',
+    $stmt->bind_param('idsssssss',
         $bookingId,
         $amount,
         $amount,
@@ -223,7 +223,7 @@ function recordMonthlyPayment($conn, $bookingId, $month, $amount, $paymentMethod
         updated_at = CURRENT_TIMESTAMP
     ");
     
-    $stmt->bind_param('isdsisssss',
+    $stmt->bind_param('isdsissss',
         $bookingId,
         $month,
         $amount,
@@ -244,17 +244,85 @@ function recordMonthlyPayment($conn, $bookingId, $month, $amount, $paymentMethod
 }
 
 /**
- * Get next unpaid month for a booking
+ * Get the next unpaid month for a booking
  */
 function getNextUnpaidMonth($conn, $bookingId) {
+    // Get booking start date
+    $stmt = $conn->prepare("SELECT start_date FROM rental_bookings WHERE id = ?");
+    $stmt->bind_param('i', $bookingId);
+    $stmt->execute();
+    $booking = $stmt->get_result()->fetch_assoc();
+    
+    if (!$booking) {
+        return null;
+    }
+    
+    $startDate = $booking['start_date'];
+    $firstMonth = date('Y-m-01', strtotime($startDate));
+    
+    // Get all monthly payment records for this booking
     $stmt = $conn->prepare("
-        SELECT get_next_unpaid_month(?) as next_month
+        SELECT month, status 
+        FROM monthly_rent_payments 
+        WHERE booking_id = ? 
+        ORDER BY month ASC
     ");
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
+    $payments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    // If no payment records exist, return the first month
+    if (empty($payments)) {
+        return $firstMonth;
+    }
+    
+    // Find the last paid month
+    $lastPaidMonth = null;
+    foreach ($payments as $payment) {
+        if ($payment['status'] === 'paid') {
+            $lastPaidMonth = $payment['month'];
+        }
+    }
+    
+    // If no paid months found, return the first month
+    if (!$lastPaidMonth) {
+        return $firstMonth;
+    }
+    
+    // Return the next month after the last paid month
+    $nextMonth = date('Y-m-01', strtotime($lastPaidMonth . ' +1 month'));
+    
+    // Check if this next month already exists in the payments table
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as month_exists 
+        FROM monthly_rent_payments 
+        WHERE booking_id = ? AND month = ?
+    ");
+    $stmt->bind_param('is', $bookingId, $nextMonth);
+    $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
     
-    return $result['next_month'];
+    // If the month doesn't exist in the table, we need to create it first
+    if ($result['month_exists'] == 0) {
+        // Get the monthly rent amount
+        $stmt = $conn->prepare("SELECT monthly_rent FROM rental_bookings WHERE id = ?");
+        $stmt->bind_param('i', $bookingId);
+        $stmt->execute();
+        $bookingData = $stmt->get_result()->fetch_assoc();
+        
+        if ($bookingData) {
+            // Create the missing month record
+            $stmt = $conn->prepare("
+                INSERT INTO monthly_rent_payments 
+                (booking_id, month, amount, status, payment_type, is_first_payment, monthly_rent_amount) 
+                VALUES (?, ?, ?, 'unpaid', 'monthly_rent', 0, ?)
+            ");
+            $stmt->bind_param('isds', $bookingId, $nextMonth, $bookingData['monthly_rent'], $bookingData['monthly_rent']);
+            $stmt->execute();
+        }
+    }
+    
+    return $nextMonth;
 }
 
 /**
@@ -262,13 +330,15 @@ function getNextUnpaidMonth($conn, $bookingId) {
  */
 function hasFirstPaymentBeenMade($conn, $bookingId) {
     $stmt = $conn->prepare("
-        SELECT has_first_payment_been_made(?) as has_first_payment
+        SELECT COUNT(*) as count 
+        FROM monthly_rent_payments 
+        WHERE booking_id = ? AND is_first_payment = 1 AND status = 'paid'
     ");
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
     
-    return $result['has_first_payment'] == 1;
+    return $result['count'] > 0;
 }
 
 /**

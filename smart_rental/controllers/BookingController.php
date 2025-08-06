@@ -50,8 +50,8 @@ class BookingController {
             $stmt = $this->conn->prepare("
                 INSERT INTO rental_bookings (
                     house_id, landlord_id, user_id, start_date, end_date,
-                    special_requests, status, security_deposit, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, NOW())
+                    special_requests, status, security_deposit, monthly_rent, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW())
             ");
             
             // Get user details
@@ -75,14 +75,15 @@ class BookingController {
             $specialRequests = $data['special_requests'] ?? null;
             
             $stmt->bind_param(
-                'iiisssd',
+                'iiisssdd',
                 $data['house_id'],
                 $landlordId,
                 $_SESSION['user_id'],
                 $data['start_date'],
                 $endDate,
                 $specialRequests,
-                $securityDeposit
+                $securityDeposit,
+                $monthlyRent
             );
             
             if (!$stmt->execute()) {
@@ -98,6 +99,9 @@ class BookingController {
             
             // Create initial payment record for security deposit (status: pending)
             $this->recordPayment($bookingId, $securityDeposit, 'deposit');
+            
+            // Create monthly payment records immediately
+            $this->createMonthlyPaymentRecords($bookingId);
             
             // Note: Units are NOT decremented here because booking is still 'pending'
             // Units will only be decremented when booking status changes to 'confirmed'
@@ -843,6 +847,34 @@ class BookingController {
             
         } catch (Exception $e) {
             $this->conn->rollback();
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Create monthly payment records for a booking
+     */
+    private function createMonthlyPaymentRecords($bookingId) {
+        try {
+            // Include the monthly payment tracker
+            require_once __DIR__ . '/../monthly_payment_tracker.php';
+            $tracker = new MonthlyPaymentTracker($this->conn);
+            
+            // This will automatically create the monthly records
+            $payments = $tracker->getMonthlyPayments($bookingId);
+            
+            error_log("Created " . count($payments) . " monthly payment records for booking $bookingId");
+            
+            return [
+                'success' => true,
+                'count' => count($payments)
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Failed to create monthly payment records for booking $bookingId: " . $e->getMessage());
             return [
                 'success' => false,
                 'message' => $e->getMessage()

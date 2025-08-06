@@ -15,17 +15,21 @@ ini_set('log_errors', 1);
 // Set JSON content type early
 header('Content-Type: application/json');
 
-// Custom database connection to avoid die() output
-$host = "localhost";
-$dbname = "house_rental";
-$username = "root";
-$password = "";
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Log session information for debugging
+error_log("Session data: " . json_encode($_SESSION));
+
+// Use the same database connection as config
+require_once __DIR__ . '/config/config.php';
 
 try {
-    $conn = new mysqli($host, $username, $password, $dbname);
-    
-    if ($conn->connect_error) {
-        throw new Exception("Connection failed: " . $conn->connect_error);
+    // Use the existing connection from config.php
+    if (!isset($conn) || $conn->connect_error) {
+        throw new Exception("Database connection not available");
     }
 } catch (Exception $e) {
     error_log("Database connection error: " . $e->getMessage());
@@ -37,16 +41,12 @@ try {
     exit;
 }
 
-require_once '../config/auth.php';
-
-// Start session
-session_start();
-
 // Clear any output buffer
 ob_clean();
 
 // Check if user is logged in
-if (!is_logged_in()) {
+if (!isset($_SESSION['user_id'])) {
+    error_log("User not logged in. Session data: " . json_encode($_SESSION));
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'User not logged in']);
     exit;
@@ -75,24 +75,23 @@ try {
         // Create the table if it doesn't exist
         $createTableSQL = "
         CREATE TABLE IF NOT EXISTS `monthly_rent_payments` (
-          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `id` int(11) NOT NULL,
           `booking_id` int(11) NOT NULL,
           `month` date NOT NULL COMMENT 'First day of the month (YYYY-MM-01)',
           `amount` decimal(15,2) NOT NULL,
           `status` enum('paid','unpaid','overdue') NOT NULL DEFAULT 'unpaid',
+          `payment_type` varchar(50) DEFAULT 'monthly_rent',
+          `is_first_payment` tinyint(1) DEFAULT 0,
+          `security_deposit_amount` decimal(15,2) DEFAULT 0.00,
+          `monthly_rent_amount` decimal(15,2) DEFAULT 0.00,
           `payment_date` datetime DEFAULT NULL,
           `payment_method` varchar(50) DEFAULT NULL,
           `transaction_id` varchar(255) DEFAULT NULL,
           `mpesa_receipt_number` varchar(50) DEFAULT NULL,
           `notes` text DEFAULT NULL,
-          `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          PRIMARY KEY (`id`),
-          UNIQUE KEY `unique_booking_month` (`booking_id`, `month`),
-          KEY `idx_booking_id` (`booking_id`),
-          KEY `idx_month` (`month`),
-          KEY `idx_status` (`status`),
-          KEY `idx_payment_date` (`payment_date`)
+          `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+          `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+          PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ";
         
@@ -112,6 +111,7 @@ try {
     $booking = $stmt->get_result()->fetch_assoc();
     
     if (!$booking) {
+        error_log("Booking not found or unauthorized. Booking ID: $bookingId, User ID: " . $_SESSION['user_id']);
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Booking not found or unauthorized']);
         exit;
@@ -254,10 +254,17 @@ try {
                 if (!$checkStmt->get_result()->fetch_assoc()) {
                     // Insert new monthly payment record
                     $insertStmt = $conn->prepare("
-                        INSERT INTO monthly_rent_payments (booking_id, month, amount, status)
-                        VALUES (?, ?, ?, 'unpaid')
+                        INSERT INTO monthly_rent_payments (booking_id, month, amount, status, payment_type, is_first_payment)
+                        VALUES (?, ?, ?, 'unpaid', ?, ?)
                     ");
-                    $insertStmt->bind_param('isd', $bookingId, $month, $property['price']);
+                    
+                    $isFirstPayment = ($current == $start) ? 1 : 0;
+                    $paymentType = $isFirstPayment ? 'initial_payment' : 'monthly_rent';
+                    
+                    // Store values in variables to avoid reference issues
+                    $isFirstPaymentValue = $isFirstPayment;
+                    
+                    $insertStmt->bind_param('isdsi', $bookingId, $month, $property['price'], $paymentType, $isFirstPaymentValue);
                     $insertStmt->execute();
                 }
                 
@@ -273,7 +280,9 @@ try {
                     payment_date,
                     payment_method,
                     mpesa_receipt_number,
-                    notes
+                    notes,
+                    is_first_payment,
+                    payment_type
                 FROM monthly_rent_payments 
                 WHERE booking_id = ?
                 ORDER BY month DESC

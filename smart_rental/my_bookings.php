@@ -305,11 +305,38 @@ include 'includes/header.php';
                                             <i class="fas fa-info-circle"></i>
                                         </a>
                                         <?php if ($booking['status'] === 'pending'): ?>
-                                        <a href="booking_payment.php?booking_id=<?php echo $booking['id']; ?>" 
+                                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>&type=initial" 
                                            class="btn btn-outline-success"
-                                           title="Make Payment">
+                                           title="Make Initial Payment">
                                             <i class="fas fa-credit-card"></i>
                                         </a>
+                                        <?php elseif ($booking['status'] === 'paid' || $booking['status'] === 'confirmed'): ?>
+                                        <?php 
+                                        // Use the new monthly payment tracker
+                                        require_once 'monthly_payment_tracker.php';
+                                        $tracker = new MonthlyPaymentTracker($conn);
+                                        
+                                        // Get next payment due
+                                        $nextPaymentDue = $tracker->getNextPaymentDue($booking['id']);
+                                        
+                                        if ($nextPaymentDue) {
+                                            $monthName = date('F Y', strtotime($nextPaymentDue['month']));
+                                            $amount = number_format($nextPaymentDue['amount'], 2);
+                                        ?>
+                                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" 
+                                           class="btn btn-outline-primary"
+                                           title="Pay <?php echo $monthName; ?> - KSh <?php echo $amount; ?>">
+                                            <i class="fas fa-credit-card"></i>
+                                        </a>
+                                        <?php 
+                                        } else {
+                                        ?>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> All Paid
+                                        </span>
+                                        <?php 
+                                        }
+                                        ?>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -668,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `);
         
         $.ajax({
-            url: 'get_monthly_payments.php',
+            url: 'get_monthly_payments_new.php',
             type: 'POST',
             data: { booking_id: bookingId },
             dataType: 'json',
@@ -699,8 +726,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Function to display monthly payments
-    function displayMonthlyPayments(payments) {
-        console.log('Displaying payments:', payments);
+    function displayMonthlyPayments(data) {
+        console.log('Displaying payments:', data);
+        
+        const payments = data.payments || [];
+        const summary = data.summary || {};
+        const nextPaymentDue = data.next_payment_due;
+        const booking = data.booking || {};
         
         if (payments.length === 0) {
             $('#monthlyPaymentsContent').html(`
@@ -751,13 +783,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Recent months (current + 1 previous):', recentMonths.length, 'Older months:', olderMonths.length);
         
-        // Calculate payment statistics
-        const totalMonths = payments.length;
-        const paidMonths = payments.filter(p => p.status === 'paid').length;
-        const unpaidMonths = payments.filter(p => p.status === 'unpaid').length;
+        // Use summary data if available, otherwise calculate from payments
+        const totalMonths = summary.total_months || payments.length;
+        const paidMonths = summary.paid_months || payments.filter(p => p.status === 'paid').length;
+        const unpaidMonths = summary.unpaid_months || payments.filter(p => p.status === 'unpaid').length;
         const overdueMonths = payments.filter(p => p.status === 'overdue').length;
-        const totalAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-        const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const totalAmount = (summary.total_paid || 0) + (summary.total_unpaid || 0);
+        const paidAmount = summary.total_paid || payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount), 0);
         
         let html = `
             <div class="row mb-3">
@@ -794,6 +826,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             </div>
+            
+            ${nextPaymentDue ? `
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1"><i class="fas fa-calendar-alt me-2"></i>Next Payment Due</h6>
+                                <p class="mb-0">${nextPaymentDue.month_display} - KSh ${parseFloat(nextPaymentDue.amount).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="makePayment(${booking.id}, ${nextPaymentDue.amount})">
+                                    <i class="fas fa-credit-card me-2"></i>Make Payment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+            
             <div class="row">
                 <div class="col-12">
                     <div class="table-responsive">
@@ -937,6 +990,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }[status] || status.charAt(0).toUpperCase() + status.slice(1);
         
         return `<span class="badge bg-${statusClass}">${statusText}</span>`;
+    }
+    
+    // Function to handle payment processing
+    function makePayment(bookingId, amount) {
+        // Redirect to the payment page
+        window.location.href = `booking_payment.php?id=${bookingId}&amount=${amount}`;
     }
 });
 </script>

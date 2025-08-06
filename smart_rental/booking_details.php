@@ -341,26 +341,27 @@ try {
                     <?php endif; ?>
                     
                     <?php 
-                    // Show pre-payment button if first payment is completed
-                    if ($firstPaymentCompleted && ($booking['status'] === 'confirmed' || $booking['status'] === 'paid')): 
-                        // Get the next unpaid month to display in the button
-                        $nextUnpaidMonth = null;
-                        $stmt = $conn->prepare("
-                            SELECT get_next_unpaid_month(?) as next_month
-                        ");
-                        $stmt->bind_param('i', $booking['id']);
-                        $stmt->execute();
-                        $result = $stmt->get_result()->fetch_assoc();
-                        $nextUnpaidMonth = $result['next_month'];
-                        
-                        if ($nextUnpaidMonth): 
-                            $monthName = date('F Y', strtotime($nextUnpaidMonth));
+                    // Use the new monthly payment tracker
+                    require_once 'monthly_payment_tracker.php';
+                    $tracker = new MonthlyPaymentTracker($conn);
+                    
+                    // Get next payment due
+                    $nextPaymentDue = $tracker->getNextPaymentDue($booking['id']);
+                    
+                    if ($nextPaymentDue): 
+                        $monthName = date('F Y', strtotime($nextPaymentDue['month']));
+                        $amount = number_format($nextPaymentDue['amount'], 2);
                     ?>
-                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>&type=prepayment" class="btn btn-primary w-100 mt-3" onclick="console.log('Pre-Pay button clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>&type=prepayment');">
-                            <i class="fas fa-calendar-plus me-1"></i> Pre-Pay <?php echo $monthName; ?>
+                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-primary w-100 mt-3">
+                            <i class="fas fa-credit-card me-1"></i> Pay <?php echo $monthName; ?> - KSh <?php echo $amount; ?>
                         </a>
                     <?php 
-                        endif;
+                    elseif ($booking['status'] === 'confirmed' || $booking['status'] === 'paid'): 
+                    ?>
+                        <div class="alert alert-success w-100 mt-3">
+                            <i class="fas fa-check me-1"></i> All payments completed!
+                        </div>
+                    <?php 
                     endif; 
                     ?>
                     
