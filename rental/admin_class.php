@@ -439,8 +439,26 @@ class Action {
         }
 
         if($id > 0) {
+            // Get current price for comparison
+            $check_stmt = $this->db->prepare("SELECT price FROM houses WHERE id = ?");
+            $check_stmt->bind_param("i", $id);
+            $check_stmt->execute();
+            $current = $check_stmt->get_result()->fetch_assoc();
+            $oldPrice = $current['price'];
+            
             $stmt = $this->db->prepare("UPDATE houses SET house_no = ?, description = ?, category_id = ?, price = ? WHERE id = ?");
             $stmt->bind_param("ssidi", $house_no, $description, $category_id, $price, $id);
+            
+            // Cascade price update if price changed
+            if ($oldPrice != $price) {
+                require_once '../smart_landlords/update_property_price_cascade.php';
+                $cascade = new PropertyPriceCascade($this->db);
+                $cascadeResult = $cascade->updatePropertyPrice($id, $price, $oldPrice);
+                
+                if (!$cascadeResult['success']) {
+                    return "Error cascading price update: " . $cascadeResult['message'];
+                }
+            }
         } else {
             $stmt = $this->db->prepare("INSERT INTO houses (house_no, description, category_id, price) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("ssid", $house_no, $description, $category_id, $price);
