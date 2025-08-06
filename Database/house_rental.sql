@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 04, 2025 at 10:23 AM
+-- Generation Time: Aug 06, 2025 at 02:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -123,8 +123,8 @@ CREATE TABLE `booking_payments` (
 --
 
 INSERT INTO `booking_payments` (`id`, `booking_id`, `amount`, `payment_date`, `payment_method`, `payment_gateway`, `transaction_id`, `receipt_url`, `status`, `notes`, `created_at`, `updated_at`) VALUES
-(6, 6, 1.00, '2025-08-01 14:42:14', 'deposit', NULL, NULL, NULL, 'completed', NULL, '2025-08-01 11:42:14', '2025-08-01 11:42:14'),
-(7, 6, 2.00, '2025-08-02 23:14:23', 'M-Pesa', NULL, 'MANUAL_1754165663', NULL, 'completed', 'Manual Payment Success - Checkout Request: ws_CO_020820252308114712512358', '2025-08-02 20:14:23', '2025-08-02 20:14:23');
+(83, 45, 1.00, '2025-08-06 15:00:14', 'deposit', NULL, NULL, NULL, 'pending', NULL, '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(84, 45, 2.00, '2025-08-06 15:01:39', 'M-Pesa', NULL, 'MPESA_1754481699', NULL, 'completed', 'M-Pesa Payment - Checkout Request: ws_CO_060820251501288712512358', '2025-08-06 12:01:39', '2025-08-06 12:01:39');
 
 -- --------------------------------------------------------
 
@@ -186,8 +186,7 @@ CREATE TABLE `favorites` (
 --
 
 INSERT INTO `favorites` (`id`, `user_id`, `house_id`, `created_at`) VALUES
-(7, 3, 38, '2025-07-28 20:24:54'),
-(8, 3, 42, '2025-07-31 21:40:16');
+(11, 3, 41, '2025-08-04 08:46:35');
 
 -- --------------------------------------------------------
 
@@ -294,19 +293,19 @@ CREATE TABLE `monthly_rent_payments` (
 --
 
 INSERT INTO `monthly_rent_payments` (`id`, `booking_id`, `month`, `amount`, `status`, `payment_type`, `is_first_payment`, `security_deposit_amount`, `monthly_rent_amount`, `payment_date`, `payment_method`, `transaction_id`, `mpesa_receipt_number`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 6, '2025-08-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(2, 6, '2025-09-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(3, 6, '2025-10-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(4, 6, '2025-11-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(5, 6, '2025-12-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(6, 6, '2026-01-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(7, 6, '2026-02-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(8, 6, '2026-03-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(9, 6, '2026-04-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(10, 6, '2026-05-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(11, 6, '2026-06-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(12, 6, '2026-07-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25'),
-(13, 6, '2026-08-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 1.00, NULL, NULL, NULL, NULL, NULL, '2025-08-02 18:26:26', '2025-08-02 19:25:25');
+(265, 45, '2025-08-01', 2.00, 'paid', 'initial_payment', 1, 0.00, 0.00, '2025-08-06 14:01:39', 'M-Pesa', 'MPESA_1754481699', 'TH676C0E55', 'First month rent + security deposit - Paid on 2025-08-06 14:01:39', '2025-08-06 12:00:14', '2025-08-06 12:01:39'),
+(266, 45, '2025-09-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(267, 45, '2025-10-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(268, 45, '2025-11-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(269, 45, '2025-12-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(270, 45, '2026-01-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(271, 45, '2026-02-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(272, 45, '2026-03-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(273, 45, '2026-04-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(274, 45, '2026-05-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(275, 45, '2026-06-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(276, 45, '2026-07-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14'),
+(277, 45, '2026-08-01', 1.00, 'unpaid', 'monthly_rent', 0, 0.00, 0.00, NULL, NULL, NULL, NULL, 'Monthly rent payment', '2025-08-06 12:00:14', '2025-08-06 12:00:14');
 
 -- --------------------------------------------------------
 
@@ -321,6 +320,7 @@ CREATE TABLE `mpesa_payment_requests` (
   `merchant_request_id` varchar(255) DEFAULT NULL,
   `phone_number` varchar(20) NOT NULL,
   `amount` decimal(15,2) NOT NULL,
+  `payment_type` varchar(50) DEFAULT 'initial',
   `reference` varchar(255) NOT NULL,
   `status` enum('pending','completed','failed','cancelled') DEFAULT 'pending',
   `result_code` varchar(10) DEFAULT NULL,
@@ -335,15 +335,8 @@ CREATE TABLE `mpesa_payment_requests` (
 -- Dumping data for table `mpesa_payment_requests`
 --
 
-INSERT INTO `mpesa_payment_requests` (`id`, `booking_id`, `checkout_request_id`, `merchant_request_id`, `phone_number`, `amount`, `reference`, `status`, `result_code`, `result_desc`, `mpesa_receipt_number`, `transaction_date`, `created_at`, `updated_at`) VALUES
-(2, 6, 'ws_CO_010820251445412712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754048740', 'failed', '4999', 'The transaction is still under processing', NULL, NULL, '2025-08-01 11:45:41', '2025-08-01 11:45:47'),
-(3, 6, 'ws_CO_010820251446088712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754048768', 'pending', NULL, NULL, NULL, NULL, '2025-08-01 11:46:09', '2025-08-01 11:46:09'),
-(4, 6, 'ws_CO_020820252238472712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754163526', 'failed', '4999', 'The transaction is still under processing', NULL, NULL, '2025-08-02 19:38:47', '2025-08-02 19:38:53'),
-(5, 6, 'ws_CO_020820252248342712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754164113', 'pending', NULL, NULL, NULL, NULL, '2025-08-02 19:48:34', '2025-08-02 19:48:34'),
-(6, 6, 'ws_CO_020820252254295712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754164468', 'failed', '4999', 'The transaction is still under processing', NULL, NULL, '2025-08-02 19:54:29', '2025-08-02 19:54:33'),
-(7, 6, 'ws_CO_020820252255127712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754164512', 'failed', '0', 'The service request is processed successfully', NULL, NULL, '2025-08-02 19:55:12', '2025-08-02 19:58:17'),
-(8, 6, 'ws_CO_020820252307550712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754165274', 'failed', '1032', 'Request Cancelled by user', NULL, NULL, '2025-08-02 20:07:54', '2025-08-02 20:07:59'),
-(9, 6, 'ws_CO_020820252308114712512358', NULL, '254712512358', 2.00, 'RENTAL_6_1754165290', 'completed', '0', 'Payment completed successfully (manual)', 'MANUAL_1754165663', NULL, '2025-08-02 20:08:11', '2025-08-02 20:14:23');
+INSERT INTO `mpesa_payment_requests` (`id`, `booking_id`, `checkout_request_id`, `merchant_request_id`, `phone_number`, `amount`, `payment_type`, `reference`, `status`, `result_code`, `result_desc`, `mpesa_receipt_number`, `transaction_date`, `created_at`, `updated_at`) VALUES
+(94, 45, 'ws_CO_060820251501288712512358', NULL, '254712512358', 2.00, 'initial', 'RENTAL_45_1754481688', 'completed', '0', 'The service request is processed successfully', 'TH676C0E55', NULL, '2025-08-06 12:01:28', '2025-08-06 12:01:39');
 
 -- --------------------------------------------------------
 
@@ -392,6 +385,18 @@ CREATE TABLE `payment_tracking` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `payment_tracking`
+--
+
+INSERT INTO `payment_tracking` (`id`, `booking_id`, `payment_type`, `amount`, `security_deposit_amount`, `monthly_rent_amount`, `month`, `is_first_payment`, `status`, `payment_date`, `payment_method`, `transaction_id`, `mpesa_receipt_number`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 29, 'monthly_rent', 0.00, 0.00, 0.00, '2025-09-01', 0, 'completed', '2025-08-05 22:20:32', 'manual', 'TEST-1754425232', NULL, 'Test pre-payment from debug script', '2025-08-05 20:20:32', '2025-08-05 20:20:32'),
+(2, 29, 'monthly_rent', 0.00, 0.00, 0.00, '2025-09-01', 0, 'completed', '2025-08-05 22:20:36', 'manual', 'TEST-1754425236', NULL, 'Test pre-payment from debug script', '2025-08-05 20:20:36', '2025-08-05 20:20:36'),
+(3, 29, 'monthly_rent', 0.00, 0.00, 0.00, '2025-09-01', 0, 'completed', '2025-08-05 22:22:51', 'manual', 'TEST-1754425371', NULL, 'Test pre-payment from debug script', '2025-08-05 20:22:51', '2025-08-05 20:22:51'),
+(4, 29, 'monthly_rent', 0.00, 0.00, 0.00, '2025-10-01', 0, 'completed', '2025-08-05 22:27:13', 'manual', 'TEST-1754425633', NULL, 'Test pre-payment from debug script', '2025-08-05 20:27:13', '2025-08-05 20:27:13'),
+(5, 29, 'monthly_rent', 0.00, 0.00, 0.00, '2025-11-01', 0, 'completed', '2025-08-05 22:27:19', 'manual', 'TEST-1754425639', NULL, 'Test pre-payment from debug script', '2025-08-05 20:27:19', '2025-08-05 20:27:19'),
+(6, 29, 'monthly_rent', 0.00, 0.00, 0.00, '2025-12-01', 0, 'completed', '2025-08-05 22:27:19', 'manual', 'TEST-1754425639', NULL, 'Test pre-payment from debug script', '2025-08-05 20:27:19', '2025-08-05 20:27:19');
 
 -- --------------------------------------------------------
 
@@ -445,7 +450,9 @@ CREATE TABLE `property_viewings` (
 
 INSERT INTO `property_viewings` (`id`, `property_id`, `user_id`, `viewer_name`, `contact_number`, `viewing_date`, `viewing_time`, `status`, `notes`, `created_at`, `updated_at`) VALUES
 (2, 38, 4, 'Maureen Tallam ', '0712512358', '2025-08-09', '14:00:00', 'pending', '', '2025-07-28 21:24:05', '2025-07-28 21:24:05'),
-(4, 38, NULL, 'Guest', '0712512358', '2025-08-08', '12:00:00', 'pending', '', '2025-07-30 07:40:51', '2025-07-30 07:40:51');
+(4, 38, NULL, 'Guest', '0712512358', '2025-08-08', '12:00:00', 'pending', '', '2025-07-30 07:40:51', '2025-07-30 07:40:51'),
+(5, 42, 3, 'Thiira Elizabeth', '0712512358', '2025-08-15', '15:00:00', 'completed', '', '2025-08-04 08:47:49', '2025-08-04 20:11:12'),
+(6, 42, 3, 'Thiira Elizabeth', '0712512358', '2025-08-06', '16:00:00', 'cancelled', '\n[CANCELLED: I have found a better house]', '2025-08-06 12:00:01', '2025-08-06 12:05:07');
 
 -- --------------------------------------------------------
 
@@ -483,7 +490,7 @@ CREATE TABLE `rental_bookings` (
 --
 
 INSERT INTO `rental_bookings` (`id`, `house_id`, `monthly_rent`, `landlord_id`, `user_id`, `start_date`, `check_in_time`, `end_date`, `check_out_time`, `special_requests`, `last_payment_date`, `next_payment_due`, `security_deposit`, `payment_status`, `payment_method`, `payment_reference`, `status`, `cancellation_reason`, `cancelled_by`, `documents`, `created_at`, `updated_at`) VALUES
-(6, 42, 0.00, 4, 3, '2025-08-02', NULL, '2026-08-02', NULL, NULL, NULL, NULL, 1.00, 'pending', NULL, NULL, '', NULL, NULL, NULL, '2025-08-01 11:42:14', '2025-08-02 20:14:23');
+(45, 42, 1.00, 4, 3, '2025-08-12', NULL, '2026-08-12', NULL, NULL, NULL, NULL, 1.00, 'paid', NULL, NULL, 'confirmed', NULL, NULL, NULL, '2025-08-06 12:00:14', '2025-08-06 12:01:39');
 
 -- --------------------------------------------------------
 
@@ -514,7 +521,46 @@ INSERT INTO `rent_payments` (`id`, `booking_id`, `month`, `amount_due`, `amount_
 (1, 3, '2025-07-01', 25000.00, 0.00, 0.00, 0.00, 'pending', '2025-07-05', NULL, '2025-07-31 19:02:06', '2025-07-31 19:02:06'),
 (2, 4, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-07-31 22:33:10', '2025-07-31 22:33:10'),
 (3, 5, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-01 09:26:14', '2025-08-01 09:26:14'),
-(4, 6, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-01 11:42:14', '2025-08-01 11:42:14');
+(4, 6, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-01 11:42:14', '2025-08-01 11:42:14'),
+(5, 7, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-04 08:50:45', '2025-08-04 08:50:45'),
+(6, 8, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-04 09:25:00', '2025-08-04 09:25:00'),
+(7, 9, '2025-08-01', 4500.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-04 20:05:00', '2025-08-04 20:05:00'),
+(8, 10, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-04 20:06:38', '2025-08-04 20:06:38'),
+(9, 11, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-04 20:14:35', '2025-08-04 20:14:35'),
+(10, 12, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-04 20:15:28', '2025-08-04 20:15:28'),
+(11, 13, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 09:23:18', '2025-08-05 09:23:18'),
+(12, 14, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 10:00:42', '2025-08-05 10:00:42'),
+(13, 15, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 10:14:09', '2025-08-05 10:14:09'),
+(14, 16, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 10:16:50', '2025-08-05 10:16:50'),
+(15, 17, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 10:36:31', '2025-08-05 10:36:31'),
+(16, 18, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 10:36:42', '2025-08-05 10:36:42'),
+(17, 19, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 10:37:36', '2025-08-05 10:37:36'),
+(18, 20, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 11:22:07', '2025-08-05 11:22:07'),
+(19, 21, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 11:32:13', '2025-08-05 11:32:13'),
+(20, 22, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 15:50:37', '2025-08-05 15:50:37'),
+(21, 23, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 16:06:10', '2025-08-05 16:06:10'),
+(22, 24, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 16:53:43', '2025-08-05 16:53:43'),
+(23, 25, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 17:02:13', '2025-08-05 17:02:13'),
+(24, 26, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 17:12:46', '2025-08-05 17:12:46'),
+(25, 27, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 17:22:58', '2025-08-05 17:22:58'),
+(26, 28, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 17:42:39', '2025-08-05 17:42:39'),
+(27, 29, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 18:28:55', '2025-08-05 18:28:55'),
+(28, 30, '2025-08-01', 4500.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-05 18:38:31', '2025-08-05 18:38:31'),
+(29, 31, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 07:46:25', '2025-08-06 07:46:25'),
+(30, 32, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 08:57:42', '2025-08-06 08:57:42'),
+(31, 33, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 09:44:04', '2025-08-06 09:44:04'),
+(32, 34, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 09:44:32', '2025-08-06 09:44:32'),
+(33, 35, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 09:51:08', '2025-08-06 09:51:08'),
+(34, 36, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 10:08:43', '2025-08-06 10:08:43'),
+(35, 37, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 10:35:32', '2025-08-06 10:35:32'),
+(36, 38, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 10:40:11', '2025-08-06 10:40:11'),
+(37, 39, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 10:46:59', '2025-08-06 10:46:59'),
+(38, 40, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 11:01:34', '2025-08-06 11:01:34'),
+(39, 41, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 11:08:27', '2025-08-06 11:08:27'),
+(40, 42, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 11:12:50', '2025-08-06 11:12:50'),
+(41, 43, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 11:18:54', '2025-08-06 11:18:54'),
+(42, 44, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 11:45:43', '2025-08-06 11:45:43'),
+(43, 45, '2025-08-01', 1.00, 0.00, 0.00, 0.00, 'pending', '2025-08-05', NULL, '2025-08-06 12:00:14', '2025-08-06 12:00:14');
 
 -- --------------------------------------------------------
 
@@ -590,7 +636,8 @@ INSERT INTO `users` (`id`, `name`, `username`, `phone_number`, `current_balance`
 (1, 'Administrator', 'denver@gmail.com', NULL, 0.00, NULL, '$2y$10$JB4x5av/DBOFe1iE022UF.OXuV4.Wg.2T1MkR37KVXUwlYv8g0vcm', 'admin'),
 (3, 'Thiira Elizabeth', 'thiira@gmail.com', NULL, 0.00, NULL, '$2y$10$BtkTBVY4vkjF1g1U4D.ytOiWdw2.3Eewzogwv3DhCT.rHsgfBgPKm', 'customer'),
 (4, 'Maureen Tallam ', 'tallam@gmail.com', '0712512358', 0.00, NULL, '$2y$10$o3s9/cRzHmWMUDa0CkdJvOG07OZkNqTnk8UbBjedr6.bFfU501WI.', 'landlord'),
-(7, 'New Landlord', 'new@gmail.com', '0712512358', 0.00, NULL, '$2y$10$KpA95L7aJhqMigyrEBfmFuu9A8TfxnBSd1KaDkRPdwFstiivhmK0.', 'landlord');
+(7, 'New Landlord', 'new@gmail.com', '0712512358', 0.00, NULL, '$2y$10$KpA95L7aJhqMigyrEBfmFuu9A8TfxnBSd1KaDkRPdwFstiivhmK0.', 'landlord'),
+(8, 'pittah Class Rep', 'pittah@gmail.com', '0712512358', 0.00, NULL, '$2y$10$w3kDHFPTQ4dSo23xDMqdoeVKbAtNCJ8ddgxts5N208lwephKbfCvW', 'customer');
 
 --
 -- Indexes for dumped tables
@@ -766,7 +813,7 @@ ALTER TABLE `booking_documents`
 -- AUTO_INCREMENT for table `booking_payments`
 --
 ALTER TABLE `booking_payments`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT for table `booking_reviews`
@@ -784,7 +831,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `houses`
@@ -802,13 +849,13 @@ ALTER TABLE `house_media`
 -- AUTO_INCREMENT for table `monthly_rent_payments`
 --
 ALTER TABLE `monthly_rent_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=278;
 
 --
 -- AUTO_INCREMENT for table `mpesa_payment_requests`
 --
 ALTER TABLE `mpesa_payment_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -820,31 +867,31 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `payment_tracking`
 --
 ALTER TABLE `payment_tracking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `payment_types`
 --
 ALTER TABLE `payment_types`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `property_viewings`
 --
 ALTER TABLE `property_viewings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `rental_bookings`
 --
 ALTER TABLE `rental_bookings`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `rent_payments`
 --
 ALTER TABLE `rent_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `system_settings`
@@ -862,7 +909,7 @@ ALTER TABLE `tenants`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
