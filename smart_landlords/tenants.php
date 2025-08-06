@@ -36,53 +36,14 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 <body>
     <?php include('./includes/header.php'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="properties.php">
-                                <i class="fas fa-home"></i> Properties
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="bookings.php">
-                                <i class="fas fa-book"></i> Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="tenants.php">
-                                <i class="fas fa-users"></i> Tenants
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="payments.php">
-                                <i class="fas fa-money-bill"></i> Payments
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="maintenance_requests.php">
-                                <i class="fas fa-tools"></i> Maintenance
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="scheduled_viewings.php">
-                                <i class="fas fa-calendar-alt"></i> Viewings
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+    <div class="page-wrapper">
+        <!-- Sidebar -->
+        <?php include('./includes/sidebar.php'); ?>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid">
+                <div class="page-content">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Manage Tenants</h1>
                 </div>
@@ -152,7 +113,8 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </tbody>
                     </table>
                 </div>
-            </main>
+                </div>
+            </div>
         </div>
     </div>
 

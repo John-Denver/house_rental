@@ -216,7 +216,7 @@ $recentBookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <h5 class="mb-0">
                                         <i class="fas fa-building me-2"></i>
                                         <?php echo htmlspecialchars($booking['property_name']); ?>
-                                    </h5>
+                                </h5>
                                     <span class="badge bg-<?php echo $booking['status'] === 'confirmed' ? 'success' : ($booking['status'] === 'pending' ? 'warning' : 'secondary'); ?>">
                                         <?php echo ucfirst($booking['status']); ?>
                                     </span>
@@ -259,9 +259,9 @@ $recentBookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                                     </li>
                                                 <?php else: ?>
                                                     <li><strong>Status:</strong> <span class="badge bg-success">All Paid!</span></li>
-                                                <?php endif; ?>
+                                <?php endif; ?>
                                             </ul>
-                                        </div>
+                            </div>
                                     </div>
                                     
                                     <!-- Monthly Payments Table -->
@@ -296,12 +296,12 @@ $recentBookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                                     </tbody>
                                                 </table>
                                             </div>
-                                        </div>
+                                                </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
-                    <?php endif; ?>
+                            <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -317,19 +317,19 @@ $recentBookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 <div class="card-body">
                     <?php if (empty($recentMpesaPayments)): ?>
                         <p class="text-muted">No M-Pesa payments found.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
+                                <?php else: ?>
+                                    <div class="table-responsive">
                             <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
+                                            <thead>
+                                                <tr>
+                                                    <th>Date</th>
                                         <th>Property</th>
                                         <th>Amount</th>
-                                        <th>Status</th>
+                                                    <th>Status</th>
                                         <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
                                     <?php foreach ($recentMpesaPayments as $payment): ?>
                                         <tr>
                                             <td><?php echo date('M d, Y', strtotime($payment['created_at'])); ?></td>
@@ -337,18 +337,18 @@ $recentBookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                             <td>KSh <?php echo number_format($payment['amount'], 2); ?></td>
                                             <td>
                                                 <span class="badge bg-<?php echo $payment['status'] === 'completed' ? 'success' : ($payment['status'] === 'pending' ? 'warning' : 'danger'); ?>">
-                                                    <?php echo ucfirst($payment['status']); ?>
-                                                </span>
-                                            </td>
+                                                                <?php echo ucfirst($payment['status']); ?>
+                                                            </span>
+                                                        </td>
                                             <td><?php echo ucfirst($payment['payment_type'] ?? 'initial'); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    <?php endif; ?>
-                </div>
-            </div>
         </div>
         
         <div class="col-md-6">

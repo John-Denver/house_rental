@@ -187,43 +187,7 @@ $stats = $stmt->get_result()->fetch_assoc();
             <!-- Sidebar -->
             <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-white sidebar">
                 <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php">
-                                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="properties.php">
-                                <i class="fas fa-home me-2"></i> Properties
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="bookings.php">
-                                <i class="fas fa-book me-2"></i> Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="payments.php">
-                                <i class="fas fa-credit-card me-2"></i> Payments
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="tenants.php">
-                                <i class="fas fa-users me-2"></i> Tenants
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="maintenance_requests.php">
-                                <i class="fas fa-tools me-2"></i> Maintenance
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="scheduled_viewings.php">
-                                <i class="fas fa-calendar-alt me-2"></i> Viewings
-                            </a>
-                        </li>
-                    </ul>
+                    <?php include('./includes/sidebar.php'); ?>
                 </div>
             </nav>
 

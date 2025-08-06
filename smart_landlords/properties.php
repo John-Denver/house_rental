@@ -373,47 +373,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="properties.php">
-                                <i class="fas fa-home"></i> My Properties
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="bookings.php">
-                                <i class="fas fa-book"></i> Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="tenants.php">
-                                <i class="fas fa-users"></i> Tenants
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="payments.php">
-                                <i class="fas fa-money-bill"></i> Payments
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="maintenance_requests.php">
-                                <i class="fas fa-tools"></i> Maintenance Requests
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="scheduled_viewings.php">
-                                <i class="fas fa-calendar-alt"></i> Scheduled Viewings
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+            <?php include('./includes/sidebar.php'); ?>
 
             <!-- Main content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
