@@ -60,7 +60,7 @@ $viewings = $stmt->get_result();
         <!-- Main Content -->
         <div class="main-content">
             <div class="container-fluid">
-                <div class="page-content">
+                <div class="page-content" style="margin-top: 80px;">
                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                         <h1 class="h2">Scheduled Viewings</h1>
                         <div class="btn-toolbar mb-2 mb-md-0">

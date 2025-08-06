@@ -182,406 +182,404 @@ $stats = $stmt->get_result()->fetch_assoc();
 <body class="bg-light">
     <?php include('./includes/header.php'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-white sidebar">
-                <div class="position-sticky pt-3">
-                    <?php include('./includes/sidebar.php'); ?>
-                </div>
-            </nav>
+    <div class="page-wrapper">
+        <!-- Sidebar -->
+        <?php include('./includes/sidebar.php'); ?>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">
-                        <i class="fas fa-book me-2 text-primary"></i>
-                        Manage Bookings
-                    </h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
-                                <i class="fas fa-print me-1"></i> Print
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Success/Error Messages -->
-                <?php if (isset($success_message)): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <?php echo htmlspecialchars($success_message); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (isset($error_message)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        <?php echo htmlspecialchars($error_message); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Statistics Cards -->
-                <div class="row mb-4">
-                    <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-                        <div class="card stats-card h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-book fa-2x mb-2"></i>
-                                <h4 class="mb-0"><?php echo $stats['total_bookings']; ?></h4>
-                                <small>Total Bookings</small>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid">
+                <div class="page-content" style="margin-top: 80px;">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">
+                            <i class="fas fa-book me-2 text-primary"></i>
+                            Manage Bookings
+                        </h1>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                                    <i class="fas fa-print me-1"></i> Print
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-                        <div class="card stats-card warning h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-clock fa-2x mb-2"></i>
-                                <h4 class="mb-0"><?php echo $stats['pending_bookings']; ?></h4>
-                                <small>Pending</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-                        <div class="card stats-card success h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-check-circle fa-2x mb-2"></i>
-                                <h4 class="mb-0"><?php echo $stats['confirmed_bookings']; ?></h4>
-                                <small>Confirmed</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-                        <div class="card stats-card info h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-flag-checkered fa-2x mb-2"></i>
-                                <h4 class="mb-0"><?php echo $stats['completed_bookings']; ?></h4>
-                                <small>Completed</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-                        <div class="card bg-danger text-white h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-times-circle fa-2x mb-2"></i>
-                                <h4 class="mb-0"><?php echo $stats['cancelled_bookings']; ?></h4>
-                                <small>Cancelled</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Search and Filter -->
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <form method="GET" class="row g-3">
-                            <div class="col-md-4">
-                                <label for="search" class="form-label">Search</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                    <input type="text" class="form-control" id="search" name="search" 
-                                           value="<?php echo htmlspecialchars($search); ?>" 
-                                           placeholder="Search by tenant, property...">
+                    <!-- Success/Error Messages -->
+                    <?php if (isset($success_message)): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <?php echo htmlspecialchars($success_message); ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (isset($error_message)): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <?php echo htmlspecialchars($error_message); ?>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Statistics Cards -->
+                    <div class="row mb-4">
+                        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card stats-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-book fa-2x mb-2"></i>
+                                    <h4 class="mb-0"><?php echo $stats['total_bookings']; ?></h4>
+                                    <small>Total Bookings</small>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <label for="status" class="form-label">Status</label>
-                                <select class="form-select" id="status" name="status">
-                                    <option value="">All Status</option>
-                                    <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="confirmed" <?php echo $status_filter === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
-                                    <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                                    <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">&nbsp;</label>
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-filter me-1"></i> Filter
-                                    </button>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card stats-card warning h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-2x mb-2"></i>
+                                    <h4 class="mb-0"><?php echo $stats['pending_bookings']; ?></h4>
+                                    <small>Pending</small>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label">&nbsp;</label>
-                                <div class="d-grid">
-                                    <a href="bookings.php" class="btn btn-outline-secondary">
-                                        <i class="fas fa-undo me-1"></i> Clear
-                                    </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card stats-card success h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                    <h4 class="mb-0"><?php echo $stats['confirmed_bookings']; ?></h4>
+                                    <small>Confirmed</small>
                                 </div>
                             </div>
-                        </form>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card stats-card info h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-flag-checkered fa-2x mb-2"></i>
+                                    <h4 class="mb-0"><?php echo $stats['completed_bookings']; ?></h4>
+                                    <small>Completed</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-danger text-white h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-times-circle fa-2x mb-2"></i>
+                                    <h4 class="mb-0"><?php echo $stats['cancelled_bookings']; ?></h4>
+                                    <small>Cancelled</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Bookings Table -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2"></i>
-                            Rental Bookings (<?php echo count($bookings); ?>)
-                        </h5>
+                    <!-- Search and Filter -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <form method="GET" class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="search" class="form-label">Search</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" class="form-control" id="search" name="search" 
+                                               value="<?php echo htmlspecialchars($search); ?>" 
+                                               placeholder="Search by tenant, property...">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="">All Status</option>
+                                        <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                        <option value="confirmed" <?php echo $status_filter === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
+                                        <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                        <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-filter me-1"></i> Filter
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-grid">
+                                        <a href="bookings.php" class="btn btn-outline-secondary">
+                                            <i class="fas fa-undo me-1"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    <div class="card-body p-0">
-                        <?php if (empty($bookings)): ?>
-                            <div class="text-center py-5">
-                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No bookings found</h5>
-                                <p class="text-muted">There are no rental bookings matching your criteria.</p>
-                            </div>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Tenant</th>
-                                            <th>Property</th>
-                                            <th>Rental Period</th>
-                                            <th>Monthly Rent</th>
-                                            <th>Payment Status</th>
-                                            <th>Booking Status</th>
-                                            <th>Created</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($bookings as $booking): ?>
-                                        <tr class="booking-row">
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2">
-                                                        <i class="fas fa-user text-white"></i>
+
+                    <!-- Bookings Table -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list me-2"></i>
+                                Rental Bookings (<?php echo count($bookings); ?>)
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <?php if (empty($bookings)): ?>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No bookings found</h5>
+                                    <p class="text-muted">There are no rental bookings matching your criteria.</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Tenant</th>
+                                                <th>Property</th>
+                                                <th>Rental Period</th>
+                                                <th>Monthly Rent</th>
+                                                <th>Payment Status</th>
+                                                <th>Booking Status</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($bookings as $booking): ?>
+                                            <tr class="booking-row">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                            <i class="fas fa-user text-white"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold"><?php echo htmlspecialchars($booking['tenant_name']); ?></div>
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-envelope me-1"></i>
+                                                                <?php echo htmlspecialchars($booking['tenant_email']); ?>
+                                                            </small>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <div class="fw-bold"><?php echo htmlspecialchars($booking['tenant_name']); ?></div>
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-envelope me-1"></i>
-                                                            <?php echo htmlspecialchars($booking['tenant_email']); ?>
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="fw-bold"><?php echo htmlspecialchars($booking['house_no']); ?></div>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-map-marker-alt me-1"></i>
-                                                    <?php echo htmlspecialchars($booking['location']); ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <div class="fw-bold"><?php echo $booking['rental_months']; ?> months</div>
-                                                <small class="text-muted">
-                                                    <?php echo date('M d, Y', strtotime($booking['start_date'])); ?> - 
-                                                    <?php echo date('M d, Y', strtotime($booking['end_date'])); ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <div class="fw-bold text-success">KSh <?php echo number_format($booking['price'], 2); ?></div>
-                                                <small class="text-muted">per month</small>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                $paymentStatus = $booking['payment_status'] ?? 'pending';
-                                                $paymentColor = $paymentStatus === 'paid' ? 'success' : ($paymentStatus === 'partial' ? 'warning' : 'danger');
-                                                $paymentIcon = $paymentStatus === 'paid' ? 'check-circle' : ($paymentStatus === 'partial' ? 'clock' : 'times-circle');
-                                                ?>
-                                                <span class="badge bg-<?php echo $paymentColor; ?>">
-                                                    <i class="fas fa-<?php echo $paymentIcon; ?> me-1"></i>
-                                                    <?php echo ucfirst($paymentStatus); ?>
-                                                </span>
-                                                <?php if ($booking['total_paid']): ?>
-                                                    <div class="small text-muted">
-                                                        Paid: KSh <?php echo number_format($booking['total_paid'], 2); ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                                <?php if ($booking['mpesa_receipt_number']): ?>
-                                                    <div class="small text-success">
-                                                        <i class="fas fa-receipt me-1"></i>
-                                                        Receipt: <?php echo htmlspecialchars($booking['mpesa_receipt_number']); ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                                <?php if ($booking['transaction_date']): ?>
-                                                    <div class="small text-muted">
-                                                        <i class="fas fa-calendar me-1"></i>
-                                                        <?php echo date('M d, Y H:i', strtotime($booking['transaction_date'])); ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                $statusColor = $booking['status'] === 'confirmed' ? 'success' : 
-                                                             ($booking['status'] === 'pending' ? 'warning' : 
-                                                             ($booking['status'] === 'completed' ? 'info' : 'danger'));
-                                                ?>
-                                                <span class="badge bg-<?php echo $statusColor; ?>">
-                                                    <?php echo ucfirst($booking['status']); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <?php echo date('M d, Y', strtotime($booking['created_at'])); ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                            data-bs-toggle="modal" 
-                                                            data-bs-target="#bookingModal<?php echo $booking['id']; ?>">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    
-                                                    <?php if ($booking['status'] === 'pending'): ?>
-                                                        <form method="POST" style="display: inline;" 
-                                                              onsubmit="return confirm('Are you sure you want to approve this booking?')">
-                                                            <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
-                                                            <input type="hidden" name="action" value="approve">
-                                                            <button type="submit" class="btn btn-sm btn-outline-success">
-                                                                <i class="fas fa-check"></i>
-                                                            </button>
-                                                        </form>
-                                                        
-                                                        <form method="POST" style="display: inline;" 
-                                                              onsubmit="return confirm('Are you sure you want to reject this booking?')">
-                                                            <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
-                                                            <input type="hidden" name="action" value="reject">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                                <i class="fas fa-times"></i>
-                                                            </button>
-                                                        </form>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-bold"><?php echo htmlspecialchars($booking['house_no']); ?></div>
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                                        <?php echo htmlspecialchars($booking['location']); ?>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-bold"><?php echo $booking['rental_months']; ?> months</div>
+                                                    <small class="text-muted">
+                                                        <?php echo date('M d, Y', strtotime($booking['start_date'])); ?> - 
+                                                        <?php echo date('M d, Y', strtotime($booking['end_date'])); ?>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-bold text-success">KSh <?php echo number_format($booking['price'], 2); ?></div>
+                                                    <small class="text-muted">per month</small>
+                                                </td>
+                                                <td>
+                                                    <?php 
+                                                    $paymentStatus = $booking['payment_status'] ?? 'pending';
+                                                    $paymentColor = $paymentStatus === 'paid' ? 'success' : ($paymentStatus === 'partial' ? 'warning' : 'danger');
+                                                    $paymentIcon = $paymentStatus === 'paid' ? 'check-circle' : ($paymentStatus === 'partial' ? 'clock' : 'times-circle');
+                                                    ?>
+                                                    <span class="badge bg-<?php echo $paymentColor; ?>">
+                                                        <i class="fas fa-<?php echo $paymentIcon; ?> me-1"></i>
+                                                        <?php echo ucfirst($paymentStatus); ?>
+                                                    </span>
+                                                    <?php if ($booking['total_paid']): ?>
+                                                        <div class="small text-muted">
+                                                            Paid: KSh <?php echo number_format($booking['total_paid'], 2); ?>
+                                                        </div>
                                                     <?php endif; ?>
-                                                    
-                                                    <?php if ($booking['status'] === 'confirmed'): ?>
-                                                        <form method="POST" style="display: inline;" 
-                                                              onsubmit="return confirm('Mark this booking as completed?')">
-                                                            <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
-                                                            <input type="hidden" name="action" value="complete">
-                                                            <button type="submit" class="btn btn-sm btn-outline-info">
-                                                                <i class="fas fa-flag-checkered"></i>
-                                                            </button>
-                                                        </form>
+                                                    <?php if ($booking['mpesa_receipt_number']): ?>
+                                                        <div class="small text-success">
+                                                            <i class="fas fa-receipt me-1"></i>
+                                                            Receipt: <?php echo htmlspecialchars($booking['mpesa_receipt_number']); ?>
+                                                        </div>
                                                     <?php endif; ?>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        
-                                        <!-- Booking Details Modal -->
-                                        <div class="modal fade" id="bookingModal<?php echo $booking['id']; ?>" tabindex="-1">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">
-                                                            <i class="fas fa-book me-2"></i>
-                                                            Booking Details
-                                                        </h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <div class="row">
-                                                            <div class="col-md-6">
-                                                                <h6><i class="fas fa-user me-2"></i>Tenant Information</h6>
-                                                                <p><strong>Name:</strong> <?php echo htmlspecialchars($booking['tenant_name']); ?></p>
-                                                                <p><strong>Email:</strong> <?php echo htmlspecialchars($booking['tenant_email']); ?></p>
-                                                                <p><strong>Phone:</strong> <?php echo htmlspecialchars($booking['tenant_phone']); ?></p>
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <h6><i class="fas fa-home me-2"></i>Property Information</h6>
-                                                                <p><strong>Property:</strong> <?php echo htmlspecialchars($booking['house_no']); ?></p>
-                                                                <p><strong>Location:</strong> <?php echo htmlspecialchars($booking['location']); ?></p>
-                                                                <p><strong>Description:</strong> <?php echo htmlspecialchars($booking['description']); ?></p>
-                                                            </div>
+                                                    <?php if ($booking['transaction_date']): ?>
+                                                        <div class="small text-muted">
+                                                            <i class="fas fa-calendar me-1"></i>
+                                                            <?php echo date('M d, Y H:i', strtotime($booking['transaction_date'])); ?>
                                                         </div>
-                                                        <hr>
-                                                        <div class="row">
-                                                            <div class="col-md-6">
-                                                                <h6><i class="fas fa-calendar me-2"></i>Rental Period</h6>
-                                                                <p><strong>Start Date:</strong> <?php echo date('F d, Y', strtotime($booking['start_date'])); ?></p>
-                                                                <p><strong>End Date:</strong> <?php echo date('F d, Y', strtotime($booking['end_date'])); ?></p>
-                                                                <p><strong>Duration:</strong> <?php echo $booking['rental_months']; ?> months</p>
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <h6><i class="fas fa-money-bill me-2"></i>Financial Details</h6>
-                                                                <p><strong>Monthly Rent:</strong> KSh <?php echo number_format($booking['price'], 2); ?></p>
-                                                                <p><strong>Monthly Rent:</strong> KSh <?php echo number_format($booking['price'], 2); ?></p>
-                                                                <p><strong>Security Deposit:</strong> KSh <?php echo number_format($booking['security_deposit'] ?? 0, 2); ?></p>
-                                                            </div>
-                                                        </div>
-                                                        <hr>
-                                                        <div class="row">
-                                                            <div class="col-12">
-                                                                <h6><i class="fas fa-info-circle me-2"></i>Status Information</h6>
-                                                                <p><strong>Booking Status:</strong> 
-                                                                    <span class="badge bg-<?php echo $statusColor; ?>">
-                                                                        <?php echo ucfirst($booking['status']); ?>
-                                                                    </span>
-                                                                </p>
-                                                                <p><strong>Payment Status:</strong> 
-                                                                    <span class="badge bg-<?php echo $paymentColor; ?>">
-                                                                        <?php echo ucfirst($paymentStatus); ?>
-                                                                    </span>
-                                                                </p>
-                                                                <p><strong>Created:</strong> <?php echo date('F d, Y \a\t g:i A', strtotime($booking['created_at'])); ?></p>
-                                                                <?php if ($booking['updated_at']): ?>
-                                                                    <p><strong>Last Updated:</strong> <?php echo date('F d, Y \a\t g:i A', strtotime($booking['updated_at'])); ?></p>
-                                                                <?php endif; ?>
-                                                            </div>
-                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php 
+                                                    $statusColor = $booking['status'] === 'confirmed' ? 'success' : 
+                                                                 ($booking['status'] === 'pending' ? 'warning' : 
+                                                                 ($booking['status'] === 'completed' ? 'info' : 'danger'));
+                                                    ?>
+                                                    <span class="badge bg-<?php echo $statusColor; ?>">
+                                                        <?php echo ucfirst($booking['status']); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        <?php echo date('M d, Y', strtotime($booking['created_at'])); ?>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#bookingModal<?php echo $booking['id']; ?>">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
                                                         
-                                                        <?php if ($booking['mpesa_receipt_number'] || $booking['transaction_date']): ?>
-                                                        <hr>
-                                                        <div class="row">
-                                                            <div class="col-12">
-                                                                <h6><i class="fas fa-credit-card me-2"></i>M-Pesa Payment Details</h6>
-                                                                <?php if ($booking['mpesa_receipt_number']): ?>
-                                                                    <p><strong>M-Pesa Receipt Number:</strong> 
-                                                                        <span class="text-success fw-bold"><?php echo htmlspecialchars($booking['mpesa_receipt_number']); ?></span>
-                                                                    </p>
-                                                                <?php endif; ?>
-                                                                <?php if ($booking['transaction_date']): ?>
-                                                                    <p><strong>Transaction Date:</strong> 
-                                                                        <?php echo date('F d, Y \a\t g:i A', strtotime($booking['transaction_date'])); ?>
-                                                                    </p>
-                                                                <?php endif; ?>
-                                                                <?php if ($booking['result_desc']): ?>
-                                                                    <p><strong>Transaction Description:</strong> 
-                                                                        <?php echo htmlspecialchars($booking['result_desc']); ?>
-                                                                    </p>
-                                                                <?php endif; ?>
-                                                                <?php if ($booking['payment_request_status']): ?>
-                                                                    <p><strong>Payment Request Status:</strong> 
-                                                                        <span class="badge bg-<?php echo $booking['payment_request_status'] === 'completed' ? 'success' : ($booking['payment_request_status'] === 'failed' ? 'danger' : 'warning'); ?>">
-                                                                            <?php echo ucfirst($booking['payment_request_status']); ?>
-                                                                        </span>
-                                                                    </p>
-                                                                <?php endif; ?>
-                                                            </div>
-                                                        </div>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                                         <?php if ($booking['status'] === 'pending'): ?>
-                                                            <form method="POST" style="display: inline;">
+                                                            <form method="POST" style="display: inline;" 
+                                                                  onsubmit="return confirm('Are you sure you want to approve this booking?')">
                                                                 <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
                                                                 <input type="hidden" name="action" value="approve">
-                                                                <button type="submit" class="btn btn-success">
-                                                                    <i class="fas fa-check me-1"></i> Approve
+                                                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                                                    <i class="fas fa-check"></i>
+                                                                </button>
+                                                            </form>
+                                                            
+                                                            <form method="POST" style="display: inline;" 
+                                                                  onsubmit="return confirm('Are you sure you want to reject this booking?')">
+                                                                <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
+                                                                <input type="hidden" name="action" value="reject">
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </form>
+                                                        <?php endif; ?>
+                                                        
+                                                        <?php if ($booking['status'] === 'confirmed'): ?>
+                                                            <form method="POST" style="display: inline;" 
+                                                                  onsubmit="return confirm('Mark this booking as completed?')">
+                                                                <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
+                                                                <input type="hidden" name="action" value="complete">
+                                                                <button type="submit" class="btn btn-sm btn-outline-info">
+                                                                    <i class="fas fa-flag-checkered"></i>
                                                                 </button>
                                                             </form>
                                                         <?php endif; ?>
                                                     </div>
+                                                </td>
+                                            </tr>
+                                            
+                                            <!-- Booking Details Modal -->
+                                            <div class="modal fade" id="bookingModal<?php echo $booking['id']; ?>" tabindex="-1">
+                                                <div class="modal-dialog modal-lg">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">
+                                                                <i class="fas fa-book me-2"></i>
+                                                                Booking Details
+                                                            </h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <h6><i class="fas fa-user me-2"></i>Tenant Information</h6>
+                                                                    <p><strong>Name:</strong> <?php echo htmlspecialchars($booking['tenant_name']); ?></p>
+                                                                    <p><strong>Email:</strong> <?php echo htmlspecialchars($booking['tenant_email']); ?></p>
+                                                                    <p><strong>Phone:</strong> <?php echo htmlspecialchars($booking['tenant_phone']); ?></p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <h6><i class="fas fa-home me-2"></i>Property Information</h6>
+                                                                    <p><strong>Property:</strong> <?php echo htmlspecialchars($booking['house_no']); ?></p>
+                                                                    <p><strong>Location:</strong> <?php echo htmlspecialchars($booking['location']); ?></p>
+                                                                    <p><strong>Description:</strong> <?php echo htmlspecialchars($booking['description']); ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <hr>
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <h6><i class="fas fa-calendar me-2"></i>Rental Period</h6>
+                                                                    <p><strong>Start Date:</strong> <?php echo date('F d, Y', strtotime($booking['start_date'])); ?></p>
+                                                                    <p><strong>End Date:</strong> <?php echo date('F d, Y', strtotime($booking['end_date'])); ?></p>
+                                                                    <p><strong>Duration:</strong> <?php echo $booking['rental_months']; ?> months</p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <h6><i class="fas fa-money-bill me-2"></i>Financial Details</h6>
+                                                                    <p><strong>Monthly Rent:</strong> KSh <?php echo number_format($booking['price'], 2); ?></p>
+                                                                    <p><strong>Monthly Rent:</strong> KSh <?php echo number_format($booking['price'], 2); ?></p>
+                                                                    <p><strong>Security Deposit:</strong> KSh <?php echo number_format($booking['security_deposit'] ?? 0, 2); ?></p>
+                                                                </div>
+                                                            </div>
+                                                            <hr>
+                                                            <div class="row">
+                                                                <div class="col-12">
+                                                                    <h6><i class="fas fa-info-circle me-2"></i>Status Information</h6>
+                                                                    <p><strong>Booking Status:</strong> 
+                                                                        <span class="badge bg-<?php echo $statusColor; ?>">
+                                                                            <?php echo ucfirst($booking['status']); ?>
+                                                                        </span>
+                                                                    </p>
+                                                                    <p><strong>Payment Status:</strong> 
+                                                                        <span class="badge bg-<?php echo $paymentColor; ?>">
+                                                                            <?php echo ucfirst($paymentStatus); ?>
+                                                                        </span>
+                                                                    </p>
+                                                                    <p><strong>Created:</strong> <?php echo date('F d, Y \a\t g:i A', strtotime($booking['created_at'])); ?></p>
+                                                                    <?php if ($booking['updated_at']): ?>
+                                                                        <p><strong>Last Updated:</strong> <?php echo date('F d, Y \a\t g:i A', strtotime($booking['updated_at'])); ?></p>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <?php if ($booking['mpesa_receipt_number'] || $booking['transaction_date']): ?>
+                                                            <hr>
+                                                            <div class="row">
+                                                                <div class="col-12">
+                                                                    <h6><i class="fas fa-credit-card me-2"></i>M-Pesa Payment Details</h6>
+                                                                    <?php if ($booking['mpesa_receipt_number']): ?>
+                                                                        <p><strong>M-Pesa Receipt Number:</strong> 
+                                                                            <span class="text-success fw-bold"><?php echo htmlspecialchars($booking['mpesa_receipt_number']); ?></span>
+                                                                        </p>
+                                                                    <?php endif; ?>
+                                                                    <?php if ($booking['transaction_date']): ?>
+                                                                        <p><strong>Transaction Date:</strong> 
+                                                                            <?php echo date('F d, Y \a\t g:i A', strtotime($booking['transaction_date'])); ?>
+                                                                        </p>
+                                                                    <?php endif; ?>
+                                                                    <?php if ($booking['result_desc']): ?>
+                                                                        <p><strong>Transaction Description:</strong> 
+                                                                            <?php echo htmlspecialchars($booking['result_desc']); ?>
+                                                                        </p>
+                                                                    <?php endif; ?>
+                                                                    <?php if ($booking['payment_request_status']): ?>
+                                                                        <p><strong>Payment Request Status:</strong> 
+                                                                            <span class="badge bg-<?php echo $booking['payment_request_status'] === 'completed' ? 'success' : ($booking['payment_request_status'] === 'failed' ? 'danger' : 'warning'); ?>">
+                                                                                <?php echo ucfirst($booking['payment_request_status']); ?>
+                                                                            </span>
+                                                                        </p>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                            <?php if ($booking['status'] === 'pending'): ?>
+                                                                <form method="POST" style="display: inline;">
+                                                                    <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
+                                                                    <input type="hidden" name="action" value="approve">
+                                                                    <button type="submit" class="btn btn-success">
+                                                                        <i class="fas fa-check me-1"></i> Approve
+                                                                    </button>
+                                                                </form>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 

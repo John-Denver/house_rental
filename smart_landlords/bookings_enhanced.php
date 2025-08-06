@@ -160,19 +160,20 @@ $stats = $stmt->get_result()->fetch_assoc();
 <body class="bg-light">
     <?php include('./includes/header.php'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <?php include('./includes/sidebar.php'); ?>
+    <div class="page-wrapper">
+        <!-- Sidebar -->
+        <?php include('./includes/sidebar.php'); ?>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">
-                        <i class="fas fa-book me-2 text-primary"></i>
-                        Manage Bookings
-                    </h1>
-                </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid">
+                <div class="page-content" style="margin-top: 80px;">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">
+                            <i class="fas fa-book me-2 text-primary"></i>
+                            Manage Bookings
+                        </h1>
+                    </div>
 
                 <!-- Success/Error Messages -->
                 <?php if (isset($success_message)): ?>
@@ -505,7 +506,7 @@ $stats = $stmt->get_result()->fetch_assoc();
                         <?php endif; ?>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 
