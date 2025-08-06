@@ -31,6 +31,17 @@ $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $scheduled_viewings_count = $stmt->get_result()->fetch_assoc()['total_viewings'];
 
+// Get maintenance requests count
+$stmt = $conn->prepare("
+    SELECT COUNT(*) as total_requests 
+    FROM maintenance_requests mr
+    JOIN houses h ON mr.property_id = h.id
+    WHERE h.landlord_id = ? AND mr.status IN ('Pending', 'In Progress')
+");
+$stmt->bind_param('i', $_SESSION['user_id']);
+$stmt->execute();
+$maintenance_requests_count = $stmt->get_result()->fetch_assoc()['total_requests'];
+
 // Get rental statistics
 $stmt = $conn->prepare("SELECT 
                            COUNT(*) as total_rentals,
@@ -87,6 +98,11 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                     <li class="nav-item">
                         <a class="nav-link" href="payments.php">
                             <i class="fas fa-money-bill"></i> Payments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="maintenance_requests.php">
+                            <i class="fas fa-tools"></i> Maintenance Requests
                         </a>
                     </li>
                     <li class="nav-item">
@@ -147,12 +163,22 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-xl">
+                        <div class="col-12 col-sm-6 col-xl mb-3 mb-xl-0">
                             <a href="scheduled_viewings.php" class="text-decoration-none">
                                 <div class="card bg-info text-white h-100 hover-shadow">
                                     <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
                                         <h5 class="card-title mb-2">Scheduled Viewings</h5>
                                         <p class="card-text display-6 mb-0"><?php echo $scheduled_viewings_count; ?></p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl">
+                            <a href="maintenance_requests.php" class="text-decoration-none">
+                                <div class="card bg-secondary text-white h-100 hover-shadow">
+                                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
+                                        <h5 class="card-title mb-2">Maintenance Requests</h5>
+                                        <p class="card-text display-6 mb-0"><?php echo $maintenance_requests_count; ?></p>
                                     </div>
                                 </div>
                             </a>

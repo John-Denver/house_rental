@@ -214,6 +214,11 @@ $stats = $stmt->get_result()->fetch_assoc();
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="maintenance_requests.php">
+                                <i class="fas fa-tools me-2"></i> Maintenance
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="scheduled_viewings.php">
                                 <i class="fas fa-calendar-alt me-2"></i> Viewings
                             </a>

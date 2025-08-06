@@ -223,6 +223,21 @@ $property_success_rates = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <i class="fas fa-credit-card me-2"></i> Payments
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tenants.php">
+                                <i class="fas fa-users me-2"></i> Tenants
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="maintenance_requests.php">
+                                <i class="fas fa-tools me-2"></i> Maintenance
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="scheduled_viewings.php">
+                                <i class="fas fa-calendar-alt me-2"></i> Viewings
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>

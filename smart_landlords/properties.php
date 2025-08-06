@@ -396,6 +396,21 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <i class="fas fa-users"></i> Tenants
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="payments.php">
+                                <i class="fas fa-money-bill"></i> Payments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="maintenance_requests.php">
+                                <i class="fas fa-tools"></i> Maintenance Requests
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="scheduled_viewings.php">
+                                <i class="fas fa-calendar-alt"></i> Scheduled Viewings
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>

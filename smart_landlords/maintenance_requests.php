@@ -72,7 +72,11 @@ $sort_order = $_GET['order'] ?? 'DESC';
 
 // Build query
 $query = "
-    SELECT mr.*, h.house_no, h.location, h.description as property_description,
+    SELECT mr.id, mr.tenant_id, mr.property_id, mr.booking_id, mr.title, mr.description, 
+           mr.photo_url, mr.urgency, mr.status, mr.submission_date, mr.assigned_repair_date,
+           mr.assigned_technician, mr.before_photo_url, mr.after_photo_url, mr.rejection_reason,
+           mr.rating, mr.feedback, mr.completion_date, mr.created_at, mr.updated_at,
+           h.house_no, h.location, h.description as property_description,
            u.name as tenant_name, u.username as tenant_email, u.phone_number as tenant_phone
     FROM maintenance_requests mr
     JOIN houses h ON mr.property_id = h.id
@@ -101,6 +105,11 @@ if ($property_filter) {
     $types .= 'i';
 }
 
+// Ensure sort_by is a valid column and properly qualified
+$allowed_sort_columns = ['submission_date', 'urgency', 'status', 'assigned_repair_date', 'completion_date'];
+if (!in_array($sort_by, $allowed_sort_columns)) {
+    $sort_by = 'submission_date';
+}
 $query .= " ORDER BY mr.$sort_by $sort_order";
 
 $stmt = $conn->prepare($query);
@@ -123,11 +132,11 @@ $properties = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stats_query = "
     SELECT 
         COUNT(*) as total_requests,
-        COUNT(CASE WHEN status = 'Pending' THEN 1 END) as pending_count,
-        COUNT(CASE WHEN status = 'In Progress' THEN 1 END) as in_progress_count,
-        COUNT(CASE WHEN status = 'Completed' THEN 1 END) as completed_count,
-        COUNT(CASE WHEN status = 'Rejected' THEN 1 END) as rejected_count,
-        COUNT(CASE WHEN urgency = 'High' THEN 1 END) as high_priority_count
+        COUNT(CASE WHEN mr.status = 'Pending' THEN 1 END) as pending_count,
+        COUNT(CASE WHEN mr.status = 'In Progress' THEN 1 END) as in_progress_count,
+        COUNT(CASE WHEN mr.status = 'Completed' THEN 1 END) as completed_count,
+        COUNT(CASE WHEN mr.status = 'Rejected' THEN 1 END) as rejected_count,
+        COUNT(CASE WHEN mr.urgency = 'High' THEN 1 END) as high_priority_count
     FROM maintenance_requests mr
     JOIN houses h ON mr.property_id = h.id
     WHERE h.landlord_id = ?
