@@ -290,52 +290,27 @@ try {
                      // Continue without recording in booking_payments - the main payment is still successful
                  }
                  
-                 // Try to include payment tracking helper if tables exist
+                 // Use the new monthly payment tracker
                  try {
-                     // Check if payment_tracking table exists
-                     $tableCheck = $conn->query("SHOW TABLES LIKE 'payment_tracking'");
-                     if ($tableCheck && $tableCheck->num_rows > 0) {
-                         require_once 'includes/payment_tracking_helper.php';
-                         
-                         // Check if this is the first payment for this booking
-                         $hasFirstPayment = hasFirstPaymentBeenMade($conn, $payment_request['booking_id']);
-                         
-                         if (!$hasFirstPayment) {
-                             // This is the initial payment (security deposit + first month rent)
-                             $breakdown = getInitialPaymentBreakdown($conn, $payment_request['booking_id']);
-                             $securityDepositAmount = $breakdown['security_deposit'];
-                             $monthlyRentAmount = $breakdown['monthly_rent'];
-                             
-                             // Record initial payment
-                             recordInitialPayment(
-                                 $conn, 
-                                 $payment_request['booking_id'], 
-                                 $payment_request['amount'], 
-                                 $securityDepositAmount, 
-                                 $monthlyRentAmount, 
-                                 'M-Pesa', 
-                                 $transaction_id, 
-                                 null, 
-                                 'M-Pesa Initial Payment - Checkout Request: ' . $checkout_request_id
-                             );
-                         } else {
-                             // This is a monthly rent payment
-                             $nextMonth = getNextUnpaidMonth($conn, $payment_request['booking_id']);
-                             
-                             // Record monthly payment
-                             recordMonthlyPayment(
-                                 $conn, 
-                                 $payment_request['booking_id'], 
-                                 $nextMonth, 
-                                 $payment_request['amount'], 
-                                 'M-Pesa', 
-                                 $transaction_id, 
-                                 null, 
-                                 'M-Pesa Monthly Payment - Checkout Request: ' . $checkout_request_id
-                             );
-                         }
+                     // Use the new monthly payment tracker
+                     require_once __DIR__ . '/monthly_payment_tracker.php';
+                     $tracker = new MonthlyPaymentTracker($conn);
+                     
+                     // Allocate payment to the next unpaid month
+                     $paymentDate = date('Y-m-d H:i:s');
+                     $result = $tracker->allocatePayment(
+                         $payment_request['booking_id'],
+                         $payment_request['amount'],
+                         $paymentDate,
+                         'M-Pesa',
+                         $transaction_id,
+                         null // mpesa_receipt_number
+                     );
+                     
+                     if ($result['success']) {
+                         error_log("Payment allocated successfully via M-Pesa callback: " . $result['message']);
                      } else {
-                         error_log("Payment tracking tables not found - skipping advanced payment tracking");
+                         error_log("Failed to allocate payment via M-Pesa callback: " . $result['message']);
                      }
                  } catch (Exception $e) {
                      error_log("Payment tracking helper error: " . $e->getMessage());

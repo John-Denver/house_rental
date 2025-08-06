@@ -127,6 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Debug: Log payment processing
         error_log("Payment processing - Type: $paymentType, Amount: " . $paymentData['amount']);
+        error_log("Form payment type: " . ($formPaymentType ?: 'not set'));
+        error_log("POST data: " . print_r($_POST, true));
         
         // Process the payment using the new monthly payment tracker
         if ($paymentType === 'monthly_payment') {
@@ -155,7 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log("Payment type is completed - throwing error");
             throw new Exception('All payments for this booking have been completed');
         } else {
-            error_log("Falling back to regular payment processing");
+            error_log("Falling back to regular payment processing - paymentType: $paymentType");
+            error_log("This will NOT update monthly_rent_payments table!");
             // Handle regular payment (fallback)
             $result = $bookingController->processPayment($paymentData);
             
