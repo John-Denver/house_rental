@@ -18,6 +18,9 @@ $stmt = $conn->prepare("SELECT DISTINCT u.*,
 $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Debug: Uncomment the line below to see the structure of the first tenant record
+// if (!empty($tenants)) { echo '<pre>'; print_r($tenants[0]); echo '</pre>'; }
 ?>
 
 <!DOCTYPE html>
@@ -75,7 +78,7 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <thead>
                             <tr>
                                 <th>Tenant</th>
-                                <th>Email</th>
+                                <th>Email/Username</th>
                                 <th>Phone</th>
                                 <th>Current Property</th>
                                 <th>Rental Status</th>
@@ -87,9 +90,9 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <tbody>
                             <?php foreach ($tenants as $tenant): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($tenant['name']); ?></td>
-                                <td><?php echo htmlspecialchars($tenant['email']); ?></td>
-                                <td><?php echo htmlspecialchars($tenant['phone']); ?></td>
+                                <td><?php echo htmlspecialchars($tenant['name'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($tenant['username'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($tenant['phone_number'] ?? 'N/A'); ?></td>
                                 <td>
                                     <?php if ($tenant['house_no']): ?>
                                         <?php echo htmlspecialchars($tenant['house_no']); ?><br>
@@ -99,9 +102,13 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge bg-<?php echo $tenant['rental_status'] === 'confirmed' ? 'success' : ($tenant['rental_status'] === 'pending' ? 'warning' : 'danger'); ?>">
-                                        <?php echo ucfirst($tenant['rental_status']); ?>
-                                    </span>
+                                    <?php if ($tenant['rental_status']): ?>
+                                        <span class="badge bg-<?php echo $tenant['rental_status'] === 'confirmed' ? 'success' : ($tenant['rental_status'] === 'pending' ? 'warning' : 'danger'); ?>">
+                                            <?php echo ucfirst($tenant['rental_status']); ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary">No Status</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if ($tenant['start_date']): ?>
