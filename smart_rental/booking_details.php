@@ -287,24 +287,83 @@ try {
                         <span><?php echo date('M d, Y', strtotime($booking['end_date'])); ?></span>
                     </div>
                     <hr>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Monthly Rent:</span>
-                        <span>KSh <?php echo number_format(floatval($booking['property_price']), 2); ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Security Deposit (One-time):</span>
-                        <span>KSh <?php echo number_format(floatval($booking['security_deposit'] ?? 0), 2); ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
-                        <span>Initial Payment Required:</span>
-                        <span>KSh <?php echo number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
-                    </div>
+                    <?php 
+                    // Check if first payment is completed
+                    $firstPaymentCompleted = false;
+                    if ($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'completed') {
+                        $firstPaymentCompleted = true;
+                    } else {
+                        // Check if initial payment exists in monthly_rent_payments
+                        $stmt = $conn->prepare("
+                            SELECT COUNT(*) as count 
+                            FROM monthly_rent_payments 
+                            WHERE booking_id = ? AND is_first_payment = 1 AND status = 'paid'
+                        ");
+                        $stmt->bind_param('i', $booking['id']);
+                        $stmt->execute();
+                        $result = $stmt->get_result()->fetch_assoc();
+                        $firstPaymentCompleted = ($result['count'] > 0);
+                    }
                     
-                    <?php if ($booking['payment_status'] === 'pending' && ($booking['status'] === 'pending' || $booking['status'] === 'confirmed')): ?>
+                    // Show different payment breakdown based on payment status
+                    if (!$firstPaymentCompleted): ?>
+                        <!-- Initial Payment Breakdown -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Monthly Rent:</span>
+                            <span>KSh <?php echo number_format(floatval($booking['property_price']), 2); ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Security Deposit (One-time):</span>
+                            <span>KSh <?php echo number_format(floatval($booking['security_deposit'] ?? 0), 2); ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
+                            <span>Initial Payment Required:</span>
+                            <span>KSh <?php echo number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2); ?></span>
+                        </div>
+                    <?php else: ?>
+                        <!-- Pre-Payment Breakdown -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Monthly Rent:</span>
+                            <span>KSh <?php echo number_format(floatval($booking['property_price']), 2); ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold mt-3 pt-2 border-top">
+                            <span>Pre-Payment Amount:</span>
+                            <span>KSh <?php echo number_format(floatval($booking['property_price']), 2); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php 
+                    // Show initial payment button if first payment not completed
+                    if (!$firstPaymentCompleted && ($booking['status'] === 'pending' || $booking['status'] === 'confirmed')): ?>
                         <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-success w-100 mt-3" onclick="console.log('Make Payment clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
-                            <i class="fas fa-credit-card me-1"></i> Make Payment
+                            <i class="fas fa-credit-card me-1"></i> Make Initial Payment
                         </a>
                     <?php endif; ?>
+                    
+                    <?php 
+                    // Use the new monthly payment tracker
+                    require_once 'monthly_payment_tracker.php';
+                    $tracker = new MonthlyPaymentTracker($conn);
+                    
+                    // Get next payment due
+                    $nextPaymentDue = $tracker->getNextPaymentDue($booking['id']);
+                    
+                    if ($nextPaymentDue): 
+                        $monthName = date('F Y', strtotime($nextPaymentDue['month']));
+                        $amount = number_format($nextPaymentDue['amount'], 2);
+                    ?>
+                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-primary w-100 mt-3">
+                            <i class="fas fa-credit-card me-1"></i> Pay <?php echo $monthName; ?> - KSh <?php echo $amount; ?>
+                        </a>
+                    <?php 
+                    elseif ($booking['status'] === 'confirmed' || $booking['status'] === 'paid'): 
+                    ?>
+                        <div class="alert alert-success w-100 mt-3">
+                            <i class="fas fa-check me-1"></i> All payments completed!
+                        </div>
+                    <?php 
+                    endif; 
+                    ?>
                     
                     <?php if ($canReview): ?>
                         <button class="btn btn-outline-primary w-100 mt-2" 

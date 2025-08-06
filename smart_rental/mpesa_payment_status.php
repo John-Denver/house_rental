@@ -290,52 +290,79 @@ try {
                      // Continue without recording in booking_payments - the main payment is still successful
                  }
                  
-                 // Try to include payment tracking helper if tables exist
+                 // Use the new monthly payment tracker
                  try {
-                     // Check if payment_tracking table exists
-                     $tableCheck = $conn->query("SHOW TABLES LIKE 'payment_tracking'");
-                     if ($tableCheck && $tableCheck->num_rows > 0) {
-                         require_once 'includes/payment_tracking_helper.php';
+                     // Use the new monthly payment tracker
+                     require_once __DIR__ . '/monthly_payment_tracker.php';
+                     $tracker = new MonthlyPaymentTracker($conn);
+                     
+                     // Get payment type from the payment request
+                     $paymentType = $payment_request['payment_type'] ?? 'initial';
+                     error_log("M-Pesa callback - Payment type: $paymentType");
+                     
+                     $paymentDate = date('Y-m-d H:i:s');
+                     
+                     if ($paymentType === 'initial') {
+                         // For initial payment, we need to handle security deposit + first month rent
+                         error_log("Processing initial payment - handling security deposit and first month rent");
                          
-                         // Check if this is the first payment for this booking
-                         $hasFirstPayment = hasFirstPaymentBeenMade($conn, $payment_request['booking_id']);
+                         // Get booking details to determine security deposit and monthly rent
+                         $bookingStmt = $conn->prepare("
+                             SELECT monthly_rent, security_deposit 
+                             FROM rental_bookings 
+                             WHERE id = ?
+                         ");
+                         $bookingStmt->bind_param('i', $payment_request['booking_id']);
+                         $bookingStmt->execute();
+                         $booking = $bookingStmt->get_result()->fetch_assoc();
                          
-                         if (!$hasFirstPayment) {
-                             // This is the initial payment (security deposit + first month rent)
-                             $breakdown = getInitialPaymentBreakdown($conn, $payment_request['booking_id']);
-                             $securityDepositAmount = $breakdown['security_deposit'];
-                             $monthlyRentAmount = $breakdown['monthly_rent'];
+                         if ($booking) {
+                             $monthlyRent = floatval($booking['monthly_rent']);
+                             $securityDeposit = floatval($booking['security_deposit']);
+                             $totalExpected = $monthlyRent + $securityDeposit;
                              
-                             // Record initial payment
-                             recordInitialPayment(
-                                 $conn, 
-                                 $payment_request['booking_id'], 
-                                 $payment_request['amount'], 
-                                 $securityDepositAmount, 
-                                 $monthlyRentAmount, 
-                                 'M-Pesa', 
-                                 $transaction_id, 
-                                 null, 
-                                 'M-Pesa Initial Payment - Checkout Request: ' . $checkout_request_id
-                             );
+                             error_log("Initial payment breakdown - Monthly rent: $monthlyRent, Security deposit: $securityDeposit, Total expected: $totalExpected");
+                             
+                             // Verify the payment amount matches expected
+                             if (abs($payment_request['amount'] - $totalExpected) < 0.01) {
+                                 // Allocate the monthly rent portion to the first month
+                                 $result = $tracker->allocatePayment(
+                                     $payment_request['booking_id'],
+                                     $monthlyRent, // Only allocate the monthly rent portion
+                                     $paymentDate,
+                                     'M-Pesa',
+                                     $transaction_id,
+                                     null // mpesa_receipt_number
+                                 );
+                                 
+                                 if ($result['success']) {
+                                     error_log("Initial payment - Monthly rent allocated successfully: " . $result['message']);
+                                 } else {
+                                     error_log("Initial payment - Failed to allocate monthly rent: " . $result['message']);
+                                 }
+                             } else {
+                                 error_log("Initial payment - Amount mismatch. Expected: $totalExpected, Received: " . $payment_request['amount']);
+                             }
                          } else {
-                             // This is a monthly rent payment
-                             $nextMonth = getNextUnpaidMonth($conn, $payment_request['booking_id']);
-                             
-                             // Record monthly payment
-                             recordMonthlyPayment(
-                                 $conn, 
-                                 $payment_request['booking_id'], 
-                                 $nextMonth, 
-                                 $payment_request['amount'], 
-                                 'M-Pesa', 
-                                 $transaction_id, 
-                                 null, 
-                                 'M-Pesa Monthly Payment - Checkout Request: ' . $checkout_request_id
-                             );
+                             error_log("Initial payment - Could not get booking details");
                          }
                      } else {
-                         error_log("Payment tracking tables not found - skipping advanced payment tracking");
+                         // For monthly payments, allocate the full amount
+                         error_log("Processing monthly payment - allocating full amount");
+                         $result = $tracker->allocatePayment(
+                             $payment_request['booking_id'],
+                             $payment_request['amount'],
+                             $paymentDate,
+                             'M-Pesa',
+                             $transaction_id,
+                             null // mpesa_receipt_number
+                         );
+                         
+                         if ($result['success']) {
+                             error_log("Monthly payment allocated successfully via M-Pesa callback: " . $result['message']);
+                         } else {
+                             error_log("Failed to allocate monthly payment via M-Pesa callback: " . $result['message']);
+                         }
                      }
                  } catch (Exception $e) {
                      error_log("Payment tracking helper error: " . $e->getMessage());

@@ -25,15 +25,9 @@ define('MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline');
 define('MPESA_PARTYB', '174379'); // Same as shortcode for till payments
 
 // Callback URL - Using ngrok for local development
-// Update this URL when ngrok tunnel changes
-// To get current ngrok URL, run: ngrok http 80
-// Example: https://abc123.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php
-
 // Callback URL Configuration
-// Always use ngrok URL for testing since M-Pesa needs to reach your callback
-define('MPESA_CALLBACK_URL', 'https://71697fa889e3.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
+define('MPESA_CALLBACK_URL', 'https://3630ad5c2479.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
 
-// For production, change this to your domain
 // define('MPESA_CALLBACK_URL', 'https://yourdomain.com/smart_rental/mpesa_callback.php');
 
 // Environment

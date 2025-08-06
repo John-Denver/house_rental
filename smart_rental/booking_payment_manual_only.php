@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($result['success']) {
             $_SESSION['success'] = 'Payment processed successfully!';
-            header('Location: booking_confirmation.php?id=' . $bookingId);
+            header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
             exit();
         } else {
             throw new Exception($result['message']);

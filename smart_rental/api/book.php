@@ -140,6 +140,16 @@ try {
         $updateStmt = $conn->prepare("UPDATE houses SET status = 2 WHERE id = :id");
         $updateStmt->execute(['id' => $data['property_id']]);
         
+        // Create monthly payment records immediately
+        try {
+            require_once __DIR__ . '/../monthly_payment_tracker.php';
+            $tracker = new MonthlyPaymentTracker($conn);
+            $payments = $tracker->getMonthlyPayments($booking_id);
+            error_log("Created " . count($payments) . " monthly payment records for booking $booking_id via API");
+        } catch (Exception $e) {
+            error_log("Failed to create monthly payment records for booking $booking_id via API: " . $e->getMessage());
+        }
+        
         echo json_encode([
             'success' => true,
             'message' => 'Booking request submitted successfully. Please wait for landlord approval.',

@@ -226,6 +226,92 @@ if ($status === 'completed') {
                     $notes
                 ]);
                 
+                // Update monthly_rent_payments table using MonthlyPaymentTracker
+                try {
+                    require_once __DIR__ . '/monthly_payment_tracker.php';
+                    
+                    // Create MySQLi connection for MonthlyPaymentTracker
+                    $mysqli = new mysqli('localhost', 'root', '', 'house_rental');
+                    if ($mysqli->connect_error) {
+                        throw new Exception("MySQLi connection failed: " . $mysqli->connect_error);
+                    }
+                    
+                    $tracker = new MonthlyPaymentTracker($mysqli);
+                    
+                    // Get payment type from the payment request
+                    $paymentTypeQuery = "SELECT payment_type FROM mpesa_payment_requests WHERE checkout_request_id = ?";
+                    $stmt = $pdo->prepare($paymentTypeQuery);
+                    $stmt->execute([$checkoutRequestId]);
+                    $paymentRequest = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $paymentType = $paymentRequest['payment_type'] ?? 'initial';
+                    
+                    $logEntry = date('Y-m-d H:i:s') . " - Processing payment allocation for booking $bookingId, type: $paymentType\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    
+                    if ($paymentType === 'initial') {
+                        // For initial payments, get booking details to determine monthly rent
+                        $bookingQuery = "SELECT monthly_rent, security_deposit FROM rental_bookings WHERE id = ?";
+                        $stmt = $pdo->prepare($bookingQuery);
+                        $stmt->execute([$bookingId]);
+                        $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($booking) {
+                            $monthlyRent = floatval($booking['monthly_rent']);
+                            $securityDeposit = floatval($booking['security_deposit']);
+                            $totalExpected = $monthlyRent + $securityDeposit;
+                            
+                            // Verify the payment amount matches expected
+                            if (abs($dbAmount - $totalExpected) < 0.01) {
+                                // Allocate only the monthly rent portion to the first month
+                                $result = $tracker->allocatePayment(
+                                    $bookingId,
+                                    $monthlyRent, // Only allocate the monthly rent portion
+                                    date('Y-m-d H:i:s'),
+                                    'M-Pesa',
+                                    $transactionId,
+                                    $mpesaReceiptNumber
+                                );
+                                
+                                if ($result['success']) {
+                                    $logEntry = date('Y-m-d H:i:s') . " - Initial payment allocated successfully: " . $result['message'] . "\n";
+                                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                                } else {
+                                    $logEntry = date('Y-m-d H:i:s') . " - Initial payment allocation failed: " . $result['message'] . "\n";
+                                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                                }
+                            } else {
+                                $logEntry = date('Y-m-d H:i:s') . " - Initial payment amount mismatch. Expected: $totalExpected, Received: $dbAmount\n";
+                                file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                            }
+                        } else {
+                            $logEntry = date('Y-m-d H:i:s') . " - Could not get booking details for initial payment\n";
+                            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                        }
+                    } else {
+                        // For monthly payments, allocate the full amount
+                        $result = $tracker->allocatePayment(
+                            $bookingId,
+                            $dbAmount,
+                            date('Y-m-d H:i:s'),
+                            'M-Pesa',
+                            $transactionId,
+                            $mpesaReceiptNumber
+                        );
+                        
+                        if ($result['success']) {
+                            $logEntry = date('Y-m-d H:i:s') . " - Monthly payment allocated successfully: " . $result['message'] . "\n";
+                            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                        } else {
+                            $logEntry = date('Y-m-d H:i:s') . " - Monthly payment allocation failed: " . $result['message'] . "\n";
+                            file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                        }
+                    }
+                } catch (Exception $e) {
+                    $logEntry = date('Y-m-d H:i:s') . " - Monthly payment tracker error: " . $e->getMessage() . "\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    // Continue without failing the entire callback
+                }
+                
                 // Commit the transaction
                 $pdo->commit();
                 

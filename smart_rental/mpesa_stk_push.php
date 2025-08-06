@@ -43,6 +43,9 @@ if (!$input) {
     exit;
 }
 
+// Get payment type from input (default to 'initial' if not provided)
+$payment_type = $input['payment_type'] ?? 'initial';
+
 // Validate required fields
 $required_fields = ['booking_id', 'phone_number', 'amount'];
 $missing_fields = array_diff($required_fields, array_keys($input));
@@ -152,15 +155,16 @@ try {
             try {
                 $stmt = $conn->prepare("
                     INSERT INTO mpesa_payment_requests (
-                        booking_id, checkout_request_id, phone_number, amount, 
+                        booking_id, checkout_request_id, phone_number, amount, payment_type,
                         reference, status, created_at
-                    ) VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
                 ");
-                $stmt->bind_param('issds', 
+                $stmt->bind_param('issdss', 
                     $booking_id, 
                     $result['CheckoutRequestID'], 
                     $phone_number, 
                     $amount, 
+                    $payment_type,
                     $reference
                 );
                 $stmt->execute();
@@ -224,15 +228,16 @@ try {
                     // Store payment request in database with merchant request ID
                     $stmt = $conn->prepare("
                         INSERT INTO mpesa_payment_requests (
-                            booking_id, checkout_request_id, phone_number, amount, 
+                            booking_id, checkout_request_id, phone_number, amount, payment_type,
                             reference, status, created_at
-                        ) VALUES (?, ?, ?, ?, ?, 'pending', NOW())
+                        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
                     ");
-                    $stmt->bind_param('issds', 
+                    $stmt->bind_param('issdss', 
                         $booking_id, 
                         $result['merchantRequestID'], 
                         $phone_number, 
                         $amount, 
+                        $payment_type,
                         $reference
                     );
                     $stmt->execute();
@@ -259,15 +264,16 @@ try {
                 
                 $stmt = $conn->prepare("
                     INSERT INTO mpesa_payment_requests (
-                        booking_id, checkout_request_id, phone_number, amount, 
+                        booking_id, checkout_request_id, phone_number, amount, payment_type,
                         reference, status, created_at
-                    ) VALUES (?, ?, ?, ?, ?, 'processing', NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'processing', NOW())
                 ");
-                $stmt->bind_param('issds', 
+                $stmt->bind_param('issdss', 
                     $booking_id, 
                     $placeholder_id, 
                     $phone_number, 
                     $amount, 
+                    $payment_type,
                     $reference
                 );
                 $stmt->execute();

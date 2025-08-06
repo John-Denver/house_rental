@@ -38,6 +38,7 @@ if (!isset($_GET['id'])) {
 }
 
 $bookingId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$paymentType = $_GET['type'] ?? 'monthly_payment'; // Default to monthly_payment instead of initial
 $bookingController = new BookingController($conn);
 
 try {
@@ -52,8 +53,11 @@ try {
         throw new Exception('Unauthorized access to this booking');
     }
     
-    // Check if booking is already paid
-    if ($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'partial') {
+    // Check if booking is already paid (only for initial payments)
+    // Allow monthly payments even if initial payment is completed
+    error_log("Payment type check - paymentType: $paymentType, payment_status: " . $booking['payment_status']);
+    if (($booking['payment_status'] === 'paid' || $booking['payment_status'] === 'partial') && $paymentType === 'initial') {
+        error_log("Redirecting to booking_details.php - booking already paid");
         $_SESSION['success'] = 'This booking has already been paid.';
         header('Location: booking_details.php?id=' . $bookingId);
         exit();
@@ -79,24 +83,61 @@ $hasFirstPayment = hasFirstPaymentBeenMade($conn, $bookingId);
 
 // Calculate payment amount based on payment history
 $additionalFees = $booking['additional_fees'] ?? 0;
-$monthlyRent = floatval($booking['property_price']);
+$monthlyRent = floatval($booking['monthly_rent']);
 $securityDeposit = floatval($booking['security_deposit'] ?? 0);
 
-if (!$hasFirstPayment) {
-    // First payment: Security deposit + first month rent + additional fees
-    $totalAmount = $monthlyRent + $securityDeposit + $additionalFees;
-    $paymentType = 'initial_payment';
-    $paymentDescription = 'Initial Payment (Security Deposit + First Month Rent)';
+// Use the new monthly payment tracker system
+require_once __DIR__ . '/monthly_payment_tracker.php';
+$tracker = new MonthlyPaymentTracker($conn);
+
+// Get next payment due
+$nextPaymentDue = $tracker->getNextPaymentDue($bookingId);
+
+if ($nextPaymentDue) {
+    $totalAmount = $nextPaymentDue['amount'] + $additionalFees;
+    
+    // Determine if this is the initial payment or a subsequent monthly payment
+    $monthlyPayments = $tracker->getMonthlyPayments($bookingId);
+    $hasAnyPaidPayments = false;
+    
+    foreach ($monthlyPayments as $payment) {
+        if ($payment['status'] === 'paid') {
+            $hasAnyPaidPayments = true;
+            break;
+        }
+    }
+    
+    if ($hasAnyPaidPayments) {
+        // This is a subsequent monthly payment
+        $paymentType = 'monthly_payment';
+        $paymentDescription = 'Payment for ' . date('F Y', strtotime($nextPaymentDue['month']));
+        error_log("Subsequent monthly payment due: " . date('F Y', strtotime($nextPaymentDue['month'])) . " - Amount: $totalAmount");
+    } else {
+        // This is the initial payment (first month + security deposit)
+        $paymentType = 'initial';
+        $paymentDescription = 'Initial payment (first month + security deposit) for ' . date('F Y', strtotime($nextPaymentDue['month']));
+        error_log("Initial payment due: " . date('F Y', strtotime($nextPaymentDue['month'])) . " - Amount: $totalAmount");
+    }
+    
+    error_log("Payment type set to: $paymentType");
 } else {
-    // Subsequent payments: Monthly rent only
-    $totalAmount = $monthlyRent + $additionalFees;
-    $paymentType = 'monthly_rent';
-    $paymentDescription = 'Monthly Rent Payment';
+    // All payments completed
+    $totalAmount = 0;
+    $paymentType = 'completed';
+    $paymentDescription = 'All payments completed';
+    error_log("All payments completed - no next payment due");
+    error_log("Payment type set to: $paymentType");
 }
 
 // Process payment form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        // Get payment type from form data (this overrides the URL parameter)
+        $formPaymentType = filter_input(INPUT_POST, 'payment_type', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        if ($formPaymentType) {
+            $paymentType = $formPaymentType;
+        }
+        
         $paymentData = [
             'booking_id' => $bookingId,
             'amount' => filter_input(INPUT_POST, 'amount', FILTER_VALIDATE_FLOAT),
@@ -105,15 +146,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notes' => filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_FULL_SPECIAL_CHARS)
         ];
         
-        // Process the payment
-        $result = $bookingController->processPayment($paymentData);
+        // Debug: Log payment processing
+        error_log("Payment processing - Type: $paymentType, Amount: " . $paymentData['amount']);
+        error_log("Form payment type: " . ($formPaymentType ?: 'not set'));
+        error_log("POST data: " . print_r($_POST, true));
         
-        if ($result['success']) {
-            $_SESSION['success'] = 'Payment processed successfully!';
-            header('Location: booking_confirmation.php?id=' . $bookingId);
-            exit();
+        // Process the payment using the new monthly payment tracker
+        if ($paymentType === 'monthly_payment') {
+            error_log("Processing as monthly_payment");
+            // Allocate payment to the next unpaid month
+            $paymentDate = date('Y-m-d H:i:s');
+            $result = $tracker->allocatePayment(
+                $bookingId,
+                $paymentData['amount'],
+                $paymentDate,
+                $paymentData['payment_method'],
+                $paymentData['transaction_id'],
+                null // mpesa_receipt_number
+            );
+            
+            if ($result['success']) {
+                error_log("Monthly payment successful: " . $result['message']);
+                $_SESSION['success'] = 'Payment processed successfully! ' . $result['message'];
+                header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
+                exit();
+            } else {
+                error_log("Monthly payment failed: " . $result['message']);
+                throw new Exception($result['message']);
+            }
+        } elseif ($paymentType === 'initial') {
+            error_log("Processing as initial payment");
+            // For initial payment, handle security deposit + first month rent
+            $paymentDate = date('Y-m-d H:i:s');
+            
+            // Get booking details to determine security deposit and monthly rent
+            $bookingDetails = $bookingController->getBookingDetails($bookingId);
+            $monthlyRent = floatval($bookingDetails['monthly_rent']);
+            $securityDeposit = floatval($bookingDetails['security_deposit']);
+            $totalExpected = $monthlyRent + $securityDeposit;
+            
+            error_log("Initial payment breakdown - Monthly rent: $monthlyRent, Security deposit: $securityDeposit, Total expected: $totalExpected");
+            
+            // Verify the payment amount matches expected
+            if (abs($paymentData['amount'] - $totalExpected) < 0.01) {
+                // Allocate the monthly rent portion to the first month
+                $result = $tracker->allocatePayment(
+                    $bookingId,
+                    $monthlyRent, // Only allocate the monthly rent portion
+                    $paymentDate,
+                    $paymentData['payment_method'],
+                    $paymentData['transaction_id'],
+                    null // mpesa_receipt_number
+                );
+                
+                if ($result['success']) {
+                    error_log("Initial payment - Monthly rent allocated successfully: " . $result['message']);
+                    $_SESSION['success'] = 'Initial payment processed successfully! ' . $result['message'];
+                    header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
+                    exit();
+                } else {
+                    error_log("Initial payment - Failed to allocate monthly rent: " . $result['message']);
+                    throw new Exception($result['message']);
+                }
+            } else {
+                error_log("Initial payment - Amount mismatch. Expected: $totalExpected, Received: " . $paymentData['amount']);
+                throw new Exception("Payment amount does not match expected initial payment amount");
+            }
+        } elseif ($paymentType === 'completed') {
+            error_log("Payment type is completed - throwing error");
+            throw new Exception('All payments for this booking have been completed');
         } else {
-            throw new Exception($result['message']);
+            error_log("Falling back to regular payment processing - paymentType: $paymentType");
+            error_log("This will NOT update monthly_rent_payments table!");
+            // Handle regular payment (fallback)
+            $result = $bookingController->processPayment($paymentData);
+            
+            if ($result['success']) {
+                error_log("Regular payment successful");
+                $_SESSION['success'] = 'Payment processed successfully!';
+                header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
+                exit();
+            } else {
+                error_log("Regular payment failed: " . $result['message']);
+                throw new Exception($result['message']);
+            }
         }
         
     } catch (Exception $e) {
@@ -218,6 +334,17 @@ include 'includes/header.php';
                                         <strong>Note:</strong> Security deposit was paid with your initial payment. This is a monthly rent payment only.
                                     </div>
                                 <?php endif; ?>
+                                
+                                <?php if ($paymentType === 'prepayment'): ?>
+                                    <?php 
+                                    // Get the next unpaid month for display
+                                    $nextUnpaidMonth = getNextUnpaidMonth($conn, $bookingId);
+                                    ?>
+                                    <div class="alert alert-warning mt-3">
+                                        <i class="fas fa-calendar-plus me-2"></i>
+                                        <strong>Pre-Payment:</strong> This payment will be applied to <strong><?php echo date('F Y', strtotime($nextUnpaidMonth)); ?></strong>.
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             
                             <div class="mt-4">
@@ -251,6 +378,7 @@ include 'includes/header.php';
                                         </p>
                                         
                                         <form id="mpesaPaymentForm">
+                                            <input type="hidden" name="payment_type" value="<?php echo $paymentType; ?>">
                                             <div class="mb-3">
                                                 <label for="phoneNumber" class="form-label">M-Pesa Phone Number</label>
                                                 <div class="input-group">
@@ -442,7 +570,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     booking_id: <?php echo $bookingId; ?>,
                     phone_number: '254' + phoneNumber,
-                    amount: amount
+                    amount: amount,
+                    payment_type: '<?php echo $paymentType; ?>'
                 })
             });
             
@@ -698,7 +827,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Redirect after 3 seconds
                     setTimeout(() => {
-                        window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
+                        window.location.href = 'my_bookings.php?success=1&payment=1&booking_id=<?php echo $bookingId; ?>';
                     }, 3000);
                     
                 } else if (result.success && result.data.status === 'processing') {
@@ -858,7 +987,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Redirect after 3 seconds
                 setTimeout(() => {
-                    window.location.href = 'booking_confirmation.php?id=<?php echo $bookingId; ?>';
+                    window.location.href = 'my_bookings.php?success=1&payment=1&booking_id=<?php echo $bookingId; ?>';
                 }, 3000);
                 
             } else if (result.success && result.data.status === 'pending') {
