@@ -304,13 +304,7 @@ include 'includes/header.php';
                                            title="View Details">
                                             <i class="fas fa-info-circle"></i>
                                         </a>
-                                        <?php if ($booking['status'] === 'pending'): ?>
-                                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>&type=initial" 
-                                           class="btn btn-outline-success"
-                                           title="Make Initial Payment">
-                                            <i class="fas fa-credit-card"></i>
-                                        </a>
-                                        <?php elseif ($booking['status'] === 'paid' || $booking['status'] === 'confirmed'): ?>
+                                        <?php if ($booking['status'] === 'confirmed' || $booking['status'] === 'active'): ?>
                                         <?php 
                                         // Use the new monthly payment tracker
                                         require_once 'monthly_payment_tracker.php';

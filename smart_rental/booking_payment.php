@@ -64,8 +64,8 @@ try {
     }
     
     // Check if booking is in a valid state for payment
-    if ($booking['status'] !== 'pending' && $booking['status'] !== 'confirmed') {
-        throw new Exception('This booking is not in a valid state for payment. Current status: ' . $booking['status']);
+    if ($booking['status'] !== 'confirmed' && $booking['status'] !== 'active') {
+        throw new Exception('This booking is not in a valid state for payment. Only confirmed or active bookings can make payments. Current status: ' . $booking['status']);
     }
     
 } catch (Exception $e) {

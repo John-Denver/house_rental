@@ -245,12 +245,17 @@ $recentBookingPayments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                                 <li><strong>Total Paid:</strong> KSh <?php echo number_format($summary['total_paid'] ?? 0, 2); ?></li>
                                                 <li><strong>Total Unpaid:</strong> KSh <?php echo number_format($summary['total_unpaid'] ?? 0, 2); ?></li>
                                                 <li><strong>Paid Months:</strong> <?php echo $summary['paid_months'] ?? 0; ?> / <?php echo $summary['total_months'] ?? 0; ?></li>
-                                                <?php if ($nextPayment): ?>
+                                                <?php if ($nextPayment && ($booking['status'] === 'confirmed' || $booking['status'] === 'active')): ?>
                                                     <li><strong>Next Payment:</strong> <?php echo date('F Y', strtotime($nextPayment['month'])); ?> - KSh <?php echo number_format($nextPayment['amount'], 2); ?></li>
                                                     <li>
                                                         <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-primary btn-sm">
                                                             <i class="fas fa-credit-card me-1"></i>Make Payment
                                                         </a>
+                                                    </li>
+                                                <?php elseif ($nextPayment && $booking['status'] === 'pending'): ?>
+                                                    <li><strong>Next Payment:</strong> <?php echo date('F Y', strtotime($nextPayment['month'])); ?> - KSh <?php echo number_format($nextPayment['amount'], 2); ?></li>
+                                                    <li>
+                                                        <span class="badge bg-warning">Payment available after approval</span>
                                                     </li>
                                                 <?php else: ?>
                                                     <li><strong>Status:</strong> <span class="badge bg-success">All Paid!</span></li>
