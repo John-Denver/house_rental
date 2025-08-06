@@ -2220,3 +2220,375 @@ CheckoutRequestID: ws_CO_060820251348575712512358
 ResultCode: 0
 ResultDesc: The service request is processed successfully
 ----------------------------------------
+2025-08-06 12:59:06 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8040987",
+            "CheckoutRequestID": "ws_CO_060820251358594712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6261AVNQ"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10662000, BasicAmount=106620.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806135904
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 12:59:06 - Status determination: ResultCode=0, Status=completed
+2025-08-06 12:59:06 - Payment completed successfully for checkout_request_id: ws_CO_060820251358594712512358
+2025-08-06 12:59:06 - Payment SUCCESS:
+Receipt: TH6261AVNQ
+Amount: 1
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251358594712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:02:14 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd040432",
+            "CheckoutRequestID": "ws_CO_060820251402050712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6961UNWH"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10634500, BasicAmount=106345.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806140212
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:02:14 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:02:14 - Payment completed successfully for checkout_request_id: ws_CO_060820251402050712512358
+2025-08-06 13:02:14 - Payment SUCCESS:
+Receipt: TH6961UNWH
+Amount: 2
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251402050712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:09:07 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8041117",
+            "CheckoutRequestID": "ws_CO_060820251409002712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH63631FL7"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10634800, BasicAmount=106348.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806140906
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:09:07 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:09:07 - Payment completed successfully for checkout_request_id: ws_CO_060820251409002712512358
+2025-08-06 13:09:07 - Payment SUCCESS:
+Receipt: TH63631FL7
+Amount: 2
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251409002712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:11:44 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e319546",
+            "CheckoutRequestID": "ws_CO_060820251411381712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6363HJC1"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10635000, BasicAmount=106350.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806141143
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:11:44 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:11:44 - Payment completed successfully for checkout_request_id: ws_CO_060820251411381712512358
+2025-08-06 13:11:44 - Payment SUCCESS:
+Receipt: TH6363HJC1
+Amount: 1
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251411381712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:13:30 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "b6ee-4b95-90b1-27d193408dd040569",
+            "CheckoutRequestID": "ws_CO_060820251413236712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6663SMSE"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10635500, BasicAmount=106355.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806141328
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:13:30 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:13:30 - Payment completed successfully for checkout_request_id: ws_CO_060820251413236712512358
+2025-08-06 13:13:30 - Payment SUCCESS:
+Receipt: TH6663SMSE
+Amount: 2
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251413236712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:19:44 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8041214",
+            "CheckoutRequestID": "ws_CO_060820251419379712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6664VB6S"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10635800, BasicAmount=106358.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806141943
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:19:44 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:19:44 - Payment completed successfully for checkout_request_id: ws_CO_060820251419379712512358
+2025-08-06 13:19:44 - Payment SUCCESS:
+Receipt: TH6664VB6S
+Amount: 2
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251419379712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:46:20 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "a71d-4f69-bf89-6e6da87fe1e319865",
+            "CheckoutRequestID": "ws_CO_060820251446124712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6669FH2M"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10646400, BasicAmount=106464.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806144618
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:46:20 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:46:20 - Processing payment allocation for booking 44, type: initial
+2025-08-06 13:46:20 - Initial payment allocated successfully: Payment allocated to August 2025
+2025-08-06 13:46:20 - Payment completed successfully for checkout_request_id: ws_CO_060820251446124712512358
+2025-08-06 13:46:20 - Payment SUCCESS:
+Receipt: TH6669FH2M
+Amount: 2
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251446124712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
+2025-08-06 13:47:31 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "cb81-4fb1-82b1-057f3b6d21d919414",
+            "CheckoutRequestID": "ws_CO_060820251447242712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 1
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH6569MK0N"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10646500, BasicAmount=106465.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250806144730
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-06 13:47:31 - Status determination: ResultCode=0, Status=completed
+2025-08-06 13:47:31 - Processing payment allocation for booking 44, type: monthly_payment
+2025-08-06 13:47:31 - Monthly payment allocated successfully: Payment allocated to September 2025
+2025-08-06 13:47:31 - Payment completed successfully for checkout_request_id: ws_CO_060820251447242712512358
+2025-08-06 13:47:31 - Payment SUCCESS:
+Receipt: TH6569MK0N
+Amount: 1
+Phone: 254712512358
+CheckoutRequestID: ws_CO_060820251447242712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------

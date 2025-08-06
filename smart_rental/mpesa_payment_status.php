@@ -296,21 +296,73 @@ try {
                      require_once __DIR__ . '/monthly_payment_tracker.php';
                      $tracker = new MonthlyPaymentTracker($conn);
                      
-                     // Allocate payment to the next unpaid month
-                     $paymentDate = date('Y-m-d H:i:s');
-                     $result = $tracker->allocatePayment(
-                         $payment_request['booking_id'],
-                         $payment_request['amount'],
-                         $paymentDate,
-                         'M-Pesa',
-                         $transaction_id,
-                         null // mpesa_receipt_number
-                     );
+                     // Get payment type from the payment request
+                     $paymentType = $payment_request['payment_type'] ?? 'initial';
+                     error_log("M-Pesa callback - Payment type: $paymentType");
                      
-                     if ($result['success']) {
-                         error_log("Payment allocated successfully via M-Pesa callback: " . $result['message']);
+                     $paymentDate = date('Y-m-d H:i:s');
+                     
+                     if ($paymentType === 'initial') {
+                         // For initial payment, we need to handle security deposit + first month rent
+                         error_log("Processing initial payment - handling security deposit and first month rent");
+                         
+                         // Get booking details to determine security deposit and monthly rent
+                         $bookingStmt = $conn->prepare("
+                             SELECT monthly_rent, security_deposit 
+                             FROM rental_bookings 
+                             WHERE id = ?
+                         ");
+                         $bookingStmt->bind_param('i', $payment_request['booking_id']);
+                         $bookingStmt->execute();
+                         $booking = $bookingStmt->get_result()->fetch_assoc();
+                         
+                         if ($booking) {
+                             $monthlyRent = floatval($booking['monthly_rent']);
+                             $securityDeposit = floatval($booking['security_deposit']);
+                             $totalExpected = $monthlyRent + $securityDeposit;
+                             
+                             error_log("Initial payment breakdown - Monthly rent: $monthlyRent, Security deposit: $securityDeposit, Total expected: $totalExpected");
+                             
+                             // Verify the payment amount matches expected
+                             if (abs($payment_request['amount'] - $totalExpected) < 0.01) {
+                                 // Allocate the monthly rent portion to the first month
+                                 $result = $tracker->allocatePayment(
+                                     $payment_request['booking_id'],
+                                     $monthlyRent, // Only allocate the monthly rent portion
+                                     $paymentDate,
+                                     'M-Pesa',
+                                     $transaction_id,
+                                     null // mpesa_receipt_number
+                                 );
+                                 
+                                 if ($result['success']) {
+                                     error_log("Initial payment - Monthly rent allocated successfully: " . $result['message']);
+                                 } else {
+                                     error_log("Initial payment - Failed to allocate monthly rent: " . $result['message']);
+                                 }
+                             } else {
+                                 error_log("Initial payment - Amount mismatch. Expected: $totalExpected, Received: " . $payment_request['amount']);
+                             }
+                         } else {
+                             error_log("Initial payment - Could not get booking details");
+                         }
                      } else {
-                         error_log("Failed to allocate payment via M-Pesa callback: " . $result['message']);
+                         // For monthly payments, allocate the full amount
+                         error_log("Processing monthly payment - allocating full amount");
+                         $result = $tracker->allocatePayment(
+                             $payment_request['booking_id'],
+                             $payment_request['amount'],
+                             $paymentDate,
+                             'M-Pesa',
+                             $transaction_id,
+                             null // mpesa_receipt_number
+                         );
+                         
+                         if ($result['success']) {
+                             error_log("Monthly payment allocated successfully via M-Pesa callback: " . $result['message']);
+                         } else {
+                             error_log("Failed to allocate monthly payment via M-Pesa callback: " . $result['message']);
+                         }
                      }
                  } catch (Exception $e) {
                      error_log("Payment tracking helper error: " . $e->getMessage());

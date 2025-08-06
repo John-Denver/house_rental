@@ -95,9 +95,30 @@ $nextPaymentDue = $tracker->getNextPaymentDue($bookingId);
 
 if ($nextPaymentDue) {
     $totalAmount = $nextPaymentDue['amount'] + $additionalFees;
-    $paymentType = 'monthly_payment';
-    $paymentDescription = 'Payment for ' . date('F Y', strtotime($nextPaymentDue['month']));
-    error_log("Next payment due: " . date('F Y', strtotime($nextPaymentDue['month'])) . " - Amount: $totalAmount");
+    
+    // Determine if this is the initial payment or a subsequent monthly payment
+    $monthlyPayments = $tracker->getMonthlyPayments($bookingId);
+    $hasAnyPaidPayments = false;
+    
+    foreach ($monthlyPayments as $payment) {
+        if ($payment['status'] === 'paid') {
+            $hasAnyPaidPayments = true;
+            break;
+        }
+    }
+    
+    if ($hasAnyPaidPayments) {
+        // This is a subsequent monthly payment
+        $paymentType = 'monthly_payment';
+        $paymentDescription = 'Payment for ' . date('F Y', strtotime($nextPaymentDue['month']));
+        error_log("Subsequent monthly payment due: " . date('F Y', strtotime($nextPaymentDue['month'])) . " - Amount: $totalAmount");
+    } else {
+        // This is the initial payment (first month + security deposit)
+        $paymentType = 'initial';
+        $paymentDescription = 'Initial payment (first month + security deposit) for ' . date('F Y', strtotime($nextPaymentDue['month']));
+        error_log("Initial payment due: " . date('F Y', strtotime($nextPaymentDue['month'])) . " - Amount: $totalAmount");
+    }
+    
     error_log("Payment type set to: $paymentType");
 } else {
     // All payments completed
@@ -152,6 +173,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 error_log("Monthly payment failed: " . $result['message']);
                 throw new Exception($result['message']);
+            }
+        } elseif ($paymentType === 'initial') {
+            error_log("Processing as initial payment");
+            // For initial payment, handle security deposit + first month rent
+            $paymentDate = date('Y-m-d H:i:s');
+            
+            // Get booking details to determine security deposit and monthly rent
+            $bookingDetails = $bookingController->getBookingDetails($bookingId);
+            $monthlyRent = floatval($bookingDetails['monthly_rent']);
+            $securityDeposit = floatval($bookingDetails['security_deposit']);
+            $totalExpected = $monthlyRent + $securityDeposit;
+            
+            error_log("Initial payment breakdown - Monthly rent: $monthlyRent, Security deposit: $securityDeposit, Total expected: $totalExpected");
+            
+            // Verify the payment amount matches expected
+            if (abs($paymentData['amount'] - $totalExpected) < 0.01) {
+                // Allocate the monthly rent portion to the first month
+                $result = $tracker->allocatePayment(
+                    $bookingId,
+                    $monthlyRent, // Only allocate the monthly rent portion
+                    $paymentDate,
+                    $paymentData['payment_method'],
+                    $paymentData['transaction_id'],
+                    null // mpesa_receipt_number
+                );
+                
+                if ($result['success']) {
+                    error_log("Initial payment - Monthly rent allocated successfully: " . $result['message']);
+                    $_SESSION['success'] = 'Initial payment processed successfully! ' . $result['message'];
+                    header('Location: my_bookings.php?success=1&payment=1&booking_id=' . $bookingId);
+                    exit();
+                } else {
+                    error_log("Initial payment - Failed to allocate monthly rent: " . $result['message']);
+                    throw new Exception($result['message']);
+                }
+            } else {
+                error_log("Initial payment - Amount mismatch. Expected: $totalExpected, Received: " . $paymentData['amount']);
+                throw new Exception("Payment amount does not match expected initial payment amount");
             }
         } elseif ($paymentType === 'completed') {
             error_log("Payment type is completed - throwing error");
@@ -319,6 +378,7 @@ include 'includes/header.php';
                                         </p>
                                         
                                         <form id="mpesaPaymentForm">
+                                            <input type="hidden" name="payment_type" value="<?php echo $paymentType; ?>">
                                             <div class="mb-3">
                                                 <label for="phoneNumber" class="form-label">M-Pesa Phone Number</label>
                                                 <div class="input-group">
@@ -510,7 +570,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     booking_id: <?php echo $bookingId; ?>,
                     phone_number: '254' + phoneNumber,
-                    amount: amount
+                    amount: amount,
+                    payment_type: '<?php echo $paymentType; ?>'
                 })
             });
             

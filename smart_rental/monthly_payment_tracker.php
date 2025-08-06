@@ -147,6 +147,23 @@ class MonthlyPaymentTracker {
         
         // Debug: Log the allocation attempt
         error_log("Allocating payment for booking $bookingId to month $nextUnpaidMonth");
+        error_log("Payment details - Amount: $paymentAmount, Date: $paymentDate, Method: $paymentMethod, Transaction: $transactionId");
+        
+        // First, let's check what records exist for this booking
+        $checkStmt = $this->conn->prepare("
+            SELECT month, status, amount 
+            FROM monthly_rent_payments 
+            WHERE booking_id = ? AND month = ?
+        ");
+        $checkStmt->bind_param('is', $bookingId, $nextUnpaidMonth);
+        $checkStmt->execute();
+        $existingRecord = $checkStmt->get_result()->fetch_assoc();
+        
+        if ($existingRecord) {
+            error_log("Found existing record - Month: " . $existingRecord['month'] . ", Status: " . $existingRecord['status'] . ", Amount: " . $existingRecord['amount']);
+        } else {
+            error_log("No existing record found for booking $bookingId, month $nextUnpaidMonth");
+        }
         
         // Update the monthly payment record
         $stmt = $this->conn->prepare("
@@ -183,7 +200,19 @@ class MonthlyPaymentTracker {
                     'message' => "Payment allocated to " . date('F Y', strtotime($nextUnpaidMonth))
                 ];
             } else {
-                throw new Exception("No records were updated. Check if the month exists and is unpaid.");
+                // Let's check what went wrong
+                $debugStmt = $this->conn->prepare("
+                    SELECT COUNT(*) as count 
+                    FROM monthly_rent_payments 
+                    WHERE booking_id = ? AND month = ?
+                ");
+                $debugStmt->bind_param('is', $bookingId, $nextUnpaidMonth);
+                $debugStmt->execute();
+                $count = $debugStmt->get_result()->fetch_assoc()['count'];
+                
+                error_log("Debug: Found $count records for booking $bookingId, month $nextUnpaidMonth");
+                
+                throw new Exception("No records were updated. Found $count records for booking $bookingId, month $nextUnpaidMonth");
             }
         } else {
             throw new Exception("Failed to allocate payment: " . $stmt->error);
