@@ -183,13 +183,15 @@ $stats = $stmt->get_result()->fetch_assoc();
     <?php include('./includes/header.php'); ?>
 
     <div class="page-wrapper">
-        <!-- Sidebar -->
-        <?php include('./includes/sidebar.php'); ?>
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <?php include('./includes/sidebar.php'); ?>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="container-fluid">
-                <div class="page-content" style="margin-top: 80px;">
+                <!-- Main Content -->
+                <div class="main-content col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                    <div class="container-fluid">
+                        <div class="page-content" style="margin-top: 80px;">
                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                         <h1 class="h2">
                             <i class="fas fa-book me-2 text-primary"></i>

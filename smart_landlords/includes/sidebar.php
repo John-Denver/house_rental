@@ -2,8 +2,8 @@
 // Get current page name for active state
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
 ?>
-<nav id="sidebar" class="sidebar">
-    <div class="position-sticky">
+<nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+    <div class="position-sticky pt-3">
         <ul class="nav flex-column">
             <li class="nav-item">
                 <a class="nav-link <?php echo $current_page === 'index' ? 'active' : ''; ?>" href="index.php">
