@@ -64,16 +64,6 @@ if (!empty($missing_fields)) {
     exit;
 }
 
-// Validate move-in date
-if (strtotime($data['move_in_date']) < strtotime('+1 month')) {
-    http_response_code(400);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Move-in date must be at least 1 month from now'
-    ]);
-    exit;
-}
-
 // Validate email format
 if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
@@ -94,21 +84,57 @@ if (!preg_match('/^[0-9]{10}$/', $data['phone'])) {
     exit;
 }
 
-// Check if property exists and is available
 try {
-    $stmt = $conn->prepare("SELECT id, status FROM houses WHERE id = :id AND status = 1");
-    $stmt->execute(['id' => $data['property_id']]);
-    $property = $stmt->fetch();
-
-    if (!$property) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Property not found or not available'
-        ]);
-        exit;
+    // Start database transaction to prevent race conditions
+    $conn->beginTransaction();
+    
+    // Validate move-in date
+    $moveInDate = $data['move_in_date'];
+    $today = date('Y-m-d');
+    
+    if ($moveInDate < $today) {
+        throw new Exception('Move-in date cannot be in the past');
     }
-
+    
+    if ($moveInDate > date('Y-m-d', strtotime('+6 months'))) {
+        throw new Exception('Bookings cannot be made more than 6 months in advance');
+    }
+    
+    // CRITICAL FIX: Check property availability with FOR UPDATE lock to prevent race conditions
+    $propertyStmt = $conn->prepare("
+        SELECT id, landlord_id, available_units, total_units 
+        FROM houses 
+        WHERE id = ? AND status = 1 
+        FOR UPDATE
+    ");
+    $propertyStmt->execute(['id' => $data['property_id']]);
+    $property = $propertyStmt->fetch();
+    
+    if (!$property) {
+        throw new Exception('Property not found or not available');
+    }
+    
+    // Check if property has available units
+    if ($property['available_units'] <= 0) {
+        throw new Exception('Property is fully booked');
+    }
+    
+    // Check for existing bookings on the same date with lock
+    $bookingStmt = $conn->prepare("
+        SELECT COUNT(*) as count 
+        FROM rental_bookings 
+        WHERE house_id = ? 
+        AND status NOT IN ('cancelled', 'completed')
+        AND start_date = ?
+        FOR UPDATE
+    ");
+    $bookingStmt->execute([$data['property_id'], $moveInDate]);
+    $existingBookings = $bookingStmt->fetch();
+    
+    if ($existingBookings['count'] > 0) {
+        throw new Exception('Property is not available for the selected date. It may have been booked by another user.');
+    }
+    
     // Insert booking into rental_bookings table
     $stmt = $conn->prepare("INSERT INTO rental_bookings (
         house_id, user_id, landlord_id, start_date, end_date, 
@@ -116,9 +142,6 @@ try {
     ) VALUES (:house_id, :user_id, :landlord_id, :start_date, :end_date, :special_requests, 'pending', NOW())");
     
     // Get landlord_id from the property
-    $landlordStmt = $conn->prepare("SELECT landlord_id FROM houses WHERE id = :id");
-    $landlordStmt->execute(['id' => $data['property_id']]);
-    $property = $landlordStmt->fetch();
     $landlordId = $property['landlord_id'] ?? 1; // Default to 1 if not set
     
     // Calculate end date (1 year from start date for now)
@@ -136,10 +159,6 @@ try {
     if ($stmt->execute($params)) {
         $booking_id = $conn->lastInsertId();
         
-        // Update property status to booked
-        $updateStmt = $conn->prepare("UPDATE houses SET status = 2 WHERE id = :id");
-        $updateStmt->execute(['id' => $data['property_id']]);
-        
         // Create monthly payment records immediately
         try {
             require_once __DIR__ . '/../monthly_payment_tracker.php';
@@ -150,6 +169,9 @@ try {
             error_log("Failed to create monthly payment records for booking $booking_id via API: " . $e->getMessage());
         }
         
+        // Commit transaction
+        $conn->commit();
+        
         echo json_encode([
             'success' => true,
             'message' => 'Booking request submitted successfully. Please wait for landlord approval.',
@@ -158,11 +180,16 @@ try {
     } else {
         throw new PDOException('Failed to create booking');
     }
-} catch(PDOException $e) {
+} catch(Exception $e) {
+    // Rollback transaction on error
+    if (isset($conn)) {
+        $conn->rollback();
+    }
+    
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Failed to create booking. Please try again.'
+        'message' => 'Failed to create booking: ' . $e->getMessage()
     ]);
 }
 ?>

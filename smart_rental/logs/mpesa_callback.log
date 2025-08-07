@@ -2688,3 +2688,57 @@ CheckoutRequestID: ws_CO_060820252024276712512358
 ResultCode: 0
 ResultDesc: The service request is processed successfully
 ----------------------------------------
+2025-08-07 10:47:09 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2fd-490e-9ab5-07f4d8c8b19d2393",
+            "CheckoutRequestID": "ws_CO_070820251147005712512358",
+            "ResultCode": 0,
+            "ResultDesc": "The service request is processed successfully",
+            "CallbackMetadata": {
+                "Item": [
+                    {
+                        "Name": "Amount",
+                        "Value": 2
+                    },
+                    {
+                        "Name": "MpesaReceiptNumber",
+                        "Value": "TH79AJQEQJ"
+                    },
+                    {
+                        "Name": "Balance",
+                        "Value": "{Amount={CurrencyCode=KES, MinimumAmount=10712400, BasicAmount=107124.00}}"
+                    },
+                    {
+                        "Name": "TransactionDate",
+                        "Value": 20250807114707
+                    },
+                    {
+                        "Name": "PhoneNumber",
+                        "Value": 254712512358
+                    }
+                ]
+            }
+        }
+    }
+}
+----------------------------------------
+2025-08-07 10:47:09 - Status determination: ResultCode=0, Status=completed
+2025-08-07 10:47:09 - Processing booking ID: 73
+2025-08-07 10:47:09 - MySQLi connection successful
+2025-08-07 10:47:09 - Attempting to update booking status via BookingController
+2025-08-07 10:47:09 - Failed to update booking status via BookingController: Invalid status transition from confirmed to confirmed
+2025-08-07 10:47:09 - Attempting fallback direct update
+2025-08-07 10:47:09 - Fallback direct update completed
+2025-08-07 10:47:09 - Processing payment allocation for booking 73, type: initial
+2025-08-07 10:47:09 - Initial payment allocated successfully: Payment allocated to August 2025
+2025-08-07 10:47:09 - Payment completed successfully for checkout_request_id: ws_CO_070820251147005712512358
+2025-08-07 10:47:09 - Payment SUCCESS:
+Receipt: TH79AJQEQJ
+Amount: 2
+Phone: 254712512358
+CheckoutRequestID: ws_CO_070820251147005712512358
+ResultCode: 0
+ResultDesc: The service request is processed successfully
+----------------------------------------
