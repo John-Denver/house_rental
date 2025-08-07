@@ -37,14 +37,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result) {
                 $bookingId = $result['booking_id'];
                 
-                // Update booking status
-                $stmt = $conn->prepare("
-                    UPDATE rental_bookings 
-                    SET status = 'confirmed', payment_status = 'paid', updated_at = NOW()
-                    WHERE id = ?
-                ");
-                $stmt->bind_param('i', $bookingId);
-                $stmt->execute();
+                // Use BookingController to update booking status (this will trigger unit automation)
+                require_once 'controllers/BookingController.php';
+                $bookingController = new BookingController($conn);
+                
+                try {
+                    $bookingController->updateBookingStatus($bookingId, 'confirmed', 'Manual payment status update', null);
+                    error_log("Booking status updated to confirmed via BookingController for booking ID: $bookingId");
+                } catch (Exception $e) {
+                    error_log("Failed to update booking status via BookingController: " . $e->getMessage());
+                    // Fallback to direct update if BookingController fails
+                    $stmt = $conn->prepare("
+                        UPDATE rental_bookings 
+                        SET status = 'confirmed', payment_status = 'paid', updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $stmt->bind_param('i', $bookingId);
+                    $stmt->execute();
+                }
                 
                 // Record payment
                 $stmt = $conn->prepare("

@@ -1,7 +1,10 @@
 <?php
 require_once '../config/db.php';
 require_once '../config/auth.php';
+require_once '../smart_rental/controllers/BookingController.php';
 require_landlord();
+
+$bookingController = new BookingController($conn);
 
 // Handle booking status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['booking_id'])) {
@@ -36,12 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
         }
         
         if ($new_status) {
-            $stmt = $conn->prepare("UPDATE rental_bookings SET status = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->bind_param('si', $new_status, $booking_id);
-            if ($stmt->execute()) {
+            try {
+                // Use BookingController to update status (this will trigger unit automation)
+                $bookingController->updateBookingStatus($booking_id, $new_status, 'Landlord action: ' . $action, $_SESSION['user_id']);
                 $success_message = $message;
-            } else {
-                $error_message = "Failed to update booking status.";
+            } catch (Exception $e) {
+                $error_message = "Failed to update booking status: " . $e->getMessage();
             }
         }
     } else {

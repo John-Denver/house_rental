@@ -199,15 +199,25 @@ if ($status === 'completed') {
                 // Get booking ID for further updates
                 $bookingId = $existingPayment['booking_id'];
                 
-                // Update booking status to confirmed and payment_status to paid
-                $updateBookingQuery = "UPDATE rental_bookings SET 
-                    status = 'confirmed',
-                    payment_status = 'paid',
-                    updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
+                // Use BookingController to update booking status (this will trigger unit automation)
+                require_once 'controllers/BookingController.php';
+                $bookingController = new BookingController($pdo);
                 
-                $stmt = $pdo->prepare($updateBookingQuery);
-                $stmt->execute([$bookingId]);
+                try {
+                    $bookingController->updateBookingStatus($bookingId, 'confirmed', 'M-Pesa payment completed', null);
+                    error_log("Booking status updated to confirmed via BookingController for booking ID: $bookingId");
+                } catch (Exception $e) {
+                    error_log("Failed to update booking status via BookingController: " . $e->getMessage());
+                    // Fallback to direct update if BookingController fails
+                    $updateBookingQuery = "UPDATE rental_bookings SET 
+                        status = 'confirmed',
+                        payment_status = 'paid',
+                        updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
+                    
+                    $stmt = $pdo->prepare($updateBookingQuery);
+                    $stmt->execute([$bookingId]);
+                }
                 
                 // Record payment in booking_payments table
                 $insertPaymentQuery = "INSERT INTO booking_payments (

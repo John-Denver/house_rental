@@ -80,13 +80,23 @@ try {
         $stmt->execute();
         
         // Update booking status
-        $stmt = $conn->prepare("
-            UPDATE rental_bookings 
-            SET status = 'paid', updated_at = NOW() 
-            WHERE id = ?
-        ");
-        $stmt->bind_param('i', $payment_request['booking_id']);
-        $stmt->execute();
+        require_once 'controllers/BookingController.php';
+        $bookingController = new BookingController($conn);
+        
+        try {
+            $bookingController->updateBookingStatus($payment_request['booking_id'], 'confirmed', 'Manual payment success', null);
+            error_log("Booking status updated to confirmed via BookingController for booking ID: " . $payment_request['booking_id']);
+        } catch (Exception $e) {
+            error_log("Failed to update booking status via BookingController: " . $e->getMessage());
+            // Fallback to direct update if BookingController fails
+            $stmt = $conn->prepare("
+                UPDATE rental_bookings 
+                SET status = 'paid', updated_at = NOW() 
+                WHERE id = ?
+            ");
+            $stmt->bind_param('i', $payment_request['booking_id']);
+            $stmt->execute();
+        }
         
         // Record payment in booking_payments table
         $stmt = $conn->prepare("
