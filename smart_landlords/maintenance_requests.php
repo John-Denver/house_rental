@@ -427,6 +427,24 @@ $stats = $stmt->get_result()->fetch_assoc();
         </div>
     </div>
 
+    <!-- View Request Details Modal -->
+    <div class="modal fade" id="viewRequestModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Maintenance Request Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Update Status Modal -->
     <div class="modal fade" id="updateStatusModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -489,8 +507,150 @@ $stats = $stmt->get_result()->fetch_assoc();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function viewRequestDetails(requestId) {
-            // You can implement a detailed view modal or redirect to a details page
-            alert('Detailed view functionality can be implemented here');
+            // Show loading state
+            const modal = new bootstrap.Modal(document.getElementById('viewRequestModal'));
+            const contentDiv = document.getElementById('requestDetailsContent');
+            contentDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p class="mt-2">Loading...</p></div>';
+            modal.show();
+            
+            // Fetch request details
+            fetch(`get_maintenance_details.php?id=${requestId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const request = data.data;
+                        contentDiv.innerHTML = `
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6 class="fw-bold mb-3">Request Information</h6>
+                                    <div class="mb-3">
+                                        <strong>Title:</strong> ${request.title}
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Description:</strong><br>
+                                        <div class="mt-2 p-3 bg-light rounded">${request.description}</div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <strong>Status:</strong><br>
+                                            <span class="${request.status_class}">${request.status}</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Urgency:</strong><br>
+                                            <span class="${request.urgency_class}">${request.urgency}</span>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <strong>Submitted:</strong><br>
+                                            <small class="text-muted">${request.submission_date_formatted}</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Last Updated:</strong><br>
+                                            <small class="text-muted">${request.updated_at_formatted}</small>
+                                        </div>
+                                    </div>
+                                    ${request.assigned_repair_date ? `
+                                    <div class="mb-3">
+                                        <strong>Scheduled Repair Date:</strong><br>
+                                        <small class="text-muted">${request.assigned_repair_date_formatted}</small>
+                                    </div>
+                                    ` : ''}
+                                    ${request.assigned_technician ? `
+                                    <div class="mb-3">
+                                        <strong>Assigned Technician:</strong><br>
+                                        <span class="text-primary">${request.assigned_technician}</span>
+                                    </div>
+                                    ` : ''}
+                                    ${request.completion_date ? `
+                                    <div class="mb-3">
+                                        <strong>Completed:</strong><br>
+                                        <small class="text-muted">${request.completion_date_formatted}</small>
+                                    </div>
+                                    ` : ''}
+                                    ${request.rejection_reason ? `
+                                    <div class="mb-3">
+                                        <strong>Rejection Reason:</strong><br>
+                                        <div class="mt-2 p-3 bg-danger bg-opacity-10 rounded text-danger">${request.rejection_reason}</div>
+                                    </div>
+                                    ` : ''}
+                                    ${request.rating ? `
+                                    <div class="mb-3">
+                                        <strong>Rating:</strong><br>
+                                        <div class="text-warning">
+                                            ${'★'.repeat(request.rating)}${'☆'.repeat(5-request.rating)}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    ${request.feedback ? `
+                                    <div class="mb-3">
+                                        <strong>Feedback:</strong><br>
+                                        <div class="mt-2 p-3 bg-light rounded">${request.feedback}</div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="fw-bold mb-3">Property Information</h6>
+                                    <div class="mb-3">
+                                        <strong>Property:</strong><br>
+                                        <span class="text-primary">${request.house_no}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Location:</strong><br>
+                                        <small class="text-muted">${request.property_location}</small>
+                                    </div>
+                                    
+                                    <h6 class="fw-bold mb-3 mt-4">Tenant Information</h6>
+                                    <div class="mb-3">
+                                        <strong>Name:</strong><br>
+                                        <span class="text-primary">${request.tenant_name}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Email:</strong><br>
+                                        <small class="text-muted">${request.tenant_email}</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Phone:</strong><br>
+                                        <small class="text-muted">${request.tenant_phone}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            ${request.photo_url ? `
+                            <div class="mt-4">
+                                <h6 class="fw-bold mb-3">Before Photos</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <img src="../uploads/${request.photo_url}" class="img-fluid rounded" alt="Before Photo">
+                                        <small class="text-muted">Before Photo</small>
+                                    </div>
+                                    ${request.after_photo_url ? `
+                                    <div class="col-md-6">
+                                        <img src="../uploads/${request.after_photo_url}" class="img-fluid rounded" alt="After Photo">
+                                        <small class="text-muted">After Photo</small>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            ` : ''}
+                        `;
+                    } else {
+                        contentDiv.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Error: ${data.error}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading request details. Please try again.
+                        </div>
+                    `;
+                    console.error('Error:', error);
+                });
         }
         
         function updateRequestStatus(requestId, currentStatus) {

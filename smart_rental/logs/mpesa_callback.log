@@ -2742,3 +2742,22 @@ CheckoutRequestID: ws_CO_070820251147005712512358
 ResultCode: 0
 ResultDesc: The service request is processed successfully
 ----------------------------------------
+2025-08-07 14:31:25 - Callback received:
+{
+    "Body": {
+        "stkCallback": {
+            "MerchantRequestID": "d2c6-4205-830c-9d5d446e2e8055841",
+            "CheckoutRequestID": "ws_CO_070820251531132712512358",
+            "ResultCode": 1,
+            "ResultDesc": "The balance is insufficient for the transaction."
+        }
+    }
+}
+----------------------------------------
+2025-08-07 14:31:25 - Status determination: ResultCode=1, Status=failed
+2025-08-07 14:31:25 - Payment request updated to failed
+2025-08-07 14:31:25 - Payment failed:
+Result Code: 1
+Result Description: The balance is insufficient for the transaction.
+CheckoutRequestID: ws_CO_070820251531132712512358
+----------------------------------------
