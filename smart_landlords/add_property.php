@@ -109,6 +109,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $house_id = $stmt->insert_id;
     
+    // Handle utilities
+    if (isset($_POST['utilities']) && is_array($_POST['utilities'])) {
+        $utilities = $_POST['utilities'];
+        $utilities_notes = $_POST['utilities_notes'] ?? '';
+        
+        // Store utilities as JSON in a new column or create a utilities table
+        $utilities_json = json_encode($utilities);
+        
+        // Update the house record with utilities
+        $update_sql = "UPDATE houses SET utilities = ?, utilities_notes = ? WHERE id = ?";
+        $update_stmt = $conn->prepare($update_sql);
+        if ($update_stmt) {
+            $update_stmt->bind_param("ssi", $utilities_json, $utilities_notes, $house_id);
+            $update_stmt->execute();
+        }
+        
+        // Debug: Log utilities data
+        error_log('Utilities data: ' . print_r($utilities, true));
+        error_log('Utilities notes: ' . $utilities_notes);
+    }
+    
     // Handle additional media
     if (isset($_FILES['additional_media']) && is_array($_FILES['additional_media']['tmp_name'])) {
         $media = $_FILES['additional_media'];
@@ -413,6 +434,133 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--text-light);
             font-style: italic;
         }
+        
+        /* Utilities Cards Styling */
+        .utilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .utility-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .utility-card:hover {
+            border-color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .utility-card.selected {
+            border-color: var(--primary-blue);
+            background-color: var(--light-blue);
+        }
+        
+        .utility-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        
+        .utility-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .utility-content h6 {
+            margin: 0 0 0.25rem 0;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+        
+        .utility-content p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        .utility-toggle {
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .utility-toggle input[type="checkbox"] {
+            display: none;
+        }
+        
+        .utility-toggle label {
+            width: 50px;
+            height: 28px;
+            background-color: #e9ecef;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+        }
+        
+        .utility-toggle label::before {
+            content: '';
+            width: 24px;
+            height: 24px;
+            background-color: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .utility-toggle input[type="checkbox"]:checked + label {
+            background-color: var(--primary-blue);
+        }
+        
+        .utility-toggle input[type="checkbox"]:checked + label::before {
+            transform: translateX(22px);
+        }
+        
+        .utility-card.selected .utility-icon {
+            background: linear-gradient(135deg, var(--dark-blue), var(--primary-blue));
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .utilities-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .utility-card {
+                padding: 1rem;
+            }
+            
+            .utility-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -545,6 +693,206 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             Available for Rent
                                         </label>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Utilities Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="fas fa-bolt"></i> Utilities & Amenities</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Included Utilities</label>
+                                    <div class="utilities-grid">
+                                        <div class="utility-card" data-utility="electricity">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-bolt"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Electricity</h6>
+                                                <p>Power supply included</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_electricity" name="utilities[]" value="electricity">
+                                                <label for="utility_electricity"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="water">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-tint"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Water</h6>
+                                                <p>Clean water supply</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_water" name="utilities[]" value="water">
+                                                <label for="utility_water"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="internet">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-wifi"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Internet</h6>
+                                                <p>High-speed WiFi</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_internet" name="utilities[]" value="internet">
+                                                <label for="utility_internet"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="gas">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-fire"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Gas</h6>
+                                                <p>Cooking gas included</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_gas" name="utilities[]" value="gas">
+                                                <label for="utility_gas"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="parking">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-car"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Parking</h6>
+                                                <p>Secure parking space</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_parking" name="utilities[]" value="parking">
+                                                <label for="utility_parking"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="security">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-shield-alt"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Security</h6>
+                                                <p>24/7 security guard</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_security" name="utilities[]" value="security">
+                                                <label for="utility_security"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="gym">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-dumbbell"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Gym</h6>
+                                                <p>Fitness center access</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_gym" name="utilities[]" value="gym">
+                                                <label for="utility_gym"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="pool">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-swimming-pool"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Swimming Pool</h6>
+                                                <p>Pool access included</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_pool" name="utilities[]" value="pool">
+                                                <label for="utility_pool"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="garden">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-seedling"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Garden</h6>
+                                                <p>Private garden area</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_garden" name="utilities[]" value="garden">
+                                                <label for="utility_garden"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="balcony">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-home"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Balcony</h6>
+                                                <p>Private balcony</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_balcony" name="utilities[]" value="balcony">
+                                                <label for="utility_balcony"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="elevator">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-arrow-up"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Elevator</h6>
+                                                <p>Elevator access</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_elevator" name="utilities[]" value="elevator">
+                                                <label for="utility_elevator"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="ac">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-snowflake"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Air Conditioning</h6>
+                                                <p>AC units included</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_ac" name="utilities[]" value="ac">
+                                                <label for="utility_ac"></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="utility-card" data-utility="furnished">
+                                            <div class="utility-icon">
+                                                <i class="fas fa-couch"></i>
+                                            </div>
+                                            <div class="utility-content">
+                                                <h6>Furnished</h6>
+                                                <p>Fully furnished unit</p>
+                                            </div>
+                                            <div class="utility-toggle">
+                                                <input type="checkbox" id="utility_furnished" name="utilities[]" value="furnished">
+                                                <label for="utility_furnished"></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Additional Notes</label>
+                                    <textarea class="form-control" name="utilities_notes" rows="4" placeholder="Add any additional notes about utilities or amenities..."></textarea>
+                                    <small class="form-text text-muted">Specify any special conditions or additional utilities not listed above</small>
                                 </div>
                             </div>
                         </div>
@@ -1139,6 +1487,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
+        // Utility cards interaction
+        document.addEventListener('DOMContentLoaded', function() {
+            const utilityCards = document.querySelectorAll('.utility-card');
+            
+            utilityCards.forEach(card => {
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                const label = card.querySelector('label');
+                
+                // Handle card click
+                card.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on the toggle switch
+                    if (e.target === label || e.target === checkbox) {
+                        return;
+                    }
+                    
+                    checkbox.checked = !checkbox.checked;
+                    updateCardState(card, checkbox.checked);
+                });
+                
+                // Handle checkbox change
+                checkbox.addEventListener('change', function() {
+                    updateCardState(card, this.checked);
+                });
+                
+                // Initialize card state
+                updateCardState(card, checkbox.checked);
+            });
+        });
+        
+        function updateCardState(card, isSelected) {
+            if (isSelected) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+        
         // Form validation
         document.getElementById('propertyForm').addEventListener('submit', function(e) {
             // Ensure location is set
