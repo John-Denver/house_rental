@@ -380,6 +380,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 margin-bottom: 1.5rem;
             }
         }
+        
+        /* Quill Editor Custom Styling */
+        .ql-editor {
+            font-family: 'Circular', -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-dark);
+        }
+        
+        .ql-toolbar {
+            border-top: 1px solid #ced4da;
+            border-left: 1px solid #ced4da;
+            border-right: 1px solid #ced4da;
+            border-radius: 8px 8px 0 0;
+            background-color: #f8f9fa;
+        }
+        
+        .ql-container {
+            border-bottom: 1px solid #ced4da;
+            border-left: 1px solid #ced4da;
+            border-right: 1px solid #ced4da;
+            border-radius: 0 0 8px 8px;
+            background-color: white;
+        }
+        
+        .ql-editor:focus {
+            outline: none;
+        }
+        
+        .ql-editor.ql-blank::before {
+            color: var(--text-light);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -449,7 +482,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <div class="mb-3">
                                 <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="4" required placeholder="Describe your property in detail..."></textarea>
+                                <div id="editor" style="height: 200px;"></div>
+                                <input type="hidden" id="description" name="description" required>
+                                <small class="form-text text-muted">Use the toolbar above to format your description</small>
                             </div>
                         </div>
                         
@@ -621,24 +656,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     </script>
     
-    <!-- TinyMCE -->
-    <script src="https://cdn.tiny.cloud/1/8zvwq78ba3v0q7hgjebfye6sr7blxj3jyeaggzyiph4c41hx/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- Quill.js Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script>
-        tinymce.init({
-            selector: '#description',
-            plugins: 'lists link image table code help wordcount',
-            toolbar: 'undo redo | formatselect | bold italic underline | \
-                     alignleft aligncenter alignright | \
-                     bullist numlist outdent indent | link image | \
-                     removeformat | help',
-            menubar: false,
-            height: 300,
-            content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
-            setup: function(editor) {
-                editor.on('change', function() {
-                    editor.save();
-                });
-            }
+        // Initialize Quill editor
+        var quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    ['link'],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Describe your property in detail...',
+            bounds: '#editor'
+        });
+
+        // Update hidden input when content changes
+        quill.on('text-change', function() {
+            document.getElementById('description').value = quill.root.innerHTML;
+        });
+
+        // Also update on form submission
+        document.getElementById('propertyForm').addEventListener('submit', function() {
+            document.getElementById('description').value = quill.root.innerHTML;
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
