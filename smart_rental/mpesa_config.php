@@ -26,7 +26,7 @@ define('MPESA_PARTYB', '174379'); // Same as shortcode for till payments
 
 // Callback URL - Using ngrok for local development
 // Callback URL Configuration
-define('MPESA_CALLBACK_URL', 'https://05cb160251dc.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
+define('MPESA_CALLBACK_URL', 'https://3d666ff3fc03.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
 
 // define('MPESA_CALLBACK_URL', 'https://yourdomain.com/smart_rental/mpesa_callback.php');
 
