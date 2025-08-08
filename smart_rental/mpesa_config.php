@@ -19,19 +19,19 @@ define('MPESA_STK_PUSH_URL', MPESA_BASE_URL . '/mpesa/stkpush/v1/processrequest'
 define('MPESA_STK_QUERY_URL', MPESA_BASE_URL . '/mpesa/stkpushquery/v1/query');
 
 // Business Configuration
-define('MPESA_BUSINESS_SHORTCODE', '174379'); // Test till number
+define('MPESA_BUSINESS_SHORTCODE', '174379');
 define('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919');
 define('MPESA_TRANSACTION_TYPE', 'CustomerPayBillOnline');
-define('MPESA_PARTYB', '174379'); // Same as shortcode for till payments
+define('MPESA_PARTYB', '174379');
 
 // Callback URL - Using ngrok for local development
 // Callback URL Configuration
-define('MPESA_CALLBACK_URL', 'https://3d666ff3fc03.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
+define('MPESA_CALLBACK_URL', 'https://fbb1724ab942.ngrok-free.app/rental_system_bse/smart_rental/mpesa_callback.php');
 
 // define('MPESA_CALLBACK_URL', 'https://yourdomain.com/smart_rental/mpesa_callback.php');
 
 // Environment
-define('MPESA_ENVIRONMENT', 'sandbox'); // Change to 'live' for production
+define('MPESA_ENVIRONMENT', 'sandbox');
 
 // Error Messages
 define('MPESA_ERROR_MESSAGES', [
