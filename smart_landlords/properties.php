@@ -370,41 +370,19 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 <body>
     <?php include('./includes/header.php'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="properties.php">
-                                <i class="fas fa-home"></i> My Properties
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="bookings.php">
-                                <i class="fas fa-book"></i> Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="tenants.php">
-                                <i class="fas fa-users"></i> Tenants
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+    <div class="page-wrapper">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <?php include('./includes/sidebar.php'); ?>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Manage Properties</h1>
-                </div>
+                <!-- Main Content -->
+                <div class="main-content col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                    <div class="container-fluid">
+                        <div class="page-content" style="margin-top: 80px;">
+                            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                                <h1 class="h2">Manage Properties</h1>
+                            </div>
 
                 <?php if (isset($error)): ?>
                     <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
@@ -511,7 +489,7 @@ $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </tbody>
                     </table>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 

@@ -258,16 +258,26 @@ try {
                 // Log successful payment detection
                 error_log("Payment successful detected via API for checkout_request_id: $checkout_request_id");
                 
-                // Update booking status to confirmed and payment_status to paid
-                $stmt = $conn->prepare("
-                    UPDATE rental_bookings 
-                    SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() 
-                    WHERE id = ?
-                ");
-                $stmt->bind_param('i', $payment_request['booking_id']);
-                $stmt->execute();
+                // Use BookingController to update booking status (this will trigger unit automation)
+                require_once 'controllers/BookingController.php';
+                $bookingController = new BookingController($conn);
+                
+                try {
+                    $bookingController->updateBookingStatus($payment_request['booking_id'], 'confirmed', 'M-Pesa payment completed via API', null);
+                    error_log("Booking status updated to confirmed via BookingController for booking ID: " . $payment_request['booking_id']);
+                } catch (Exception $e) {
+                    error_log("Failed to update booking status via BookingController: " . $e->getMessage());
+                    // Fallback to direct update if BookingController fails
+                    $stmt = $conn->prepare("
+                        UPDATE rental_bookings 
+                        SET status = 'confirmed', payment_status = 'paid', updated_at = NOW() 
+                        WHERE id = ?
+                    ");
+                    $stmt->bind_param('i', $payment_request['booking_id']);
+                    $stmt->execute();
+                }
 
-                                 // Record payment in booking_payments table
+                // Record payment in booking_payments table
                  try {
                      $stmt = $conn->prepare("
                          INSERT INTO booking_payments (

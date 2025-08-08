@@ -183,6 +183,70 @@ if (!$property) {
             margin-bottom: 2rem;
         }
         
+        /* Quill content styling */
+        .description-section h1,
+        .description-section h2,
+        .description-section h3,
+        .description-section h4,
+        .description-section h5,
+        .description-section h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+        
+        .description-section h1 { font-size: 1.75rem; }
+        .description-section h2 { font-size: 1.5rem; }
+        .description-section h3 { font-size: 1.25rem; }
+        .description-section h4 { font-size: 1.125rem; }
+        .description-section h5 { font-size: 1rem; }
+        .description-section h6 { font-size: 0.875rem; }
+        
+        .description-section p {
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+        
+        .description-section ul,
+        .description-section ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        
+        .description-section li {
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+        
+        .description-section strong,
+        .description-section b {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .description-section em,
+        .description-section i {
+            font-style: italic;
+        }
+        
+        .description-section a {
+            color: var(--primary-blue);
+            text-decoration: none;
+        }
+        
+        .description-section a:hover {
+            text-decoration: underline;
+        }
+        
+        .description-section blockquote {
+            border-left: 4px solid var(--primary-blue);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: var(--text-light);
+        }
+        
         /* Amenities */
         .amenities-grid {
             display: grid;
@@ -268,6 +332,95 @@ if (!$property) {
             
             .main-image {
                 height: 300px;
+            }
+        }
+        
+        /* Utilities Cards Styling */
+        .utilities-section {
+            margin-top: 2rem;
+        }
+        
+        .subsection-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+        
+        .utilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .utility-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .utility-card:hover {
+            border-color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .utility-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .utility-content h6 {
+            margin: 0;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+        }
+        
+        .utilities-notes {
+            margin-top: 1rem;
+        }
+        
+        .utilities-notes .alert {
+            border-radius: 8px;
+            border: none;
+            background-color: var(--light-blue);
+            color: var(--dark-blue);
+        }
+        
+        /* Responsive adjustments for utilities */
+        @media (max-width: 768px) {
+            .utilities-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .utility-card {
+                padding: 0.75rem;
+            }
+            
+            .utility-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 0.875rem;
+            }
+            
+            .utility-content h6 {
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -362,14 +515,16 @@ if (!$property) {
                     </div>
                     
                     <div class="description-section">
-                        <?php echo nl2br(htmlspecialchars($property['description'])); ?>
+                        <?php echo $property['description']; ?>
                     </div>
                     
                     <hr class="my-4">
                     
                     <!-- Amenities -->
                     <h3 class="section-title">What this place offers</h3>
-                    <div class="amenities-grid">
+                    
+                    <!-- Basic Amenities -->
+                    <div class="amenities-grid mb-4">
                         <?php if($property['bedrooms'] > 0): ?>
                         <div class="amenity-item">
                             <i class="fas fa-bed text-primary"></i>
@@ -384,17 +539,10 @@ if (!$property) {
                         </div>
                         <?php endif; ?>
                         
-                        <?php if(!empty($property['size'])): ?>
+                        <?php if(!empty($property['area'])): ?>
                         <div class="amenity-item">
                             <i class="fas fa-ruler-combined text-primary"></i>
-                            <span><?php echo $property['size']; ?> sq.ft</span>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if(!empty($property['parking'])): ?>
-                        <div class="amenity-item">
-                            <i class="fas fa-car text-primary"></i>
-                            <span>Parking: <?php echo $property['parking']; ?></span>
+                            <span><?php echo $property['area']; ?> sqm</span>
                         </div>
                         <?php endif; ?>
                         
@@ -410,6 +558,75 @@ if (!$property) {
                             endforeach;
                         endif; ?>
                     </div>
+                    
+                    <!-- Utilities Cards -->
+                    <?php 
+                    $utilities = [];
+                    if (!empty($property['utilities'])) {
+                        $utilities = json_decode($property['utilities'], true);
+                    }
+                    
+                    if (!empty($utilities)): ?>
+                    <div class="utilities-section mb-4">
+                        <h4 class="subsection-title">Included Utilities</h4>
+                        <div class="utilities-grid">
+                            <?php 
+                            $utility_icons = [
+                                'electricity' => 'fas fa-bolt',
+                                'water' => 'fas fa-tint',
+                                'internet' => 'fas fa-wifi',
+                                'gas' => 'fas fa-fire',
+                                'parking' => 'fas fa-car',
+                                'security' => 'fas fa-shield-alt',
+                                'gym' => 'fas fa-dumbbell',
+                                'pool' => 'fas fa-swimming-pool',
+                                'garden' => 'fas fa-seedling',
+                                'balcony' => 'fas fa-home',
+                                'elevator' => 'fas fa-arrow-up',
+                                'ac' => 'fas fa-snowflake',
+                                'furnished' => 'fas fa-couch'
+                            ];
+                            
+                            $utility_names = [
+                                'electricity' => 'Electricity',
+                                'water' => 'Water',
+                                'internet' => 'Internet',
+                                'gas' => 'Gas',
+                                'parking' => 'Parking',
+                                'security' => 'Security',
+                                'gym' => 'Gym',
+                                'pool' => 'Swimming Pool',
+                                'garden' => 'Garden',
+                                'balcony' => 'Balcony',
+                                'elevator' => 'Elevator',
+                                'ac' => 'Air Conditioning',
+                                'furnished' => 'Furnished'
+                            ];
+                            
+                            foreach($utilities as $utility): 
+                                if (isset($utility_icons[$utility])): ?>
+                                    <div class="utility-card">
+                                        <div class="utility-icon">
+                                            <i class="<?php echo $utility_icons[$utility]; ?>"></i>
+                                        </div>
+                                        <div class="utility-content">
+                                            <h6><?php echo $utility_names[$utility]; ?></h6>
+                                        </div>
+                                    </div>
+                                <?php endif;
+                            endforeach; ?>
+                        </div>
+                        
+                        <?php if (!empty($property['utilities_notes'])): ?>
+                        <div class="utilities-notes mt-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Additional Notes:</strong> <?php echo htmlspecialchars($property['utilities_notes']); ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Videos Section -->

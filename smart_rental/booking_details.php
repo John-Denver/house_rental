@@ -111,20 +111,12 @@ try {
     <?php if ($booking['status'] === 'pending'): ?>
         <div class="alert alert-warning">
             <i class="fas fa-info-circle me-2"></i>
-            Your booking is pending approval from the property owner.
+            Your booking is pending approval from the property owner. Payment options will be available once your booking is approved.
         </div>
     <?php elseif ($booking['status'] === 'confirmed' && $booking['payment_status'] !== 'paid'): ?>
         <div class="alert alert-info">
             <i class="fas fa-credit-card me-2"></i>
             Your booking is confirmed! Please complete your payment.
-            <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="alert-link ms-2" onclick="console.log('Pay Now clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
-                Pay Now <i class="fas fa-arrow-right ms-1"></i>
-            </a>
-        </div>
-    <?php elseif ($booking['status'] === 'pending' && $booking['payment_status'] === 'pending'): ?>
-        <div class="alert alert-warning">
-            <i class="fas fa-clock me-2"></i>
-            Your booking is pending. Please complete your payment to secure your booking.
             <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="alert-link ms-2" onclick="console.log('Pay Now clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
                 Pay Now <i class="fas fa-arrow-right ms-1"></i>
             </a>
@@ -232,7 +224,7 @@ try {
                                 'title' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') ? 'Payment Completed' : 'Payment Pending',
                                 'description' => ($booking['payment_status'] === 'completed' || $booking['payment_status'] === 'paid') 
                                     ? 'Payment of KSh ' . number_format(floatval($booking['property_price']) + floatval($booking['security_deposit'] ?? 0), 2) . ' received.'
-                                    : 'Complete your payment to secure your booking.'
+                                    : ($booking['status'] === 'pending' ? 'Payment will be available once booking is approved.' : 'Complete your payment to secure your booking.')
                             ]
                         ];
                         
@@ -241,6 +233,10 @@ try {
                             // Skip payment event if no payment date and status is not completed/paid
                             if ($event['icon'] === 'money-bill-wave' && !$event['date'] && 
                                 ($booking['payment_status'] !== 'completed' && $booking['payment_status'] !== 'paid')) {
+                                continue;
+                            }
+                            // Skip payment events for pending bookings
+                            if ($event['icon'] === 'money-bill-wave' && $booking['status'] === 'pending') {
                                 continue;
                             }
                         ?>
@@ -333,8 +329,8 @@ try {
                     <?php endif; ?>
                     
                     <?php 
-                    // Show initial payment button if first payment not completed
-                    if (!$firstPaymentCompleted && ($booking['status'] === 'pending' || $booking['status'] === 'confirmed')): ?>
+                    // Show initial payment button only if booking is confirmed/active and first payment not completed
+                    if (!$firstPaymentCompleted && ($booking['status'] === 'confirmed' || $booking['status'] === 'active')): ?>
                         <a href="booking_payment.php?id=<?php echo $booking['id']; ?>" class="btn btn-success w-100 mt-3" onclick="console.log('Make Payment clicked - navigating to booking_payment.php?id=<?php echo $booking['id']; ?>');">
                             <i class="fas fa-credit-card me-1"></i> Make Initial Payment
                         </a>
@@ -348,7 +344,7 @@ try {
                     // Get next payment due
                     $nextPaymentDue = $tracker->getNextPaymentDue($booking['id']);
                     
-                    if ($nextPaymentDue): 
+                    if ($nextPaymentDue && ($booking['status'] === 'confirmed' || $booking['status'] === 'active')): 
                         $monthName = date('F Y', strtotime($nextPaymentDue['month']));
                         $amount = number_format($nextPaymentDue['amount'], 2);
                     ?>
@@ -356,10 +352,16 @@ try {
                             <i class="fas fa-credit-card me-1"></i> Pay <?php echo $monthName; ?> - KSh <?php echo $amount; ?>
                         </a>
                     <?php 
-                    elseif ($booking['status'] === 'confirmed' || $booking['status'] === 'paid'): 
+                    elseif ($booking['status'] === 'confirmed' || $booking['status'] === 'active'): 
                     ?>
                         <div class="alert alert-success w-100 mt-3">
                             <i class="fas fa-check me-1"></i> All payments completed!
+                        </div>
+                    <?php 
+                    elseif ($booking['status'] === 'pending'): 
+                    ?>
+                        <div class="alert alert-warning w-100 mt-3">
+                            <i class="fas fa-clock me-1"></i> Payment options will be available once your booking is approved.
                         </div>
                     <?php 
                     endif; 

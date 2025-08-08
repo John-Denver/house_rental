@@ -70,6 +70,13 @@ try {
         }
     }
 
+    // Get current property price for comparison
+    $stmt = $conn->prepare("SELECT price FROM houses WHERE id = ? AND landlord_id = ?");
+    $stmt->bind_param('ii', $property_id, $_SESSION['user_id']);
+    $stmt->execute();
+    $currentProperty = $stmt->get_result()->fetch_assoc();
+    $oldPrice = $currentProperty['price'];
+    
     // Update property
     $stmt = $conn->prepare("UPDATE houses SET 
         house_no = ?, description = ?, price = ?, location = ?, latitude = ?, longitude = ?, category_id = ?, status = ?, bedrooms = ?, bathrooms = ?, area = ?, main_image = ?, total_units = ?, available_units = ?, updated_at = NOW()
@@ -79,6 +86,20 @@ try {
         $bedrooms, $bathrooms, $area, $main_image, $total_units, $available_units, $property_id, $_SESSION['user_id']
     );
     if (!$stmt->execute()) throw new Exception('Error updating property: ' . $stmt->error);
+    
+    // Cascade price update to related tables if price changed
+    if ($oldPrice != $price) {
+        require_once 'update_property_price_cascade.php';
+        $cascade = new PropertyPriceCascade($conn);
+        $cascadeResult = $cascade->updatePropertyPrice($property_id, $price, $oldPrice);
+        
+        if (!$cascadeResult['success']) {
+            throw new Exception('Error cascading price update: ' . $cascadeResult['message']);
+        }
+        
+        // Add cascade info to response
+        $response['cascade_info'] = $cascadeResult;
+    }
 
     $response['success'] = true;
     $response['main_image'] = $main_image;

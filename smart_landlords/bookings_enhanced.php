@@ -1,7 +1,10 @@
 <?php
 require_once '../config/db.php';
 require_once '../config/auth.php';
+require_once '../smart_rental/controllers/BookingController.php';
 require_landlord();
+
+$bookingController = new BookingController($conn);
 
 // Handle booking status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['booking_id'])) {
@@ -36,12 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
         }
         
         if ($new_status) {
-            $stmt = $conn->prepare("UPDATE rental_bookings SET status = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->bind_param('si', $new_status, $booking_id);
-            if ($stmt->execute()) {
+            try {
+                // Use BookingController to update status (this will trigger unit automation)
+                $bookingController->updateBookingStatus($booking_id, $new_status, 'Landlord action: ' . $action, $_SESSION['user_id']);
                 $success_message = $message;
-            } else {
-                $error_message = "Failed to update booking status.";
+            } catch (Exception $e) {
+                $error_message = "Failed to update booking status: " . $e->getMessage();
             }
         }
     } else {
@@ -160,44 +163,22 @@ $stats = $stmt->get_result()->fetch_assoc();
 <body class="bg-light">
     <?php include('./includes/header.php'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-white sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php">
-                                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="properties.php">
-                                <i class="fas fa-home me-2"></i> Properties
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="bookings.php">
-                                <i class="fas fa-book me-2"></i> Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="tenants.php">
-                                <i class="fas fa-users me-2"></i> Tenants
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+    <div class="page-wrapper">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <?php include('./includes/sidebar.php'); ?>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">
-                        <i class="fas fa-book me-2 text-primary"></i>
-                        Manage Bookings
-                    </h1>
-                </div>
+                <!-- Main Content -->
+                <div class="main-content col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                    <div class="container-fluid">
+                        <div class="page-content" style="margin-top: 80px;">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">
+                            <i class="fas fa-book me-2 text-primary"></i>
+                            Manage Bookings
+                        </h1>
+                    </div>
 
                 <!-- Success/Error Messages -->
                 <?php if (isset($success_message)): ?>
@@ -530,7 +511,7 @@ $stats = $stmt->get_result()->fetch_assoc();
                         <?php endif; ?>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 

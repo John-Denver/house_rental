@@ -19,6 +19,12 @@ require_once '../config/auth.php';
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
+    <!-- Font Awesome 7 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Font Awesome 5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.1.0/css/v4-shims.min.css" integrity="sha512-p++g4gkFY8DBqLItjIfuKJPFvTPqcg2FzOns2BNaltwoCOrXMqRIOqgWqWEvuqsj/3aVdgoEo2Y7X6SomTfUPA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -216,17 +222,20 @@ require_once '../config/auth.php';
                 <li class="nav-item">
                     <a class="nav-link" href="rent_payment.php"><i class="fas fa-credit-card me-1"></i> Payments</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="submit_maintenance_request.php"><i class="fas fa-tools me-1"></i> Maintenance</a>
+                </li>
                 <?php else: ?>
                 <li class="nav-item">
                     <a class="nav-link" href="browse.php">Browse Properties</a>
                 </li>
                 <?php endif; ?>
-                <li class="nav-item">
+                <!-- <li class="nav-item">
                     <a class="nav-link" href="about.php">About Us</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="contact.php">Contact</a>
-                </li>
+                </li> -->
             </ul>
 
             <ul class="navbar-nav ms-auto">
@@ -240,6 +249,8 @@ require_once '../config/auth.php';
                             <li><a class="dropdown-item" href="my_bookings.php"><i class="fas fa-calendar-alt me-2"></i> My Bookings</a></li>
                             <li><a class="dropdown-item" href="favorites.php"><i class="fas fa-heart me-2"></i> Favorites</a></li>
                             <li><a class="dropdown-item" href="rent_payment.php"><i class="fas fa-credit-card me-2"></i> Payments</a></li>
+                            <li><a class="dropdown-item" href="submit_maintenance_request.php"><i class="fas fa-tools me-2"></i> Submit Maintenance</a></li>
+                            <li><a class="dropdown-item" href="my_maintenance_requests.php"><i class="fas fa-clipboard-list me-2"></i> My Requests</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                         </ul>

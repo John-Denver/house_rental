@@ -199,15 +199,56 @@ if ($status === 'completed') {
                 // Get booking ID for further updates
                 $bookingId = $existingPayment['booking_id'];
                 
-                // Update booking status to confirmed and payment_status to paid
-                $updateBookingQuery = "UPDATE rental_bookings SET 
-                    status = 'confirmed',
-                    payment_status = 'paid',
-                    updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
+                // Log the booking ID for debugging
+                $logEntry = date('Y-m-d H:i:s') . " - Processing booking ID: $bookingId\n";
+                file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
                 
-                $stmt = $pdo->prepare($updateBookingQuery);
-                $stmt->execute([$bookingId]);
+                // Use BookingController to update booking status (this will trigger unit automation)
+                require_once 'controllers/BookingController.php';
+                
+                // Create MySQLi connection for BookingController
+                $mysqli = new mysqli('localhost', 'root', '', 'house_rental');
+                if ($mysqli->connect_error) {
+                    $logEntry = date('Y-m-d H:i:s') . " - MySQLi connection failed: " . $mysqli->connect_error . "\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    throw new Exception("MySQLi connection failed: " . $mysqli->connect_error);
+                }
+                
+                $logEntry = date('Y-m-d H:i:s') . " - MySQLi connection successful\n";
+                file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                
+                $bookingController = new BookingController($mysqli);
+                
+                try {
+                    $logEntry = date('Y-m-d H:i:s') . " - Attempting to update booking status via BookingController\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    
+                    $bookingController->updateBookingStatus($bookingId, 'confirmed', 'M-Pesa payment completed', null);
+                    
+                    $logEntry = date('Y-m-d H:i:s') . " - Booking status updated to confirmed via BookingController for booking ID: $bookingId\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    error_log("Booking status updated to confirmed via BookingController for booking ID: $bookingId");
+                } catch (Exception $e) {
+                    $logEntry = date('Y-m-d H:i:s') . " - Failed to update booking status via BookingController: " . $e->getMessage() . "\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    error_log("Failed to update booking status via BookingController: " . $e->getMessage());
+                    
+                    // Fallback to direct update if BookingController fails
+                    $logEntry = date('Y-m-d H:i:s') . " - Attempting fallback direct update\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                    
+                    $updateBookingQuery = "UPDATE rental_bookings SET 
+                        status = 'confirmed',
+                        payment_status = 'paid',
+                        updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ? AND (status = 'pending' OR status = 'confirmed')";
+                    
+                    $stmt = $pdo->prepare($updateBookingQuery);
+                    $stmt->execute([$bookingId]);
+                    
+                    $logEntry = date('Y-m-d H:i:s') . " - Fallback direct update completed\n";
+                    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+                }
                 
                 // Record payment in booking_payments table
                 $insertPaymentQuery = "INSERT INTO booking_payments (

@@ -63,10 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $bookingId = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
 
 if (!$bookingId) {
+    error_log("Invalid booking ID received: " . ($_POST['booking_id'] ?? 'not set'));
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid booking ID']);
     exit;
 }
+
+error_log("Processing monthly payments request for booking ID: $bookingId, User ID: " . ($_SESSION['user_id'] ?? 'not set'));
 
 try {
     // First, check if the monthly_rent_payments table exists
@@ -131,7 +134,7 @@ try {
             payment_type
         FROM monthly_rent_payments 
         WHERE booking_id = ?
-        ORDER BY month DESC
+        ORDER BY month ASC
     ");
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
@@ -148,7 +151,7 @@ try {
             status
         FROM booking_payments 
         WHERE booking_id = ? AND status = 'completed'
-        ORDER BY payment_date DESC
+        ORDER BY payment_date ASC
     ");
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
@@ -216,7 +219,7 @@ try {
                     payment_type
                 FROM monthly_rent_payments 
                 WHERE booking_id = ?
-                ORDER BY month DESC
+                ORDER BY month ASC
             ");
             $stmt->bind_param('i', $bookingId);
             $stmt->execute();
@@ -285,7 +288,7 @@ try {
                     payment_type
                 FROM monthly_rent_payments 
                 WHERE booking_id = ?
-                ORDER BY month DESC
+                ORDER BY month ASC
             ");
             $stmt->bind_param('i', $bookingId);
             $stmt->execute();
@@ -309,7 +312,7 @@ try {
         ];
     }
     
-    echo json_encode([
+    $response = [
         'success' => true,
         'data' => $formattedPayments,
         'booking' => [
@@ -318,7 +321,11 @@ try {
             'end_date' => $booking['end_date'],
             'status' => $booking['status']
         ]
-    ]);
+    ];
+    
+    error_log("Monthly payments response for booking $bookingId: " . json_encode($response));
+    
+    echo json_encode($response);
     
 } catch (Exception $e) {
     error_log('Monthly Payments Error: ' . $e->getMessage());

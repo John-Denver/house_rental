@@ -46,13 +46,10 @@ class BookingController {
             }
             $securityDeposit = $property['security_deposit'];
             
-            // Insert booking with monthly rent and landlord_id
-            $stmt = $this->conn->prepare("
-                INSERT INTO rental_bookings (
-                    house_id, landlord_id, user_id, start_date, end_date,
-                    special_requests, status, security_deposit, monthly_rent, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW())
-            ");
+            // CRITICAL FIX: Check availability with FOR UPDATE lock to prevent race conditions
+            if (!$this->isPropertyAvailableWithLock($data['house_id'], $data['start_date'])) {
+                throw new Exception("The property is not available for the selected date. It may have been booked by another user.");
+            }
             
             // Get user details
             $userStmt = $this->conn->prepare("SELECT id FROM users WHERE id = ?");
@@ -73,6 +70,14 @@ class BookingController {
             
             // Prepare special_requests variable
             $specialRequests = $data['special_requests'] ?? null;
+            
+            // Insert booking with monthly rent and landlord_id
+            $stmt = $this->conn->prepare("
+                INSERT INTO rental_bookings (
+                    house_id, landlord_id, user_id, start_date, end_date,
+                    special_requests, status, security_deposit, monthly_rent, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW())
+            ");
             
             $stmt->bind_param(
                 'iiisssdd',
@@ -146,10 +151,44 @@ class BookingController {
             throw new Exception("Bookings cannot be made more than 6 months in advance");
         }
         
-        // Check property availability (includes unit availability)
-        if (!$this->isPropertyAvailable($data['house_id'], $data['start_date'])) {
-            throw new Exception("The property is not available for the selected date");
+        // Note: Property availability check moved to createBooking() with proper locking
+    }
+    
+    /**
+     * Check property availability with database lock to prevent race conditions
+     * This method uses FOR UPDATE to lock the property and prevent double bookings
+     */
+    private function isPropertyAvailableWithLock($propertyId, $startDate) {
+        // Lock the property record to prevent concurrent access
+        $stmt = $this->conn->prepare("
+            SELECT available_units, total_units 
+            FROM houses 
+            WHERE id = ? 
+            FOR UPDATE
+        ");
+        $stmt->bind_param('i', $propertyId);
+        $stmt->execute();
+        $property = $stmt->get_result()->fetch_assoc();
+        
+        if (!$property || $property['available_units'] <= 0) {
+            return false;
         }
+        
+        // Check for existing bookings on the same date with lock
+        $stmt = $this->conn->prepare("
+            SELECT COUNT(*) as count 
+            FROM rental_bookings 
+            WHERE house_id = ? 
+            AND status NOT IN ('cancelled', 'completed')
+            AND start_date = ?
+            FOR UPDATE
+        ");
+        
+        $stmt->bind_param('is', $propertyId, $startDate);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        return $result['count'] == 0;
     }
     
     private function isPropertyAvailable($propertyId, $startDate) {

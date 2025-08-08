@@ -18,6 +18,9 @@ $stmt = $conn->prepare("SELECT DISTINCT u.*,
 $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Debug: Uncomment the line below to see the structure of the first tenant record
+// if (!empty($tenants)) { echo '<pre>'; print_r($tenants[0]); echo '</pre>'; }
 ?>
 
 <!DOCTYPE html>
@@ -33,38 +36,16 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 <body>
     <?php include('./includes/header.php'); ?>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.php">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="properties.php">
-                                <i class="fas fa-home"></i> Properties
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="bookings.php">
-                                <i class="fas fa-book"></i> Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="tenants.php">
-                                <i class="fas fa-users"></i> Tenants
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+    <div class="page-wrapper">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <?php include('./includes/sidebar.php'); ?>
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- Main Content -->
+                <div class="main-content col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                    <div class="container-fluid">
+                        <div class="page-content" style="margin-top: 80px;">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Manage Tenants</h1>
                 </div>
@@ -75,7 +56,7 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <thead>
                             <tr>
                                 <th>Tenant</th>
-                                <th>Email</th>
+                                <th>Email/Username</th>
                                 <th>Phone</th>
                                 <th>Current Property</th>
                                 <th>Rental Status</th>
@@ -87,9 +68,9 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <tbody>
                             <?php foreach ($tenants as $tenant): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($tenant['name']); ?></td>
-                                <td><?php echo htmlspecialchars($tenant['email']); ?></td>
-                                <td><?php echo htmlspecialchars($tenant['phone']); ?></td>
+                                <td><?php echo htmlspecialchars($tenant['name'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($tenant['username'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($tenant['phone_number'] ?? 'N/A'); ?></td>
                                 <td>
                                     <?php if ($tenant['house_no']): ?>
                                         <?php echo htmlspecialchars($tenant['house_no']); ?><br>
@@ -99,9 +80,13 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge bg-<?php echo $tenant['rental_status'] === 'confirmed' ? 'success' : ($tenant['rental_status'] === 'pending' ? 'warning' : 'danger'); ?>">
-                                        <?php echo ucfirst($tenant['rental_status']); ?>
-                                    </span>
+                                    <?php if ($tenant['rental_status']): ?>
+                                        <span class="badge bg-<?php echo $tenant['rental_status'] === 'confirmed' ? 'success' : ($tenant['rental_status'] === 'pending' ? 'warning' : 'danger'); ?>">
+                                            <?php echo ucfirst($tenant['rental_status']); ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary">No Status</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if ($tenant['start_date']): ?>
@@ -130,7 +115,8 @@ $tenants = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </tbody>
                     </table>
                 </div>
-            </main>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -3,6 +3,16 @@ $page_title = "About Us | Smart Rental";
 include 'includes/header.php';
 ?>
 
+<!-- Font Awesome Test (remove this after debugging) -->
+<div class="container mt-3" style="display: none;">
+    <div class="alert alert-info">
+        <h6>Font Awesome Test:</h6>
+        <p>Shield: <i class="fas fa-shield"></i></p>
+        <p>Heart: <i class="fas fa-heart"></i></p>
+        <p>Lightbulb: <i class="fas fa-lightbulb"></i></p>
+    </div>
+</div>
+
 <!-- Hero Section -->
 <section class="hero-section">
     <div class="container h-100">
@@ -80,8 +90,8 @@ include 'includes/header.php';
         <div class="row align-items-center">
             <div class="col-lg-6 order-lg-2">
                 <h2 class="fw-bold mb-4">Our Story</h2>
-                <p class="lead text-muted">Founded in 2020, Smart Rental began with a simple mission: to transform the way people find and rent properties.</p>
-                <p>What started as a small team of real estate enthusiasts has grown into a trusted platform connecting thousands of tenants with their dream homes. We understand that finding the perfect rental isn't just about four walls - it's about finding a place where life happens.</p>
+                <p class="lead text-muted">Founded in 2025 - Last Semester, Smart Rental began with a simple mission: to transform the way people find and rent properties.</p>
+                <p>What started as a small team of software engineering enthusiasts who just want to find a house, has grown into a trusted platform connecting thousands of tenants with their dream homes. We understand that finding the perfect rental isn't just about four walls - it's about finding a place where life happens.</p>
                 <p>Today, we're proud to serve communities across the country, helping people find not just houses, but homes where they can build their futures.</p>
             </div>
             <div class="col-lg-6 order-lg-1">
@@ -119,8 +129,8 @@ include 'includes/header.php';
             <div class="col-md-4">
                 <div class="card h-100 border-0 shadow-sm hover-shadow">
                     <div class="card-body text-center p-4">
-                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto mb-4" style="width: 80px; height: 80px; line-height: 80px;">
-                            <i class="fas fa-shield-alt fa-2x"></i>
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="fas fa-shield fa-2x" aria-hidden="true"></i>
                         </div>
                         <h4 class="h5">Trust & Transparency</h4>
                         <p class="text-muted mb-0">We believe in honest communication and transparent processes in all our dealings.</p>
@@ -130,7 +140,7 @@ include 'includes/header.php';
             <div class="col-md-4">
                 <div class="card h-100 border-0 shadow-sm hover-shadow">
                     <div class="card-body text-center p-4">
-                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto mb-4" style="width: 80px; height: 80px; line-height: 80px;">
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
                             <i class="fas fa-heart fa-2x"></i>
                         </div>
                         <h4 class="h5">Customer-Centric</h4>
@@ -141,7 +151,7 @@ include 'includes/header.php';
             <div class="col-md-4">
                 <div class="card h-100 border-0 shadow-sm hover-shadow">
                     <div class="card-body text-center p-4">
-                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto mb-4" style="width: 80px; height: 80px; line-height: 80px;">
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
                             <i class="fas fa-lightbulb fa-2x"></i>
                         </div>
                         <h4 class="h5">Innovation</h4>
@@ -233,16 +243,7 @@ include 'includes/header.php';
             <div class="col-md-3 col-6">
                 <div class="text-center">
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
-                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="David Kim" class="img-fluid">
-                    </div>
-                    <h5 class="mb-1">Denver Bogonko</h5>
-                    <p class="text-muted mb-0">Senior Backend Developer</p>
-                </div>
-            </div>
-            <div class="col-md-3 col-6">
-                <div class="text-center">
-                    <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
-                        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Jennifer Lee" class="img-fluid">
+                        <img src="./assets/images/tallam.png" alt="Tallam Maureen" class="img-fluid">
                     </div>
                     <h5 class="mb-1">Tallam Maureen</h5>
                     <p class="text-muted mb-0">Head of Operations</p>
@@ -251,7 +252,16 @@ include 'includes/header.php';
             <div class="col-md-3 col-6">
                 <div class="text-center">
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
-                        <img src="https://randomuser.me/api/portraits/men/67.jpg" alt="Robert Johnson" class="img-fluid">
+                        <img src="./assets/images/suittt.jpg" alt="Denver Ogamba" class="img-fluid">
+                    </div>
+                    <h5 class="mb-1">Denver Bogonko</h5>
+                    <p class="text-muted mb-0">Senior Backend Developer</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center">
+                    <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
+                        <img src="./assets/images/thiira.png" alt="Elizabeth Thiira" class="img-fluid">
                     </div>
                     <h5 class="mb-1">Elizabeth Thiira</h5>
                     <p class="text-muted mb-0">Lead UX/UI developer</p>
@@ -260,7 +270,7 @@ include 'includes/header.php';
             <div class="col-md-3 col-6">
                 <div class="text-center">
                     <div class="rounded-circle overflow-hidden mx-auto mb-3" style="width: 150px; height: 150px;">
-                        <img src="https://randomuser.me/api/portraits/women/28.jpg" alt="Maria Garcia" class="img-fluid">
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Maria Garcia" class="img-fluid">
                     </div>
                     <h5 class="mb-1">Lec Richard Mathenge</h5>
                     <p class="text-muted mb-0">Senior C.O.O & Supervisor</p>
@@ -276,7 +286,7 @@ include 'includes/header.php';
         <h2 class="fw-bold mb-4">Ready to Find Your Dream Rental?</h2>
         <p class="lead mb-4">Join thousands of satisfied tenants and landlords who trust Smart Rental.</p>
         <div class="d-flex justify-content-center gap-3">
-            <a href="properties.php" class="btn btn-light btn-lg px-4">Browse Properties</a>
+            <a href="index.php" class="btn btn-light btn-lg px-4">Browse Properties</a>
             <a href="contact.php" class="btn btn-outline-light btn-lg px-4">Contact Us</a>
         </div>
     </div>
@@ -306,5 +316,42 @@ include 'includes/header.php';
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.3s ease;
 }
+
+.icon-box:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.icon-box i {
+    display: block;
+    text-align: center;
+    font-size: 2rem !important;
+    color: var(--primary-color) !important;
+}
+
+/* Fallback for Font Awesome icons */
+.icon-box i.fas {
+    font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", Arial, sans-serif;
+    font-weight: 900;
+}
+
+/* Ensure icons are visible even if Font Awesome fails to load */
+.icon-box i.fas::before {
+    content: attr(data-icon);
+}
+
+/* Additional fallback styles */
+.icon-box {
+    position: relative;
+}
+
+.icon-box i {
+    position: relative;
+    z-index: 2;
+}
+
+/* Ensure proper font loading */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 </style>

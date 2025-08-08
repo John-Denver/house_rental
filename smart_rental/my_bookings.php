@@ -11,6 +11,15 @@ if (!is_logged_in()) {
 
 $pageTitle = 'My Bookings & Viewings';
 
+// Debug mode
+$debug = isset($_GET['debug']) && $_GET['debug'] == '1';
+
+if ($debug) {
+    echo "<h1>DEBUG MODE - My Bookings</h1>\n";
+    echo "<p>Session ID: " . session_id() . "</p>\n";
+    echo "<p>User ID: " . $_SESSION['user_id'] . "</p>\n";
+}
+
 // Get user's scheduled viewings with house information
 $stmt = $conn->prepare("
     SELECT pv.*, 
@@ -42,8 +51,18 @@ $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+if ($debug) {
+    echo "<h2>DEBUG: Raw Bookings Data</h2>\n";
+    echo "<p>Total bookings found: " . count($bookings) . "</p>\n";
+    echo "<pre>" . print_r($bookings, true) . "</pre>\n";
+}
+
 // Get current month payment status for each booking
-foreach ($bookings as &$booking) {
+$processed_bookings = [];
+foreach ($bookings as $booking) {
+    // Create a copy of the booking to avoid reference issues
+    $processed_booking = $booking;
+    
     // Get the current month (today's month)
     $currentMonth = date('Y-m-01');
     $today = date('Y-m-d');
@@ -65,7 +84,7 @@ foreach ($bookings as &$booking) {
         $result = $stmt->get_result()->fetch_assoc();
         
         if ($result) {
-            $booking['current_month_status'] = $result;
+            $processed_booking['current_month_status'] = $result;
         } else {
             // Check if there's a payment in booking_payments for current month
             $stmt = $conn->prepare("
@@ -97,7 +116,7 @@ foreach ($bookings as &$booking) {
                 );
                 $insertStmt->execute();
                 
-                $booking['current_month_status'] = [
+                $processed_booking['current_month_status'] = [
                     'status' => 'paid',
                     'payment_date' => $bookingPayment['payment_date'],
                     'amount' => $bookingPayment['amount']
@@ -112,7 +131,7 @@ foreach ($bookings as &$booking) {
                     $status = 'unpaid';
                 }
                 
-                $booking['current_month_status'] = [
+                $processed_booking['current_month_status'] = [
                     'status' => $status,
                     'payment_date' => null,
                     'amount' => null
@@ -128,25 +147,24 @@ foreach ($bookings as &$booking) {
         ");
         $stmt->bind_param('i', $booking['id']);
         $stmt->execute();
-        $initialPayment = $stmt->get_result()->fetch_assoc();
+        $result = $stmt->get_result()->fetch_assoc();
         
-        if ($initialPayment) {
-            // Initial payment was made, so the move-in month is paid
-            $booking['current_month_status'] = [
-                'status' => 'paid',
-                'payment_date' => $initialPayment['payment_date'],
-                'amount' => $initialPayment['amount']
-            ];
+        if ($result) {
+            $processed_booking['current_month_status'] = $result;
         } else {
-            // No initial payment made yet
-            $booking['current_month_status'] = [
-                'status' => 'unpaid',
+            $processed_booking['current_month_status'] = [
+                'status' => 'not_started',
                 'payment_date' => null,
                 'amount' => null
             ];
         }
     }
+    
+    $processed_bookings[] = $processed_booking;
 }
+
+// Replace the original bookings array with the processed one
+$bookings = $processed_bookings;
 
 // Include header after all processing is done
 include 'includes/header.php';
@@ -219,7 +237,10 @@ include 'includes/header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($bookings as $booking): 
+                            <?php 
+                            $row_counter = 0;
+                            foreach ($bookings as $booking): 
+                                $row_counter++;
                                 $statusClass = [
                                     'pending' => 'warning',
                                     'confirmed' => 'success',
@@ -228,7 +249,7 @@ include 'includes/header.php';
                                     'active' => 'info'
                                 ][$booking['status']] ?? 'secondary';
                             ?>
-                            <tr>
+                            <tr data-booking-id="<?php echo $booking['id']; ?>" data-row-number="<?php echo $row_counter; ?>">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <?php if (!empty($booking['main_image'])): 
@@ -250,6 +271,9 @@ include 'includes/header.php';
                                         <div>
                                             <h6 class="mb-0"><?php echo htmlspecialchars($booking['property_title']); ?></h6>
                                             <small class="text-muted"><?php echo htmlspecialchars($booking['location']); ?></small>
+                                            <?php if ($debug): ?>
+                                            <br><small class="text-danger">DEBUG: Row #<?php echo $row_counter; ?>, Booking ID: <?php echo $booking['id']; ?></small>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </td>
@@ -304,13 +328,7 @@ include 'includes/header.php';
                                            title="View Details">
                                             <i class="fas fa-info-circle"></i>
                                         </a>
-                                        <?php if ($booking['status'] === 'pending'): ?>
-                                        <a href="booking_payment.php?id=<?php echo $booking['id']; ?>&type=initial" 
-                                           class="btn btn-outline-success"
-                                           title="Make Initial Payment">
-                                            <i class="fas fa-credit-card"></i>
-                                        </a>
-                                        <?php elseif ($booking['status'] === 'paid' || $booking['status'] === 'confirmed'): ?>
+                                        <?php if ($booking['status'] === 'confirmed' || $booking['status'] === 'active'): ?>
                                         <?php 
                                         // Use the new monthly payment tracker
                                         require_once 'monthly_payment_tracker.php';
@@ -552,404 +570,188 @@ include 'includes/header.php';
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+// Prevent duplicate event listeners by checking if already initialized
+if (typeof window.bookingsPageInitialized === 'undefined') {
+    window.bookingsPageInitialized = true;
     
-    // Handle cancel viewing modal
-    var cancelViewingModal = document.getElementById('cancelViewingModal');
-    if (cancelViewingModal) {
-        cancelViewingModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var viewingId = button.getAttribute('data-id');
-            var modalInput = cancelViewingModal.querySelector('#cancelViewingId');
-            modalInput.value = viewingId;
-            
-            // Reset form
-            var form = cancelViewingModal.querySelector('form');
-            if (form) {
-                form.reset();
-            }
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('My Bookings page initialized');
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
-    }
-    
-    // Handle form submission via AJAX
-    $('#cancelViewingForm').on('submit', function(e) {
-        e.preventDefault();
         
-        var form = $(this);
-        var submitBtn = form.find('button[type="submit"]');
-        var originalBtnText = submitBtn.html();
-        
-        // Disable button and show loading state
-        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
-        
-        $.ajax({
-            url: form.attr('action'),
-            type: 'POST',
-            data: form.serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Show success message
-                    showToast('Success', response.message, 'success');
-                    
-                    // Close modal
-                    var modal = bootstrap.Modal.getInstance(cancelViewingModal);
-                    modal.hide();
-                    
-                    // Reload page after a short delay
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    // Show error message
-                    showToast('Error', response.message || 'An error occurred. Please try again.', 'error');
-                    submitBtn.prop('disabled', false).html(originalBtnText);
+        // Handle cancel viewing modal
+        var cancelViewingModal = document.getElementById('cancelViewingModal');
+        if (cancelViewingModal) {
+            cancelViewingModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var viewingId = button.getAttribute('data-id');
+                var modalInput = cancelViewingModal.querySelector('#cancelViewingId');
+                modalInput.value = viewingId;
+                
+                // Reset form
+                var form = cancelViewingModal.querySelector('form');
+                if (form) {
+                    form.reset();
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error:', error);
-                showToast('Error', 'An error occurred while processing your request. Please try again.', 'error');
-                submitBtn.prop('disabled', false).html(originalBtnText);
-            }
-        });
-    });
-    
-    // Function to show toast notifications
-    function showToast(title, message, type = 'info') {
-        // Create toast HTML if it doesn't exist
-        if (!$('#toastContainer').length) {
-            $('body').append(`
-                <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 1100;">
-                    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="toast-header">
-                            <strong class="me-auto">${title}</strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                    </div>
-                </div>
-            `);
-        }
-        
-        // Set toast type
-        var toast = $('.toast');
-        toast.removeClass('bg-success bg-danger bg-info bg-warning');
-        
-        switch(type) {
-            case 'success':
-                toast.addClass('bg-success text-white');
-                break;
-            case 'error':
-                toast.addClass('bg-danger text-white');
-                break;
-            case 'warning':
-                toast.addClass('bg-warning text-dark');
-                break;
-            default:
-                toast.addClass('bg-info text-white');
-        }
-        
-        // Show toast
-        var bsToast = new bootstrap.Toast(toast[0], { autohide: true, delay: 5000 });
-        bsToast.show();
-    }
-    
-    // Add click handler for cancel viewing buttons
-    document.querySelectorAll('.cancel-viewing').forEach(button => {
-        button.addEventListener('click', function() {
-            const viewingId = this.getAttribute('data-id');
-            const modal = new bootstrap.Modal(document.getElementById('cancelViewingModal'));
-            document.getElementById('cancelViewingId').value = viewingId;
-            modal.show();
-        });
-    });
-    
-    // Handle monthly payments modal
-    var monthlyPaymentsModal = document.getElementById('monthlyPaymentsModal');
-    if (monthlyPaymentsModal) {
-        monthlyPaymentsModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var bookingId = button.getAttribute('data-booking-id');
-            
-            // Load monthly payments data
-            loadMonthlyPayments(bookingId);
-        });
-    }
-    
-    // Function to load monthly payments
-    function loadMonthlyPayments(bookingId) {
-        $('#monthlyPaymentsContent').html(`
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2">Loading payment history...</p>
-            </div>
-        `);
-        
-        $.ajax({
-            url: 'get_monthly_payments_new.php',
-            type: 'POST',
-            data: { booking_id: bookingId },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    displayMonthlyPayments(response.data);
-                } else {
-                    $('#monthlyPaymentsContent').html(`
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            ${response.message || 'Failed to load payment history'}
-                        </div>
-                    `);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error:', error);
-                console.error('Response:', xhr.responseText);
-                $('#monthlyPaymentsContent').html(`
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        An error occurred while loading payment history.<br>
-                        <small class="text-muted">Error: ${error}</small>
-                    </div>
-                `);
-            }
-        });
-    }
-    
-    // Function to display monthly payments
-    function displayMonthlyPayments(data) {
-        console.log('Displaying payments:', data);
-        
-        const payments = data.payments || [];
-        const summary = data.summary || {};
-        const nextPaymentDue = data.next_payment_due;
-        const booking = data.booking || {};
-        
-        if (payments.length === 0) {
-            $('#monthlyPaymentsContent').html(`
-                <div class="text-center py-4">
-                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                    <h6>No Payment History</h6>
-                    <p class="text-muted">No monthly payments have been recorded for this booking.</p>
-                </div>
-            `);
-            return;
-        }
-        
-        // Sort payments: current month first, then chronological order (oldest to newest)
-        const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
-        payments.sort(function(a, b) {
-            // If a is current month, it comes first
-            if (a.month === currentMonth) return -1;
-            // If b is current month, it comes first
-            if (b.month === currentMonth) return 1;
-            // Otherwise, sort by date (oldest first - chronological order)
-            return new Date(a.month) - new Date(b.month);
-        });
-        
-        // Show current month and one previous month initially
-        const currentMonthIndex = payments.findIndex(p => p.month === currentMonth);
-        
-        // Get current month and one previous month
-        let recentMonths = [];
-        let olderMonths = [];
-        
-        if (currentMonthIndex !== -1) {
-            // Current month is found
-            recentMonths.push(payments[currentMonthIndex]);
-            
-            // Add one previous month if available
-            if (currentMonthIndex + 1 < payments.length) {
-                recentMonths.push(payments[currentMonthIndex + 1]);
-                olderMonths = payments.filter((_, index) => index !== currentMonthIndex && index !== currentMonthIndex + 1);
-            } else {
-                // No previous month available
-                olderMonths = payments.filter((_, index) => index !== currentMonthIndex);
-            }
-        } else {
-            // Current month not found, show first 2 months
-            recentMonths = payments.slice(0, 2);
-            olderMonths = payments.slice(2);
-        }
-        
-        console.log('Recent months (current + 1 previous):', recentMonths.length, 'Older months:', olderMonths.length);
-        
-        // Use summary data if available, otherwise calculate from payments
-        const totalMonths = summary.total_months || payments.length;
-        const paidMonths = summary.paid_months || payments.filter(p => p.status === 'paid').length;
-        const unpaidMonths = summary.unpaid_months || payments.filter(p => p.status === 'unpaid').length;
-        const overdueMonths = payments.filter(p => p.status === 'overdue').length;
-        const totalAmount = (summary.total_paid || 0) + (summary.total_unpaid || 0);
-        const paidAmount = summary.total_paid || payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount), 0);
-        
-        let html = `
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="card bg-light">
-                        <div class="card-body py-2">
-                            <div class="row text-center">
-                                <div class="col-md-2">
-                                    <small class="text-muted">Total Months</small>
-                                    <div class="fw-bold">${totalMonths}</div>
-                                </div>
-                                <div class="col-md-2">
-                                    <small class="text-muted">Paid</small>
-                                    <div class="fw-bold text-success">${paidMonths}</div>
-                                </div>
-                                <div class="col-md-2">
-                                    <small class="text-muted">Unpaid</small>
-                                    <div class="fw-bold text-warning">${unpaidMonths}</div>
-                                </div>
-                                <div class="col-md-2">
-                                    <small class="text-muted">Overdue</small>
-                                    <div class="fw-bold text-danger">${overdueMonths}</div>
-                                </div>
-                                <div class="col-md-2">
-                                    <small class="text-muted">Total Amount</small>
-                                    <div class="fw-bold">KSh ${totalAmount.toLocaleString()}</div>
-                                </div>
-                                <div class="col-md-2">
-                                    <small class="text-muted">Paid Amount</small>
-                                    <div class="fw-bold text-success">KSh ${paidAmount.toLocaleString()}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            ${nextPaymentDue ? `
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="alert alert-info">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1"><i class="fas fa-calendar-alt me-2"></i>Next Payment Due</h6>
-                                <p class="mb-0">${nextPaymentDue.month_display} - KSh ${parseFloat(nextPaymentDue.amount).toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="makePayment(${booking.id}, ${nextPaymentDue.amount})">
-                                    <i class="fas fa-credit-card me-2"></i>Make Payment
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            ` : ''}
-            
-            <div class="row">
-                <div class="col-12">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Month</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                    <th>Payment Date</th>
-                                    <th>Method</th>
-                                </tr>
-                            </thead>
-                            <tbody id="paymentsTableBody">
-        `;
-        
-        recentMonths.forEach(function(payment) {
-            const monthFormatted = new Date(payment.month).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long' 
             });
-            const statusBadge = getPaymentStatusBadge(payment.status);
-            const paymentDate = payment.payment_date ? 
-                new Date(payment.payment_date).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }) : '-';
-            const paymentMethod = payment.payment_method || '-';
-            
-            // Add special styling for current month
-            const isCurrentMonth = payment.month === currentMonth;
-            const rowClass = isCurrentMonth ? 'table-primary' : '';
-            const currentMonthIndicator = isCurrentMonth ? ' <span class="badge bg-primary">Current</span>' : '';
-            
-            html += `
-                <tr class="${rowClass}">
-                    <td><strong>${monthFormatted}${currentMonthIndicator}</strong></td>
-                    <td>KSh ${parseFloat(payment.amount).toLocaleString()}</td>
-                    <td>${statusBadge}</td>
-                    <td>${paymentDate}</td>
-                    <td>${paymentMethod}</td>
-                </tr>
-            `;
-        });
-        
-        html += `
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Add "View Previous Months" button if there are older months
-        if (olderMonths.length > 0) {
-            console.log('Adding View Previous Months button with', olderMonths.length, 'months');
-            console.log('Older months data:', olderMonths);
-            
-            // Store the data in a global variable instead of data attribute
-            window.olderMonthsData = olderMonths;
-            
-                           html += `
-                   <div class="row mt-3">
-                       <div class="col-12 text-center">
-                           <button type="button" class="btn btn-outline-secondary" id="viewPreviousMonths">
-                               <i class="fas fa-history me-2"></i>
-                               View All Previous Months (${olderMonths.length} more)
-                           </button>
-                       </div>
-                   </div>
-               `;
-        } else {
-            console.log('No older months to show');
         }
         
-        $('#monthlyPaymentsContent').html(html);
+        // Handle monthly payments modal
+        var monthlyPaymentsModal = document.getElementById('monthlyPaymentsModal');
+        if (monthlyPaymentsModal) {
+            monthlyPaymentsModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var bookingId = button.getAttribute('data-booking-id');
+                
+                console.log('Loading monthly payments for booking ID:', bookingId);
+                
+                // Show loading state
+                var content = document.getElementById('monthlyPaymentsContent');
+                content.innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading payment history...</p>
+                    </div>
+                `;
+                
+                // Load monthly payments data
+                fetch('get_monthly_payments.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'booking_id=' + bookingId
+                })
+                .then(response => {
+                    console.log('Monthly payments response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Monthly payments data:', data);
+                    
+                    if (data.success) {
+                        displayMonthlyPayments(data);
+                    } else {
+                        content.innerHTML = `
+                            <div class="text-center">
+                                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                <h6 class="text-warning">Error Loading Payments</h6>
+                                <p class="text-muted">${data.message || 'Failed to load payment history'}</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading monthly payments:', error);
+                    content.innerHTML = `
+                        <div class="text-center">
+                            <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                            <h6 class="text-danger">Error Loading Payments</h6>
+                            <p class="text-muted">Failed to load payment history. Please try again.</p>
+                        </div>
+                    `;
+                });
+            });
+        }
         
-        // Debug: Check if button exists
-        setTimeout(function() {
-            if ($('#viewPreviousMonths').length > 0) {
-                console.log('✓ View Previous Months button found');
-            } else {
-                console.log('✗ View Previous Months button not found');
-            }
-        }, 100);
-        
-        // Add click handler for "View Previous Months" button using event delegation
-        $(document).off('click', '#viewPreviousMonths').on('click', '#viewPreviousMonths', function() {
-            console.log('View Previous Months clicked');
-            const olderMonths = window.olderMonthsData;
-            console.log('Older months:', olderMonths);
+        // Function to display monthly payments
+        function displayMonthlyPayments(data) {
+            var content = document.getElementById('monthlyPaymentsContent');
+            var payments = data.data || [];
+            var booking = data.booking || {};
             
-            let additionalRows = '';
-            olderMonths.forEach(function(payment) {
-                const monthFormatted = new Date(payment.month).toLocaleDateString('en-US', { 
+            if (payments.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <h6>No Payment History</h6>
+                        <p class="text-muted">No monthly payments have been recorded for this booking.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Calculate summary
+            var totalPaid = 0;
+            var totalUnpaid = 0;
+            var totalOverdue = 0;
+            
+            payments.forEach(function(payment) {
+                if (payment.status === 'paid') {
+                    totalPaid += parseFloat(payment.amount);
+                } else if (payment.status === 'unpaid') {
+                    totalUnpaid += parseFloat(payment.amount);
+                } else if (payment.status === 'overdue') {
+                    totalOverdue += parseFloat(payment.amount);
+                }
+            });
+            
+            var html = `
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body py-2">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Total Months</small>
+                                        <div class="fw-bold">${payments.length}</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Paid</small>
+                                        <div class="fw-bold text-success">${payments.filter(p => p.status === 'paid').length}</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Unpaid</small>
+                                        <div class="fw-bold text-warning">${payments.filter(p => p.status === 'unpaid').length}</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Overdue</small>
+                                        <div class="fw-bold text-danger">${payments.filter(p => p.status === 'overdue').length}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Month</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Payment Date</th>
+                                <th>Method</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            payments.forEach(function(payment) {
+                var monthFormatted = new Date(payment.month).toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: 'long' 
                 });
-                const statusBadge = getPaymentStatusBadge(payment.status);
-                const paymentDate = payment.payment_date ? 
+                
+                var statusBadge = '';
+                if (payment.status === 'paid') {
+                    statusBadge = '<span class="badge bg-success">Paid</span>';
+                } else if (payment.status === 'unpaid') {
+                    statusBadge = '<span class="badge bg-warning">Unpaid</span>';
+                } else if (payment.status === 'overdue') {
+                    statusBadge = '<span class="badge bg-danger">Overdue</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-secondary">' + payment.status + '</span>';
+                }
+                
+                var paymentDate = payment.payment_date ? 
                     new Date(payment.payment_date).toLocaleDateString('en-US', { 
                         year: 'numeric', 
                         month: 'short', 
@@ -957,10 +759,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         hour: '2-digit',
                         minute: '2-digit'
                     }) : '-';
-                const paymentMethod = payment.payment_method || '-';
                 
-                additionalRows += `
-                    <tr class="table-light">
+                var paymentMethod = payment.payment_method || '-';
+                
+                html += `
+                    <tr>
                         <td><strong>${monthFormatted}</strong></td>
                         <td>KSh ${parseFloat(payment.amount).toLocaleString()}</td>
                         <td>${statusBadge}</td>
@@ -970,34 +773,148 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
             
-            $('#paymentsTableBody').append(additionalRows);
-            $(this).remove();
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+        }
+        
+        // Handle form submission via AJAX
+        $('#cancelViewingForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            var form = $(this);
+            var submitBtn = form.find('button[type="submit"]');
+            var originalBtnText = submitBtn.html();
+            
+            // Disable button and show loading state
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...');
+            
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: form.serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Show success message
+                        showToast('Success', response.message, 'success');
+                        
+                        // Close modal
+                        var modal = bootstrap.Modal.getInstance(cancelViewingModal);
+                        modal.hide();
+                        
+                        // Reload page after a short delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        // Show error message
+                        showToast('Error', response.message || 'An error occurred. Please try again.', 'error');
+                        submitBtn.prop('disabled', false).html(originalBtnText);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    showToast('Error', 'An error occurred while processing your request. Please try again.', 'error');
+                    submitBtn.prop('disabled', false).html(originalBtnText);
+                }
+            });
         });
-    }
-    
-    // Helper function to get payment status badge HTML
-    function getPaymentStatusBadge(status) {
-        const statusClass = {
-            'paid': 'success',
-            'unpaid': 'warning',
-            'overdue': 'danger'
-        }[status] || 'secondary';
         
-        const statusText = {
-            'paid': 'Paid',
-            'unpaid': 'Unpaid',
-            'overdue': 'Overdue'
-        }[status] || status.charAt(0).toUpperCase() + status.slice(1);
+        // Function to show toast notifications
+        function showToast(title, message, type = 'info') {
+            // Create toast HTML if it doesn't exist
+            if (!$('#toastContainer').length) {
+                $('body').append(`
+                    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 1100;">
+                        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="toast-header">
+                                <strong class="me-auto">${title}</strong>
+                                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                            </div>
+                            <div class="toast-body">${message}</div>
+                        </div>
+                    </div>
+                `);
+            }
+            
+            var toast = new bootstrap.Toast(document.querySelector('#toastContainer .toast'));
+            toast.show();
+        }
         
-        return `<span class="badge bg-${statusClass}">${statusText}</span>`;
-    }
-    
-    // Function to handle payment processing
-    function makePayment(bookingId, amount) {
-        // Redirect to the payment page
-        window.location.href = `booking_payment.php?id=${bookingId}&amount=${amount}`;
-    }
-});
+        // Debug: Log the number of booking rows found
+        var bookingTable = document.querySelector('.card.mb-5 .table-responsive table tbody');
+        var bookingRows = bookingTable ? bookingTable.querySelectorAll('tr') : [];
+        console.log('Found ' + bookingRows.length + ' booking rows in the bookings table');
+        
+        // Debug: Log each booking row
+        bookingRows.forEach(function(row, index) {
+            var bookingId = row.getAttribute('data-booking-id');
+            var rowNumber = row.getAttribute('data-row-number');
+            var location = row.querySelector('small') ? row.querySelector('small').textContent : 'No location found';
+            console.log('Row ' + index + ': Booking ID ' + bookingId + ', Row #' + rowNumber + ', Location: ' + location);
+        });
+        
+        // Additional debug: Check for duplicate booking IDs
+        var bookingIds = [];
+        bookingRows.forEach(function(row) {
+            var bookingId = row.getAttribute('data-booking-id');
+            if (bookingId) {
+                bookingIds.push(bookingId);
+            }
+        });
+        
+        // Check for duplicates
+        var uniqueIds = [...new Set(bookingIds)];
+        if (bookingIds.length !== uniqueIds.length) {
+            console.error('DUPLICATE BOOKING IDs FOUND!');
+            console.log('All booking IDs:', bookingIds);
+            console.log('Unique booking IDs:', uniqueIds);
+        } else {
+            console.log('No duplicate booking IDs found');
+        }
+        
+        // Debug: Check for duplicate row numbers
+        var rowNumbers = [];
+        bookingRows.forEach(function(row) {
+            var rowNumber = row.getAttribute('data-row-number');
+            if (rowNumber) {
+                rowNumbers.push(rowNumber);
+            }
+        });
+        
+        console.log('Row numbers found:', rowNumbers);
+        
+        // Check if row numbers are sequential
+        var expectedRowNumbers = [];
+        for (var i = 1; i <= bookingRows.length; i++) {
+            expectedRowNumbers.push(i.toString());
+        }
+        
+        if (JSON.stringify(rowNumbers) !== JSON.stringify(expectedRowNumbers)) {
+            console.error('ROW NUMBERS ARE NOT SEQUENTIAL!');
+            console.log('Expected:', expectedRowNumbers);
+            console.log('Found:', rowNumbers);
+        } else {
+            console.log('Row numbers are sequential');
+        }
+        
+        // Additional debug: Check all tables on the page
+        var allTables = document.querySelectorAll('table');
+        console.log('Total tables found on page:', allTables.length);
+        
+        allTables.forEach(function(table, tableIndex) {
+            var tableRows = table.querySelectorAll('tbody tr');
+            console.log('Table ' + tableIndex + ' has ' + tableRows.length + ' rows');
+        });
+    });
+} else {
+    console.log('My Bookings page already initialized, skipping duplicate initialization');
+}
 </script>
 
 <style>

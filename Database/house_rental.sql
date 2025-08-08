@@ -770,6 +770,13 @@ ALTER TABLE `rental_bookings`
   ADD KEY `idx_rental_status` (`status`),
   ADD KEY `idx_rental_dates` (`start_date`,`end_date`);
 
+-- Add unique constraint to prevent duplicate bookings
+ALTER TABLE rental_bookings 
+ADD UNIQUE KEY unique_property_user_date (house_id, user_id, start_date, status);
+
+-- Add index for better performance on booking queries
+CREATE INDEX idx_rental_bookings_house_date ON rental_bookings(house_id, start_date, status);
+
 --
 -- Indexes for table `rent_payments`
 --
@@ -903,77 +910,3 @@ ALTER TABLE `system_settings`
 -- AUTO_INCREMENT for table `tenants`
 --
 ALTER TABLE `tenants`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int(30) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
-
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `booking_documents`
---
-ALTER TABLE `booking_documents`
-  ADD CONSTRAINT `fk_document_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `booking_payments`
---
-ALTER TABLE `booking_payments`
-  ADD CONSTRAINT `fk_payment_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `booking_reviews`
---
-ALTER TABLE `booking_reviews`
-  ADD CONSTRAINT `fk_review_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `favorites`
---
-ALTER TABLE `favorites`
-  ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `house_media`
---
-ALTER TABLE `house_media`
-  ADD CONSTRAINT `house_media_ibfk_1` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `monthly_rent_payments`
---
-ALTER TABLE `monthly_rent_payments`
-  ADD CONSTRAINT `fk_monthly_rent_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `mpesa_payment_requests`
---
-ALTER TABLE `mpesa_payment_requests`
-  ADD CONSTRAINT `fk_mpesa_booking` FOREIGN KEY (`booking_id`) REFERENCES `rental_bookings` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `property_viewings`
---
-ALTER TABLE `property_viewings`
-  ADD CONSTRAINT `property_viewings_ibfk_1` FOREIGN KEY (`property_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `property_viewings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
-
---
--- Constraints for table `rental_bookings`
---
-ALTER TABLE `rental_bookings`
-  ADD CONSTRAINT `fk_booking_house` FOREIGN KEY (`house_id`) REFERENCES `houses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_booking_landlord` FOREIGN KEY (`landlord_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_booking_tenant` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

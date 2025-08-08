@@ -31,6 +31,17 @@ $stmt->bind_param('i', $_SESSION['user_id']);
 $stmt->execute();
 $scheduled_viewings_count = $stmt->get_result()->fetch_assoc()['total_viewings'];
 
+// Get maintenance requests count
+$stmt = $conn->prepare("
+    SELECT COUNT(*) as total_requests 
+    FROM maintenance_requests mr
+    JOIN houses h ON mr.property_id = h.id
+    WHERE h.landlord_id = ? AND mr.status IN ('Pending', 'In Progress')
+");
+$stmt->bind_param('i', $_SESSION['user_id']);
+$stmt->execute();
+$maintenance_requests_count = $stmt->get_result()->fetch_assoc()['total_requests'];
+
 // Get rental statistics
 $stmt = $conn->prepare("SELECT 
                            COUNT(*) as total_rentals,
@@ -61,52 +72,12 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
 
     <div class="page-wrapper">
         <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar">
-            <div class="position-sticky">
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="index.php">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="properties.php">
-                            <i class="fas fa-home"></i> My Properties
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="bookings.php">
-                            <i class="fas fa-book"></i> Bookings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="tenants.php">
-                            <i class="fas fa-users"></i> Tenants
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="payments.php">
-                            <i class="fas fa-money-bill"></i> Payments
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="scheduled_viewings.php">
-                            <i class="fas fa-calendar-alt"></i> Scheduled Viewings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="reports.php">
-                            <i class="fas fa-chart-bar"></i> Reports
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
+        <?php include('./includes/sidebar.php'); ?>
 
         <!-- Main Content -->
         <div class="main-content">
             <div class="container-fluid">
-                <div class="page-content">
+                <div class="page-content" style="margin-top: 80px;">
                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                         <h1 class="h2">Dashboard</h1>
                     </div>
@@ -147,12 +118,22 @@ $rental_stats = $stmt->get_result()->fetch_assoc();
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-xl">
+                        <div class="col-12 col-sm-6 col-xl mb-3 mb-xl-0">
                             <a href="scheduled_viewings.php" class="text-decoration-none">
                                 <div class="card bg-info text-white h-100 hover-shadow">
                                     <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
                                         <h5 class="card-title mb-2">Scheduled Viewings</h5>
                                         <p class="card-text display-6 mb-0"><?php echo $scheduled_viewings_count; ?></p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl">
+                            <a href="maintenance_requests.php" class="text-decoration-none">
+                                <div class="card bg-secondary text-white h-100 hover-shadow">
+                                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center">
+                                        <h5 class="card-title mb-2">Maintenance Requests</h5>
+                                        <p class="card-text display-6 mb-0"><?php echo $maintenance_requests_count; ?></p>
                                     </div>
                                 </div>
                             </a>

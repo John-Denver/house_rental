@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container text-center">
         <h2 class="fw-bold mb-4">Need Help Finding a Property?</h2>
         <p class="lead text-muted mb-4">Our team is ready to help you find your dream home.</p>
-        <a href="properties.php" class="btn btn-primary btn-lg px-4">Browse Properties</a>
+        <a href="index.php" class="btn btn-primary btn-lg px-4">Browse Properties</a>
     </div>
 </section>
 
